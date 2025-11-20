@@ -1,0 +1,85 @@
+name: vh-home-stack
+
+services:
+  traefik:
+    image: traefik:2.11.2
+    command:
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - vh_net
+
+  minio:
+    image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    command: server /data --console-address ":9001"
+    env_file:
+      - .env
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - vh_net
+    depends_on:
+      - traefik
+
+  relay:
+    image: node:20.16.0-alpine3.19
+    command: ["sh", "-c", "echo 'relay placeholder running'; tail -f /dev/null"]
+    volumes:
+      - relay_data:/var/lib/vh-relay
+    ports:
+      - "7777:7777"
+    networks:
+      - vh_net
+    depends_on:
+      - traefik
+
+  coturn:
+    image: coturn/coturn:4.5.2
+    env_file:
+      - .env
+    command: ["sh", "-c", "echo 'coturn placeholder awaiting config'; tail -f /dev/null"]
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478"
+      - "5349:5349/udp"
+      - "5349:5349"
+    networks:
+      - vh_net
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry@sha256:e320c947c12c422114a86a870c7fa5f639786f16202cebcd6e5580d76443d894
+    entrypoint:
+      - anvil
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8545"
+      - --chain-id
+      - "31337"
+    ports:
+      - "8545:8545"
+    networks:
+      - vh_net
+
+volumes:
+  minio_data:
+  relay_data:
+
+networks:
+  vh_net:
+    driver: bridge
