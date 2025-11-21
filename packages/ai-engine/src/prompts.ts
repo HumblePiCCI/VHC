@@ -26,7 +26,7 @@ export const SINGLE_PREV_PASS_TEMPLATE = `
 Previous pass notes:
 {{previous_summary}}
 Confidence: {{previous_confidence}}
-`; 
+`;
 
 export function generateOutputFormatReq(previous?: AnalysisResult): string {
   if (!previous) return PRIMARY_OUTPUT_FORMAT_REQ;
