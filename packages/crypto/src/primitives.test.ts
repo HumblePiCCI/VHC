@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { randomBytes, sha256 } from './primitives';
+import { aesDecrypt, aesEncrypt, deriveKey, randomBytes, sha256 } from './primitives';
+
+const textDecoder = new TextDecoder();
 
 describe('crypto primitives', () => {
   it('creates deterministic SHA-256 digests', async () => {
@@ -14,5 +16,24 @@ describe('crypto primitives', () => {
     expect(bytes.byteLength).toBe(size);
     const uniqueValues = new Set(bytes);
     expect(uniqueValues.size).toBeGreaterThan(1);
+  });
+
+  it('derives deterministic PBKDF2 keys', async () => {
+    const first = await deriveKey('secret', 'salt');
+    const second = await deriveKey('secret', 'salt');
+    expect(first).toHaveLength(32);
+    expect(Buffer.from(first).toString('hex')).toBe(
+      Buffer.from(second).toString('hex')
+    );
+  });
+
+  it('encrypts and decrypts using AES-GCM', async () => {
+    const key = await deriveKey('vh-dev-secret', 'vh-dev-salt');
+    const message = 'local-first forever';
+    const { iv, ciphertext } = await aesEncrypt(message, key);
+    expect(ciphertext.byteLength).toBeGreaterThan(0);
+    expect(Buffer.from(ciphertext).toString('hex')).not.toContain(message);
+    const decrypted = await aesDecrypt(iv, ciphertext, key);
+    expect(textDecoder.decode(decrypted)).toBe(message);
   });
 });

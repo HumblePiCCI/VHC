@@ -13,16 +13,19 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "echo 'No tests yet'",
+    "test": "vitest run",
     "lint": "echo 'No lint yet'"
   },
   "dependencies": {
     "@vh/crypto": "workspace:*",
     "@vh/types": "workspace:*",
-    "gun": "0.2020.1237"
+    "gun": "0.2020.1237",
+    "idb": "^8.0.3"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "typescript": "^5.4.5"
+    "fake-indexeddb": "^6.2.5",
+    "typescript": "^5.4.5",
+    "vitest": "^2.1.4"
   }
 }

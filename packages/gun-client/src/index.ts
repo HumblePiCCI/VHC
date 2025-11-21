@@ -61,31 +61,25 @@ function createNamespace<T>(chain: ChainLike<T>, barrier: HydrationBarrier): Nam
   };
 }
 
-function hydrate(barrier: HydrationBarrier, storage: StorageAdapter): void {
-  const timeout = setTimeout(() => {
-    if (!barrier.ready) {
-      barrier.markReady();
-    }
-  }, 5000);
+export function createClient(config: VennClientConfig = {}): VennClient {
+  const hydrationBarrier = createHydrationBarrier();
+  const peers = normalizePeers(config.peers);
+  const storage = config.storage ?? createStorageAdapter(hydrationBarrier);
+  const gun = Gun({ peers }) as IGunInstance;
 
   storage
     .hydrate()
+    .then(() => {
+      if (!hydrationBarrier.ready) {
+        hydrationBarrier.markReady();
+      }
+    })
     .catch((error) => {
       console.warn('[vh] storage hydration failed', error);
-    })
-    .finally(() => {
-      clearTimeout(timeout);
-      barrier.markReady();
+      if (!hydrationBarrier.ready) {
+        hydrationBarrier.markReady();
+      }
     });
-}
-
-export function createClient(config: VennClientConfig = {}): VennClient {
-  const peers = normalizePeers(config.peers);
-  const storage = config.storage ?? createStorageAdapter();
-  const hydrationBarrier = createHydrationBarrier();
-  const gun = Gun({ peers }) as IGunInstance;
-
-  hydrate(hydrationBarrier, storage);
 
   const root = gun.get('vh');
   const userChain = gun.user() as unknown as ChainLike<Record<string, unknown>>;
