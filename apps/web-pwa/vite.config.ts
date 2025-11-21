@@ -13,6 +13,7 @@ export default defineConfig({
       '@vh/ui': path.resolve(__dirname, '../../packages/ui/src'),
       '@vh/gun-client': path.resolve(__dirname, '../../packages/gun-client/src'),
       '@vh/types': path.resolve(__dirname, '../../packages/types/src'),
+      '@vh/ai-engine': path.resolve(__dirname, '../../packages/ai-engine/src'),
       '@vh/crypto': path.resolve(__dirname, '../../packages/crypto/src'),
       '@vh/contracts': path.resolve(__dirname, '../../packages/contracts/typechain-types')
     }

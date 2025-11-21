@@ -11,6 +11,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.62.8",
     "@tanstack/react-router": "^1.84.4",
+    "@vh/ai-engine": "workspace:*",
     "@vh/contracts": "workspace:*",
     "@vh/gun-client": "workspace:*",
     "@vh/types": "workspace:*",

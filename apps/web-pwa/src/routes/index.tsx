@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
 import React from 'react';
 import { Button } from '@vh/ui';
 import { createClient } from '@vh/gun-client';
+import { useAI } from '@vh/ai-engine';
 
 const vennClient = createClient({ peers: ['http://localhost:7777/gun'] });
 
@@ -25,17 +26,61 @@ const RootComponent = () => (
   </div>
 );
 
-const HomeComponent = () => (
-  <section className="space-y-4">
-    <p className="text-lg text-slate-700">Your Guardian Node stack is live. Next: hydrate the graph and start composing signals.</p>
-    <div className="flex gap-3">
-      <Button onClick={() => console.log('bootstrap mesh')}>Bootstrap Mesh</Button>
-      <Button variant="secondary" onClick={() => console.log('open settings')}>
-        Open Settings
-      </Button>
-    </div>
-  </section>
-);
+const HomeComponent = () => {
+  const {
+    state: { status, progress, result, message },
+    analyze,
+    reset
+  } = useAI();
+
+  const handleAnalyze = () => {
+    const demo = `A local-first stack powers civic analysis. The system processes text on-device to surface bias and provide balanced counterpoints.`;
+    analyze(demo);
+  };
+
+  return (
+    <section className="space-y-4">
+      <p className="text-lg text-slate-700">Your Guardian Node stack is live. Next: hydrate the graph and start composing signals.</p>
+      <div className="flex gap-3">
+        <Button onClick={() => console.log('bootstrap mesh')}>Bootstrap Mesh</Button>
+        <Button variant="secondary" onClick={() => console.log('open settings')}>
+          Open Settings
+        </Button>
+        <Button variant="ghost" onClick={handleAnalyze} disabled={status === 'generating' || status === 'loading'}>
+          {status === 'generating' || status === 'loading' ? 'Analyzing…' : 'Analyze demo'}
+        </Button>
+        {status !== 'idle' && (
+          <Button variant="ghost" onClick={reset}>
+            Reset
+          </Button>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between text-sm text-slate-600">
+          <span>Status: {status}</span>
+          <span>Progress: {progress}%</span>
+        </div>
+        {message && <p className="mt-2 text-sm text-slate-600">{message}</p>}
+        {result && (
+          <div className="mt-4 space-y-2">
+            <p className="font-semibold text-slate-900">Summary</p>
+            <p className="text-sm text-slate-700">{result.summary}</p>
+            <p className="font-semibold text-slate-900">Biases</p>
+            <ul className="list-disc space-y-1 pl-4 text-sm text-slate-700">
+              {result.biases.map((bias, idx) => (
+                <li key={idx}>
+                  <span className="font-medium text-slate-900">{bias}</span>
+                  {result.counterpoints[idx] && <span className="text-slate-600"> · Counterpoint: {result.counterpoints[idx]}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
 
 const rootRoute = createRootRoute({ component: RootComponent });
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeComponent });
