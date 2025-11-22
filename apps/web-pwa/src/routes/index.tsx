@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@vh/ui';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
 import { useAppStore } from '../store';
+import { useIdentity } from '../hooks/useIdentity';
 
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 
@@ -50,7 +51,11 @@ const RootShell = ({ children }: { children: React.ReactNode }) => {
 
 const HomeComponent = () => {
   const { profile, createIdentity, identityStatus, client, error } = useAppStore();
+  const { identity, startLinkSession, completeLinkSession } = useIdentity();
   const [username, setUsername] = useState('');
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [incomingCode, setIncomingCode] = useState('');
   const [workerFactory, setWorkerFactory] = useState<(() => Worker) | undefined>();
   const {
     state: { status, progress, result, message },
@@ -115,6 +120,26 @@ const HomeComponent = () => {
     analyze(demo);
   };
 
+  const handleStartLink = async () => {
+    try {
+      const code = await startLinkSession();
+      setGeneratedCode(code);
+      setLinkModalOpen(true);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCompleteLink = async () => {
+    try {
+      await completeLinkSession(incomingCode.trim());
+      setLinkModalOpen(false);
+      setIncomingCode('');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <section className="space-y-4">
       <p className="text-lg text-slate-700">Your Guardian Node stack is live. Next: hydrate the graph and start composing signals.</p>
@@ -158,12 +183,18 @@ const HomeComponent = () => {
             <span className="text-slate-500" data-testid="welcome-msg">
               Welcome, {profile.username}
             </span>
+            <span className="text-slate-500" data-testid="linked-count">
+              Linked devices: {(identity?.linkedDevices ?? []).length}
+            </span>
           </div>
 
           <div className="flex flex-wrap gap-3">
             <Button onClick={() => console.log('bootstrap mesh')}>Bootstrap Mesh</Button>
             <Button variant="secondary" onClick={() => console.log('open settings')}>
               Open Settings
+            </Button>
+            <Button variant="ghost" onClick={handleStartLink} data-testid="link-device-btn">
+              Link Device
             </Button>
             <Button
               variant="ghost"
@@ -179,6 +210,39 @@ const HomeComponent = () => {
               </Button>
             )}
           </div>
+
+          {linkModalOpen && (
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
+              <p className="font-semibold text-slate-900">Link Device</p>
+              <p className="text-sm text-slate-700">Share this link code with the device you want to link.</p>
+              {generatedCode && (
+                <div className="mt-2 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-800" data-testid="link-code">
+                  {generatedCode}
+                </div>
+              )}
+              <div className="mt-3 space-y-2">
+                <label className="text-xs uppercase tracking-wide text-slate-500">Simulate incoming link</label>
+                <div className="flex gap-2">
+                  <input
+                    className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+                    placeholder="Paste code here"
+                    value={incomingCode}
+                    onChange={(e) => setIncomingCode(e.target.value)}
+                    data-testid="link-input"
+                  />
+                  <Button onClick={handleCompleteLink} data-testid="link-complete-btn">
+                    Complete
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
+                <span>Linked devices: {(identity?.linkedDevices ?? []).length}</span>
+                <Button variant="ghost" onClick={() => setLinkModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between text-sm text-slate-600">

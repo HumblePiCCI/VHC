@@ -38,11 +38,19 @@ test.describe('The Tracer Bullet: E2E Integration', () => {
         await expect(page.getByText('Summary', { exact: true })).toBeVisible();
         await expect(page.getByText('Biases', { exact: true })).toBeVisible();
 
-        // 7. Verify Persistence (Reload)
+        // 7. Link Device UI Flow
+        await page.getByTestId('link-device-btn').click();
+        const code = await page.getByTestId('link-code').innerText();
+        await page.fill('[data-testid="link-input"]', code);
+        await page.getByTestId('link-complete-btn').click();
+        await expect(page.getByTestId('linked-count')).toContainText(/Linked devices: 1/);
+
+        // 8. Verify Persistence (Reload)
         await page.reload();
         // Identity should still be there (no create button)
         await expect(createIdentityBtn).not.toBeVisible();
         // Mesh should reconnect
         await expect(page.getByText(/Peers: \d+/)).toBeVisible();
+        await expect(page.getByTestId('linked-count')).toContainText(/Linked devices: 1/);
     });
 });

@@ -32,10 +32,10 @@
 - [ ] **Integration:** Client generates proof of region (e.g., "US-CA") without revealing exact location.
 
 ### 1.3 Multi-Device Linking
-- [ ] **Graph:** Implement "Add Device" flow in `gun-client`.
-- [ ] **Sync:** Ensure profile and session keys sync across linked devices via Gun.
-- [ ] **Safety:** Respect **Hydration Barrier** (read-before-write) and prevent `ready` event race conditions.
-- [ ] **Docs:** Document key-rotation and linking flow in `packages/gun-client/README.md`.
+- [x] **Graph:** Implement "Add Device" flow in `gun-client`.
+- [x] **Sync:** Ensure profile and session keys sync across linked devices via Gun.
+- [x] **Safety:** Respect **Hydration Barrier** (read-before-write) and prevent `ready` event race conditions.
+- [x] **Docs:** Document key-rotation and linking flow in `packages/gun-client/README.md`.
 
 **DoD:** A user can create an identity that is attested by the service (gated by trust score), and link a second device that inherits the identity. CI passes with True Offline Mode.
 

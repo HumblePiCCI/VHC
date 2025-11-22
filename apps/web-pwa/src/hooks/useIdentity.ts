@@ -19,6 +19,7 @@ export interface IdentityRecord {
     nullifier: string;
   };
   linkedDevices?: string[];
+  pendingLinkCode?: string;
 }
 
 function loadIdentity(): IdentityRecord | null {
@@ -95,12 +96,42 @@ export function useIdentity() {
     return newDevice;
   }, [identity]);
 
+  const startLinkSession = useCallback(async () => {
+    if (!identity) {
+      throw new Error('Identity not ready');
+    }
+    const code = `link-${randomToken()}`;
+    const updated: IdentityRecord = { ...identity, pendingLinkCode: code };
+    persistIdentity(updated);
+    setIdentity(updated);
+    return code;
+  }, [identity]);
+
+  const completeLinkSession = useCallback(
+    async (code: string) => {
+      if (!identity || !identity.pendingLinkCode) {
+        throw new Error('No pending link');
+      }
+      if (code !== identity.pendingLinkCode) {
+        throw new Error('Invalid link code');
+      }
+      const linked = [...(identity.linkedDevices ?? []), `linked-${randomToken()}`];
+      const updated: IdentityRecord = { ...identity, linkedDevices: linked, pendingLinkCode: undefined };
+      persistIdentity(updated);
+      setIdentity(updated);
+      return linked;
+    },
+    [identity]
+  );
+
   return {
     identity,
     status,
     error,
     createIdentity,
-    linkDevice
+    linkDevice,
+    startLinkSession,
+    completeLinkSession
   };
 }
 
