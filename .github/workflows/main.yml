@@ -15,8 +15,7 @@ jobs:
       
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9  # Using 9 for stability, or 10 if strictly required
+        # Version inferred from packageManager field
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -42,8 +41,7 @@ jobs:
       
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
+        # Version inferred from packageManager field
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
