@@ -1,35 +1,56 @@
 import { createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@vh/ui';
-import { createClient } from '@vh/gun-client';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
-import { useIdentity } from '../hooks/useIdentity';
+import { useAppStore } from '../store';
 
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
-const vennClient = createClient({ peers: E2E_MODE ? [] : ['http://localhost:7777/gun'] });
 
 const RootComponent = () => (
-  <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
-    <div className="mx-auto max-w-4xl px-6 py-12 space-y-8">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.2em] text-slate-500">TRINITY · VENN/HERMES</p>
-          <h1 className="text-3xl font-semibold text-slate-900">Hello Trinity</h1>
-          <p className="text-slate-600">Local-first nervous system online.</p>
-        </div>
-        <div className="text-right text-sm text-slate-500">
-          <p>Peers: {vennClient.config.peers.length}</p>
-        </div>
-      </header>
-      <main className="space-y-6">
-        <Outlet />
-      </main>
-    </div>
-  </div>
+  <RootShell>
+    <Outlet />
+  </RootShell>
 );
 
+const RootShell = ({ children }: { children: React.ReactNode }) => {
+  const { client, initializing, init } = useAppStore();
+
+  useEffect(() => {
+    void init();
+  }, [init]);
+
+  const peersCount = client?.config.peers.length ?? 0;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
+      <div className="mx-auto max-w-4xl px-6 py-12 space-y-8">
+        <header className="flex items-center justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.2em] text-slate-500">TRINITY · VENN/HERMES</p>
+            <h1 className="text-3xl font-semibold text-slate-900">Hello Trinity</h1>
+            <p className="text-slate-600">Local-first nervous system online.</p>
+          </div>
+          <div className="text-right text-sm text-slate-500">
+            <p>Peers: {peersCount}</p>
+          </div>
+        </header>
+        <main className="space-y-6">
+          {initializing && !client ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-sm text-slate-700">Loading Mesh…</p>
+            </div>
+          ) : (
+            children
+          )}
+        </main>
+      </div>
+    </div>
+  );
+};
+
 const HomeComponent = () => {
-  const { identity, status: identityStatus, createIdentity, error: identityError } = useIdentity();
+  const { profile, createIdentity, identityStatus, client, error } = useAppStore();
+  const [username, setUsername] = useState('');
   const [workerFactory, setWorkerFactory] = useState<(() => Worker) | undefined>();
   const {
     state: { status, progress, result, message },
@@ -90,7 +111,7 @@ const HomeComponent = () => {
 
   const handleAnalyze = () => {
     const demo = `A local-first stack powers civic analysis. The system processes text on-device to surface bias and provide balanced counterpoints.`;
-    if (!identity) return;
+    if (!profile) return;
     analyze(demo);
   };
 
@@ -98,24 +119,43 @@ const HomeComponent = () => {
     <section className="space-y-4">
       <p className="text-lg text-slate-700">Your Guardian Node stack is live. Next: hydrate the graph and start composing signals.</p>
 
-      {!identity && (
+      {!profile && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-slate-800">
           <p className="font-semibold">Welcome to TRINITY</p>
           <p className="text-sm text-amber-800">No identity found. Create a local identity to join the mesh.</p>
-          <div className="mt-3 flex gap-3">
-            <Button onClick={() => createIdentity()} disabled={identityStatus === 'creating'} data-testid="create-identity-btn">
-              {identityStatus === 'creating' ? 'Creating…' : 'Create Identity'}
+          <form
+            className="mt-3 flex flex-col gap-3 sm:flex-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const chosen = username.trim() || 'vh-user';
+              void createIdentity(chosen);
+            }}
+          >
+            <input
+              className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+              placeholder="Choose a username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={identityStatus === 'creating'}
+            />
+            <Button
+              type="submit"
+              onClick={() => {}}
+              disabled={identityStatus === 'creating'}
+              data-testid="create-identity-btn"
+            >
+              {identityStatus === 'creating' ? 'Creating…' : 'Join'}
             </Button>
-            {identityError && <span className="text-xs text-red-700">{identityError}</span>}
-          </div>
+          </form>
+          {error && <span className="text-xs text-red-700">{error}</span>}
         </div>
       )}
 
-      {identity && (
+      {profile && (
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm text-slate-600">
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Connected to mesh</span>
-            <span className="text-slate-500">Identity: {identity.id.slice(0, 8)}…</span>
+            <span className="text-slate-500">Identity: {profile.username}</span>
           </div>
 
           <div className="flex flex-wrap gap-3">
@@ -123,7 +163,7 @@ const HomeComponent = () => {
             <Button variant="secondary" onClick={() => console.log('open settings')}>
               Open Settings
             </Button>
-            <Button variant="ghost" onClick={handleAnalyze} disabled={status === 'generating' || status === 'loading'}>
+            <Button variant="ghost" onClick={handleAnalyze} disabled={!client || status === 'generating' || status === 'loading'}>
               {status === 'generating' || status === 'loading' ? 'Analyzing…' : 'Analyze demo'}
             </Button>
             {status !== 'idle' && (
