@@ -66,3 +66,7 @@ src-tauri/target/
 .fusebox/
 .dynamodb/
 .tern-port
+playwright-report/
+test-results/
+packages/e2e/playwright-report/
+packages/e2e/test-results/
