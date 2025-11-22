@@ -107,3 +107,4 @@ export { HydrationBarrier } from './sync/barrier';
 export { createStorageAdapter } from './storage/adapter';
 export type { StorageAdapter, StorageRecord } from './storage/types';
 export type { VennClientConfig, Namespace } from './types';
+export { createSession } from './auth';
