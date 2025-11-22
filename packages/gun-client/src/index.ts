@@ -1,4 +1,5 @@
 import Gun from 'gun';
+import 'gun/sea';
 import type { IGunInstance } from 'gun';
 import { createStorageAdapter, type StorageAdapter } from './storage/adapter';
 import { HydrationBarrier, createHydrationBarrier } from './sync/barrier';
