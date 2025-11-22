@@ -18,10 +18,10 @@
 ## Phase 1: LHID (Identity & Trust)
 
 ### 1.1 Attestation Integration
-- [ ] **Client:** Update `useIdentity` to fetch real/mock attestation from `AttestationVerifier` service.
-- [ ] **API Contract:** Ensure payload fields use `camelCase` per `packages/types`.
-- [ ] **Service:** Harden `attestation-verifier` to validate platform-specific chains (Apple AppAttest / Google Play Integrity).
-- [ ] **Session:** Implement `createSession` handshake: Client sends Attestation -> Service verifies -> Returns `trust_score` -> Client derives Nullifier.
+- [x] **Client:** Update `useIdentity` to fetch real/mock attestation from `AttestationVerifier` service.
+- [x] **API Contract:** Ensure payload fields use `camelCase` per `packages/types`.
+- [x] **Service:** Harden `attestation-verifier` to validate platform-specific chains (Apple AppAttest / Google Play Integrity).
+- [x] **Session:** Implement `createSession` handshake: Client sends Attestation -> Service verifies -> Returns `trust_score` -> Client derives Nullifier.
     - *Constraint:* Session creation MUST fail if `trust_score` is insufficient.
     - *Constraint:* Default peers must be empty `[]` in offline/E2E mode (`VITE_E2E_MODE=true`).
 

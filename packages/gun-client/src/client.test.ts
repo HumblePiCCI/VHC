@@ -1,8 +1,25 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createClient } from './index';
 
-const mockGet = vi.fn(() => ({ get: mockGet, once: vi.fn(), put: vi.fn() }));
-const mockUser = vi.fn(() => ({ once: vi.fn(), put: vi.fn() }));
+function makeChain() {
+  const chain: any = {
+    once: vi.fn((cb?: (data: any) => void) => {
+      cb?.({});
+    }),
+    put: vi.fn((_value: any, cb?: (ack?: any) => void) => {
+      cb?.({});
+    })
+  };
+  chain.get = vi.fn(() => chain);
+  return chain;
+}
+
+const userChain = makeChain();
+const chatChain = makeChain();
+const outboxChain = makeChain();
+
+const mockGet = vi.fn(() => chatChain);
+const mockUser = vi.fn(() => userChain);
 const mockGun = vi.fn(() => ({
   get: mockGet,
   user: mockUser
@@ -50,5 +67,20 @@ describe('createClient', () => {
     await client.shutdown();
     expect(storageClose).toHaveBeenCalled();
     expect(markReadySpy).toHaveBeenCalled();
+  });
+
+  it('linkDevice waits for remote hydration then writes device entry', async () => {
+    const client = createClient({ requireSession: false });
+    await client.linkDevice('device-123');
+    expect(userChain.once).toHaveBeenCalled();
+    expect(userChain.get).toHaveBeenCalledWith('devices');
+    expect(userChain.put).toHaveBeenCalledTimes(1);
+    expect(userChain.get().get).toHaveBeenCalledWith('device-123');
+    expect(userChain.get().put).toHaveBeenCalled();
+  });
+
+  it('linkDevice rejects when session is not ready', async () => {
+    const client = createClient({ requireSession: true });
+    await expect(client.linkDevice('dev')).rejects.toThrow('Session not ready');
   });
 });

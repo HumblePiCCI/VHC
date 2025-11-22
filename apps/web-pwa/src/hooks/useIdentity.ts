@@ -18,6 +18,7 @@ export interface IdentityRecord {
     trustScore: number;
     nullifier: string;
   };
+  linkedDevices?: string[];
 }
 
 function loadIdentity(): IdentityRecord | null {
@@ -80,11 +81,26 @@ export function useIdentity() {
     }
   }, [identity, createIdentity]);
 
+  const linkDevice = useCallback(async () => {
+    if (!identity) {
+      throw new Error('Identity not ready');
+    }
+    const newDevice = `device-${randomToken()}`;
+    const updated: IdentityRecord = {
+      ...identity,
+      linkedDevices: [...(identity.linkedDevices ?? []), newDevice]
+    };
+    persistIdentity(updated);
+    setIdentity(updated);
+    return newDevice;
+  }, [identity]);
+
   return {
     identity,
     status,
     error,
-    createIdentity
+    createIdentity,
+    linkDevice
   };
 }
 

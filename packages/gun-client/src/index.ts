@@ -15,6 +15,10 @@ interface ChainLike<T> {
   put(value: T, callback?: (ack?: ChainAck) => void): unknown;
 }
 
+interface ChainWithGet<T> extends ChainLike<T> {
+  get(key: string): ChainWithGet<T>;
+}
+
 const DEFAULT_PEERS = ['http://localhost:7777/gun'];
 
 export interface VennClient {
@@ -26,6 +30,7 @@ export interface VennClient {
   outbox: Namespace<Record<string, unknown>>;
   sessionReady: boolean;
   markSessionReady(): void;
+  linkDevice(deviceKey: string): Promise<void>;
   shutdown(): Promise<void>;
 }
 
@@ -61,7 +66,7 @@ function createNamespace<T>(
       if (!sessionReadyRef()) {
         throw new Error('Session not ready');
       }
-      await barrier.prepare();
+      await waitForRemote(chain, barrier);
       await new Promise<void>((resolve, reject) => {
         chain.put(value, (ack?: ChainAck) => {
           if (ack?.err) {
@@ -73,6 +78,13 @@ function createNamespace<T>(
       });
     }
   };
+}
+
+async function waitForRemote<T>(chain: ChainLike<T>, barrier: HydrationBarrier): Promise<void> {
+  await barrier.prepare();
+  await new Promise<void>((resolve) => {
+    chain.once(() => resolve());
+  });
 }
 
 export function createClient(config: VennClientConfig = {}): VennClient {
@@ -100,6 +112,27 @@ export function createClient(config: VennClientConfig = {}): VennClient {
   const userChain = gun.user() as unknown as ChainLike<Record<string, unknown>>;
   const chatChain = root.get('chat') as unknown as ChainLike<Record<string, unknown>>;
   const outboxChain = root.get('outbox') as unknown as ChainLike<Record<string, unknown>>;
+  const devicesChain = (userChain as unknown as ChainWithGet<Record<string, unknown>>).get('devices');
+
+  async function ensureSession() {
+    if (!sessionReady && config.requireSession !== false) {
+      throw new Error('Session not ready');
+    }
+  }
+
+  async function linkDevice(deviceKey: string): Promise<void> {
+    await ensureSession();
+    await waitForRemote(devicesChain, hydrationBarrier);
+    await new Promise<void>((resolve, reject) => {
+      devicesChain.get(deviceKey).put({ linkedAt: Date.now() }, (ack?: ChainAck) => {
+        if (ack?.err) {
+          reject(new Error(ack.err));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
 
   return {
     config: { ...config, peers },
@@ -109,6 +142,7 @@ export function createClient(config: VennClientConfig = {}): VennClient {
     markSessionReady() {
       sessionReady = true;
     },
+    linkDevice,
     user: createNamespace(userChain, hydrationBarrier, () => sessionReady || config.requireSession === false),
     chat: createNamespace(chatChain, hydrationBarrier, () => sessionReady || config.requireSession === false),
     outbox: createNamespace(outboxChain, hydrationBarrier, () => sessionReady || config.requireSession === false),
