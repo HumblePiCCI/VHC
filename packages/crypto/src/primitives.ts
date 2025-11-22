@@ -8,29 +8,39 @@ const VALID_AES_KEY_LENGTHS = new Set([16, 24, 32]);
 const PBKDF2_ITERATIONS = 100_000;
 const PBKDF2_KEY_BYTES = 32;
 
+function copyToArrayBuffer(view: ArrayBufferView | ArrayBuffer): ArrayBuffer {
+  if (view instanceof ArrayBuffer) {
+    return view.slice(0);
+  }
+  const uint8 = new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+  return uint8.slice().buffer;
+}
+
 function normalizeHashInput(input: HashInput): ArrayBuffer {
   if (typeof input === 'string') {
     return textEncoder.encode(input).buffer;
   }
 
   if (input instanceof ArrayBuffer) {
-    return input;
+    return input.slice(0);
   }
 
   if (ArrayBuffer.isView(input)) {
-    const view = input as ArrayBufferView;
-    return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+    return copyToArrayBuffer(input);
   }
 
   throw new TypeError('Unsupported input for hashing.');
 }
 
 function normalizeData(input: string | Uint8Array): Uint8Array {
-  return typeof input === 'string' ? textEncoder.encode(input) : input;
+  if (typeof input === 'string') {
+    return textEncoder.encode(input);
+  }
+  return new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
 }
 
 function toBuffer(view: Uint8Array): ArrayBuffer {
-  return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+  return view.slice().buffer;
 }
 
 function bufferToHex(data: ArrayBuffer): string {
@@ -48,7 +58,8 @@ function assertAesKey(key: Uint8Array) {
 
 async function importAesKey(raw: Uint8Array, provider: CryptoProvider, usages: KeyUsage[]) {
   assertAesKey(raw);
-  return provider.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, usages);
+  const material = new Uint8Array(raw.slice().buffer);
+  return provider.subtle.importKey('raw', material, { name: 'AES-GCM' }, false, usages);
 }
 
 export async function randomBytes(length: number): Promise<Uint8Array> {
@@ -75,7 +86,7 @@ export async function aesEncrypt(data: string | Uint8Array, key: Uint8Array) {
   const iv = provider.getRandomValues(new Uint8Array(AES_GCM_IV_BYTES));
   const plaintext = normalizeData(data);
   const ciphertext = await provider.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: copyToArrayBuffer(iv) },
     cryptoKey,
     toBuffer(plaintext)
   );
@@ -90,7 +101,7 @@ export async function aesDecrypt(iv: Uint8Array, ciphertext: Uint8Array, key: Ui
   const provider = await getWebCrypto();
   const cryptoKey = await importAesKey(key, provider, ['decrypt']);
   const plaintext = await provider.subtle.decrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: copyToArrayBuffer(iv) },
     cryptoKey,
     toBuffer(ciphertext)
   );
@@ -99,9 +110,11 @@ export async function aesDecrypt(iv: Uint8Array, ciphertext: Uint8Array, key: Ui
 
 export async function deriveKey(secret: string, salt: string): Promise<Uint8Array> {
   const provider = await getWebCrypto();
+  const secretBytes = textEncoder.encode(secret);
+  const saltBytes = textEncoder.encode(salt);
   const baseKey = await provider.subtle.importKey(
     'raw',
-    textEncoder.encode(secret),
+    copyToArrayBuffer(secretBytes),
     { name: 'PBKDF2' },
     false,
     ['deriveBits']
@@ -110,7 +123,7 @@ export async function deriveKey(secret: string, salt: string): Promise<Uint8Arra
   const derivedBits = await provider.subtle.deriveBits(
     {
       name: 'PBKDF2',
-      salt: textEncoder.encode(salt),
+      salt: copyToArrayBuffer(saltBytes),
       iterations: PBKDF2_ITERATIONS,
       hash: 'SHA-256'
     },

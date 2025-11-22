@@ -1,6 +1,6 @@
 import { openDB, type IDBPDatabase } from 'idb';
 import { aesDecrypt, aesEncrypt, deriveKey } from '@vh/crypto';
-import type { StorageAdapter, StorageRecord } from './adapter';
+import type { StorageRecord } from './types';
 import type { HydrationBarrier } from '../sync/barrier';
 
 const DB_NAME = 'vh_encrypted_graph';
@@ -21,7 +21,7 @@ export function hasIndexedDBSupport(): boolean {
   return typeof indexedDB !== 'undefined';
 }
 
-export class EncryptedIndexedDBAdapter implements StorageAdapter {
+export class EncryptedIndexedDBAdapter {
   readonly backend = 'indexeddb' as const;
   #dbPromise: Promise<GraphDB>;
   #rootKeyPromise: Promise<Uint8Array>;

@@ -1,4 +1,4 @@
-import type { StorageAdapter } from './storage/adapter';
+import type { StorageAdapter } from './storage/types';
 
 export interface VennClientConfig {
   peers?: string[];

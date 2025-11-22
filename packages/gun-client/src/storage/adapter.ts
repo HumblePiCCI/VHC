@@ -1,19 +1,6 @@
 import type { HydrationBarrier } from '../sync/barrier';
 import { EncryptedIndexedDBAdapter, hasIndexedDBSupport } from './indexeddb';
-
-export interface StorageRecord<T = unknown> {
-  key: string;
-  value: T;
-  updatedAt: number;
-}
-
-export interface StorageAdapter {
-  backend: 'indexeddb' | 'memory';
-  hydrate(): Promise<void>;
-  write<T>(record: StorageRecord<T>): Promise<void>;
-  read<T>(key: string): Promise<StorageRecord<T> | null>;
-  close(): Promise<void>;
-}
+import type { StorageAdapter, StorageRecord } from './types';
 
 class MemoryStorageAdapter implements StorageAdapter {
   readonly backend = 'memory' as const;
@@ -45,8 +32,10 @@ class MemoryStorageAdapter implements StorageAdapter {
 
 export function createStorageAdapter(barrier: HydrationBarrier): StorageAdapter {
   if (hasIndexedDBSupport()) {
-    return new EncryptedIndexedDBAdapter(barrier);
+    return new EncryptedIndexedDBAdapter(barrier) as unknown as StorageAdapter;
   }
 
   return new MemoryStorageAdapter(barrier);
 }
+
+export type { StorageAdapter, StorageRecord } from './types';

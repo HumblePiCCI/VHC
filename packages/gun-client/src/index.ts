@@ -1,7 +1,8 @@
 import Gun from 'gun';
 import 'gun/sea';
 import type { IGunInstance } from 'gun';
-import { createStorageAdapter, type StorageAdapter } from './storage/adapter';
+import { createStorageAdapter } from './storage/adapter';
+import type { StorageAdapter, StorageRecord } from './storage/types';
 import { HydrationBarrier, createHydrationBarrier } from './sync/barrier';
 import type { Namespace, VennClientConfig } from './types';
 
@@ -75,7 +76,7 @@ export function createClient(config: VennClientConfig = {}): VennClient {
         hydrationBarrier.markReady();
       }
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       console.warn('[vh] storage hydration failed', error);
       if (!hydrationBarrier.ready) {
         hydrationBarrier.markReady();
@@ -96,9 +97,7 @@ export function createClient(config: VennClientConfig = {}): VennClient {
     outbox: createNamespace(outboxChain, hydrationBarrier),
     async shutdown(): Promise<void> {
       hydrationBarrier.markReady();
-      if (typeof (gun as IGunInstance & { off?: () => void }).off === 'function') {
-        (gun as IGunInstance & { off?: () => void }).off();
-      }
+      (gun as IGunInstance & { off?: () => void }).off?.();
       await storage.close();
     }
   };
@@ -106,5 +105,5 @@ export function createClient(config: VennClientConfig = {}): VennClient {
 
 export { HydrationBarrier } from './sync/barrier';
 export { createStorageAdapter } from './storage/adapter';
-export type { StorageAdapter, StorageRecord } from './storage/adapter';
+export type { StorageAdapter, StorageRecord } from './storage/types';
 export type { VennClientConfig, Namespace } from './types';
