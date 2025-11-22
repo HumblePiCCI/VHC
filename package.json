@@ -6,7 +6,10 @@
     "build": "pnpm -r --workspace-root=false build",
     "test": "pnpm -r --workspace-root=false test",
     "lint": "pnpm -r --workspace-root=false lint",
-    "vh": "pnpm --filter \"@vh/cli\" exec tsx src/index.ts"
+    "vh": "pnpm --filter \"@vh/cli\" exec tsx src/index.ts",
+    "test:quick": "vitest run",
+    "test:workflow": "act -j build-and-test",
+    "deps:check": "madge --circular --extensions ts,tsx ."
   },
   "devDependencies": {
     "typescript": "^5.4.5"
