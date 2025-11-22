@@ -1,6 +1,14 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@vh/crypto': resolve(__dirname, 'packages/crypto/src/index.ts'),
+      '@vh/crypto/primitives': resolve(__dirname, 'packages/crypto/src/primitives.ts'),
+      '@vh/crypto/provider': resolve(__dirname, 'packages/crypto/src/provider.ts')
+    }
+  },
   test: {
     include: [
       'packages/**/src/**/*.{test,spec}.{ts,tsx,js,jsx}',
