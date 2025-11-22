@@ -41,6 +41,10 @@ const HomeComponent = () => {
   const [statusTrail, setStatusTrail] = useState<string[]>(() => ['idle']);
 
   useEffect(() => {
+    if (E2E_MODE) {
+      // In E2E we rely on the mock worker in useAI to avoid heavy model downloads.
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -131,8 +135,8 @@ const HomeComponent = () => {
 
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between text-sm text-slate-600">
-              <span>Status: {status}</span>
-              <span>Progress: {progress}%</span>
+              <span data-testid="current-status">Status: {status}</span>
+              <span data-testid="current-progress">Progress: {progress}%</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600" data-testid="status-trail">
               {statusTrail.map((s) => (
