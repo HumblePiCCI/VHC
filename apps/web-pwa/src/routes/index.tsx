@@ -5,7 +5,8 @@ import { createClient } from '@vh/gun-client';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
 import { useIdentity } from '../hooks/useIdentity';
 
-const vennClient = createClient({ peers: ['http://localhost:7777/gun'] });
+const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
+const vennClient = createClient({ peers: E2E_MODE ? [] : ['http://localhost:7777/gun'] });
 
 const RootComponent = () => (
   <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
@@ -37,6 +38,7 @@ const HomeComponent = () => {
   } = useAI({
     workerFactory
   });
+  const [statusTrail, setStatusTrail] = useState<string[]>(() => ['idle']);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +76,13 @@ const HomeComponent = () => {
       });
     }
   }, [result]);
+
+  useEffect(() => {
+    setStatusTrail((prev) => {
+      if (prev[prev.length - 1] === status) return prev;
+      return [...prev, status].slice(-5);
+    });
+  }, [status]);
 
   const handleAnalyze = () => {
     const demo = `A local-first stack powers civic analysis. The system processes text on-device to surface bias and provide balanced counterpoints.`;
@@ -124,6 +133,11 @@ const HomeComponent = () => {
             <div className="flex items-center justify-between text-sm text-slate-600">
               <span>Status: {status}</span>
               <span>Progress: {progress}%</span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600" data-testid="status-trail">
+              {statusTrail.map((s) => (
+                <span key={s} className="rounded bg-slate-100 px-2 py-1">{`Status: ${s}`}</span>
+              ))}
             </div>
             {message && <p className="mt-2 text-sm text-slate-600">{message}</p>}
             {result && (
