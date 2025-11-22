@@ -15,6 +15,11 @@
     "lint:loc": "./tools/scripts/check-loc.sh",
     "bundle:check": "node tools/scripts/check-bundle-size.js"
   },
+  "pnpm": {
+    "overrides": {
+      "@types/node": "20.17.19"
+    }
+  },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.1.4",
     "madge": "^8.0.0",
