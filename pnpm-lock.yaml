@@ -148,6 +148,22 @@ importers:
         specifier: ^2.1.4
         version: 2.1.9(@types/node@20.19.25)
 
+  packages/data-model:
+    dependencies:
+      '@vh/types':
+        specifier: workspace:*
+        version: link:../types
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.30
+        version: 20.19.25
+      typescript:
+        specifier: ^5.4.5
+        version: 5.9.3
+
   packages/e2e:
     devDependencies:
       '@playwright/test':
