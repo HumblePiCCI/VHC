@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@vh/ui';
 import { createClient } from '@vh/gun-client';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
-import AIWorker from '@vh/ai-engine/worker?worker';
 import { useIdentity } from '../hooks/useIdentity';
 
 const vennClient = createClient({ peers: ['http://localhost:7777/gun'] });
@@ -30,13 +29,32 @@ const RootComponent = () => (
 
 const HomeComponent = () => {
   const { identity, status: identityStatus, createIdentity, error: identityError } = useIdentity();
+  const [workerFactory, setWorkerFactory] = useState<(() => Worker) | undefined>();
   const {
     state: { status, progress, result, message },
     analyze,
     reset
   } = useAI({
-    workerFactory: () => new AIWorker(),
+    workerFactory
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const mod = await import('@vh/ai-engine/worker?worker');
+        if (!cancelled) {
+          const WorkerCtor = (mod as any).default as { new (): Worker };
+          setWorkerFactory(() => () => new WorkerCtor());
+        }
+      } catch (err) {
+        console.warn('[vh:web-pwa] AI worker unavailable, using mock fallback', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [history, setHistory] = useState<AnalysisResult[]>(() => {
     try {
@@ -72,7 +90,7 @@ const HomeComponent = () => {
           <p className="font-semibold">Welcome to TRINITY</p>
           <p className="text-sm text-amber-800">No identity found. Create a local identity to join the mesh.</p>
           <div className="mt-3 flex gap-3">
-            <Button onClick={() => createIdentity()} disabled={identityStatus === 'creating'}>
+            <Button onClick={() => createIdentity()} disabled={identityStatus === 'creating'} data-testid="create-identity-btn">
               {identityStatus === 'creating' ? 'Creating…' : 'Create Identity'}
             </Button>
             {identityError && <span className="text-xs text-red-700">{identityError}</span>}

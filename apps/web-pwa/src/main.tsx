@@ -4,6 +4,8 @@ import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routes';
 import './index.css';
 
+console.info('[vh:web-pwa] main.tsx executing, mounting router...');
+
 const router = createRouter({ routeTree });
 
 declare module '@tanstack/react-router' {
