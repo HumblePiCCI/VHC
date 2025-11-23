@@ -1,11 +1,12 @@
 import { createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Button } from '@vh/ui';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
 import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
-import { WalletPanel } from './WalletPanel';
-import { AnalysisFeed } from './AnalysisFeed';
+
+const WalletPanel = lazy(() => import('./WalletPanel').then((mod) => ({ default: mod.WalletPanel })));
+const AnalysisFeed = lazy(() => import('./AnalysisFeed').then((mod) => ({ default: mod.AnalysisFeed })));
 
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 
@@ -246,8 +247,12 @@ const HomeComponent = () => {
             </div>
           )}
 
-          <WalletPanel />
-          <AnalysisFeed />
+          <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading wallet…</div>}>
+            <WalletPanel />
+          </Suspense>
+          <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading analyses…</div>}>
+            <AnalysisFeed />
+          </Suspense>
 
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between text-sm text-slate-600">

@@ -47,6 +47,44 @@ export function isE2EMode(): boolean {
 }
 
 function createMockClient(): VennClient {
+  const MESH_STORAGE_KEY = '__VH_MESH_STORE__';
+  const readMesh = () => {
+    try {
+      const raw = localStorage.getItem(MESH_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as Record<string, any>) : {};
+    } catch {
+      return {};
+    }
+  };
+  const writeMesh = (data: Record<string, any>) => {
+    try {
+      localStorage.setItem(MESH_STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      /* ignore */
+    }
+  };
+  const mesh = {
+    get(scope: string) {
+      return {
+        get(key: string) {
+          return {
+            once(cb: (data: any) => void) {
+              const store = readMesh();
+              cb(store[scope]?.[key]);
+            },
+            put(value: any, cb?: (ack?: { err?: string }) => void) {
+              const store = readMesh();
+              store[scope] = store[scope] ?? {};
+              store[scope][key] = value;
+              writeMesh(store);
+              cb?.();
+            }
+          };
+        }
+      };
+    }
+  } as unknown as VennClient['mesh'];
+
   return {
     config: { peers: [] },
     hydrationBarrier: { ready: true, prepare: async () => {} } as any,
@@ -66,6 +104,7 @@ function createMockClient(): VennClient {
     chat: { send: async () => {} } as any,
     outbox: { enqueue: async () => {} } as any,
     createSession: async () => ({ token: 'mock-token', trustScore: 1, nullifier: 'mock-nullifier' }),
+    mesh,
     sessionReady: true,
     markSessionReady: () => {}
   };

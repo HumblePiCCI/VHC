@@ -67,21 +67,16 @@
 ## Phase 3: VENN (Application & Nervous System)
 
 ### 3.1 Canonical Analysis Protocol
-- [ ] **Schema:** Define `CanonicalAnalysis` schema in `packages/data-model`.
-- [ ] **Protocol:** Implement "First-to-File" logic:
-    1. Hash URL + Timestamp -> `canonicalId`.
-    2. Query Gun for existing Analysis by `canonicalId`.
-    3. If missing, generate via WebLLM (**Local-Only Inference**) and publish.
-    4. If exists, display existing Analysis.
+- [x] **Schema:** Define `CanonicalAnalysis` (with `urlHash`) and `CivicDecay` schemas.
+- [x] **Protocol:** Implement `getOrGenerate` (First-to-File) and `applyDecay` logic.
 
 ### 3.2 Civic Decay Logic
-- [ ] **Algo:** Implement decay function (weight halves per interaction).
-- [ ] **Storage:** Persist decay state locally to ensure idempotent application across sessions.
+- [x] **Storage:** Persist decay state locally to ensure idempotent application across sessions.
 
 ### 3.3 UI Polish & Integration
 - [x] **Feed:** Create a "News Feed" view showing recent Canonical Analyses.
 - [x] **Wallet:** Create a "Wallet" view showing RGU balance and UBE claim status.
-- [ ] **Performance:** Enforce Bundle Budget (≤ 1 MiB gz) and Lighthouse Perf ≥ 90.
+- [x] **Performance:** Enforce Bundle Budget (≤ 1 MiB gz) and Lighthouse Perf ≥ 90.
 
 **DoD:** User can paste a URL, generate/view an Analysis (local inference), and see it appear in the global feed. UI meets performance budgets.
 
