@@ -19,48 +19,48 @@
 ## Phase 1: Governance & Voting (GWC)
 
 ### 1.1 Quadratic Funding Logic
-- [ ] **Contract:** Enhance `QuadraticFunding.sol` with full pooling and distribution logic.
-- [ ] **Gating:** Voting and Matching MUST be gated by valid **Attestation** (`trust_score` check).
-- [ ] **Tests:** Add specific test cases for non-attested attempts (must revert).
+- [x] **Contract:** Enhance `QuadraticFunding.sol` with full pooling and distribution logic.
+- [x] **Gating:** Voting and Matching MUST be gated by valid **Attestation** (`trust_score` check).
+- [x] **Tests:** Add specific test cases for non-attested attempts (must revert).
 
 ### 1.2 Proposal System
-- [ ] **Schema:** Define `Proposal` schema in `data-model` with validation (Zod).
-- [ ] **Flow:** Create "Submit Proposal" flow (requires minimum RGU stake + Attestation).
-- [ ] **E2E:** Verify "Submit -> Vote -> Match" flow in Offline Mock Mode.
+- [x] **Schema:** Define `Proposal` schema in `data-model` with validation (Zod).
+- [x] **Flow:** Create "Submit Proposal" flow (requires minimum RGU stake + Attestation).
+- [x] **E2E:** Verify "Submit -> Vote -> Match" flow in Offline Mock Mode.
 
 ---
 
 ## Phase 2: The Civic Feed & Nervous System (VENN)
 
 ### 2.1 The Civic Feed Experience (UX)
-- [ ] **Feed:** Virtualized infinite scroll.
+- [x] **Feed:** Virtualized infinite scroll.
     - **Tests:** Component tests for windowing thresholds, empty/error states.
-- [ ] **Metrics:**
+- [x] **Metrics:**
     - **Eye:** Read Count (Unique Expansions).
     - **Lightbulb:** Global Engagement Score (Sum of all User Scores).
-- [ ] **Transitions:** "Lift & Hover" effect (Scale + Z-Index) on expansion.
+- [x] **Transitions:** "Lift & Hover" effect (Scale + Z-Index) on expansion.
     - **Tests:** Verify lift state, metric rendering, and a11y/keyboard support.
-- [ ] **Analysis UI:**
+- [x] **Analysis UI:**
     - Narrative Summary.
     - **Perspectives Table:** Two columns (Frame/Reframe).
     - **Voting:** Independent +/- toggle per cell (Frame & Reframe).
     - **Logic:** 3-state (Agree/Disagree/None). Toggling active state resets to None. Switching state flips vote.
     - **Stats:** Display aggregate sentiment ratio for each item.
-- [ ] **State Management:**
+- [x] **State Management:**
     - **Tests:** Unit tests for pagination, caching, and local persistence.
     - **E2E:** Mocked offline mode (no network).
 
 ### 2.2 The Nervous System (Engine)
-- [ ] **Civic Decay Algorithm:**
+- [x] **Civic Decay Algorithm:**
     - **Formula:** `next = current + (2.0 - current) * 0.3`.
     - **Tests:** Verify asymptotic ceiling (never > 2.0) and monotonic growth.
     - **Scope:** Applied to the User's contribution to the Article's "Lightbulb" score.
-- [ ] **Local State:** Persist `article_interaction_state` (current score) in Gun/IDB.
-- [ ] **Optimization:** Integrate `q4f16_1` (or optimal) weights.
+- [x] **Local State:** Persist `article_interaction_state` (current score) in Gun/IDB.
+- [x] **Optimization:** Integrate `q4f16_1` (or optimal) weights.
     - **Validation:** Worker entry < 20KB, Lazy Chunk < 10MB.
-- [ ] **Caching:** Implement persistent caching (IndexedDB) for weights & analysis.
+- [x] **Caching:** Implement persistent caching (IndexedDB) for weights & analysis.
     - **Tests:** Verify Warm Cache latency < 2s and Cold Start fallback.
-- [ ] **System Prompt:** Implement `prompts.ts` using the following strict guidelines:
+- [x] **System Prompt:** Implement `prompts.ts` using the following strict guidelines:
     - **Tests:** Coverage for prompt builder and response parsing.
 
     ```python

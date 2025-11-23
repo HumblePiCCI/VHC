@@ -42,6 +42,7 @@ export declare namespace QuadraticFunding {
     sumOfSqrtContributions: BigNumberish;
     exists: boolean;
     withdrawn: boolean;
+    matchedAmount: BigNumberish;
   };
 
   export type ProjectStructOutput = [
@@ -49,13 +50,15 @@ export declare namespace QuadraticFunding {
     totalContributions: bigint,
     sumOfSqrtContributions: bigint,
     exists: boolean,
-    withdrawn: boolean
+    withdrawn: boolean,
+    matchedAmount: bigint
   ] & {
     recipient: string;
     totalContributions: bigint;
     sumOfSqrtContributions: bigint;
     exists: boolean;
     withdrawn: boolean;
+    matchedAmount: bigint;
   };
 }
 
@@ -73,10 +76,13 @@ export interface QuadraticFundingInterface extends Interface {
       | "getRoleAdmin"
       | "grantRole"
       | "hasRole"
+      | "matchFunds"
+      | "matchesComputed"
       | "matchingPool"
       | "matchingWeight"
       | "minTrustScore"
       | "participantInfo"
+      | "poolFunds"
       | "previewMatch"
       | "projectCount"
       | "projectDetails"
@@ -94,6 +100,7 @@ export interface QuadraticFundingInterface extends Interface {
   getEvent(
     nameOrSignatureOrTopic:
       | "FundsWithdrawn"
+      | "MatchingCalculated"
       | "MatchingPoolFunded"
       | "MinTrustScoreUpdated"
       | "ParticipantRecorded"
@@ -150,6 +157,14 @@ export interface QuadraticFundingInterface extends Interface {
     values: [BytesLike, AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "matchFunds",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "matchesComputed",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "matchingPool",
     values?: undefined
   ): string;
@@ -164,6 +179,10 @@ export interface QuadraticFundingInterface extends Interface {
   encodeFunctionData(
     functionFragment: "participantInfo",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "poolFunds",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "previewMatch",
@@ -243,6 +262,11 @@ export interface QuadraticFundingInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "grantRole", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "hasRole", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "matchFunds", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "matchesComputed",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "matchingPool",
     data: BytesLike
@@ -259,6 +283,7 @@ export interface QuadraticFundingInterface extends Interface {
     functionFragment: "participantInfo",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "poolFunds", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "previewMatch",
     data: BytesLike
@@ -315,6 +340,19 @@ export namespace FundsWithdrawnEvent {
     projectId: bigint;
     recipient: string;
     amount: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace MatchingCalculatedEvent {
+  export type InputTuple = [projectId: BigNumberish, matchAmount: BigNumberish];
+  export type OutputTuple = [projectId: bigint, matchAmount: bigint];
+  export interface OutputObject {
+    projectId: bigint;
+    matchAmount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -567,6 +605,10 @@ export interface QuadraticFunding extends BaseContract {
     "view"
   >;
 
+  matchFunds: TypedContractMethod<[], [void], "nonpayable">;
+
+  matchesComputed: TypedContractMethod<[], [boolean], "view">;
+
   matchingPool: TypedContractMethod<[], [bigint], "view">;
 
   matchingWeight: TypedContractMethod<[], [bigint], "view">;
@@ -578,6 +620,8 @@ export interface QuadraticFunding extends BaseContract {
     [QuadraticFunding.ParticipantStructOutput],
     "view"
   >;
+
+  poolFunds: TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
 
   previewMatch: TypedContractMethod<
     [projectId: BigNumberish],
@@ -693,6 +737,12 @@ export interface QuadraticFunding extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "matchFunds"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "matchesComputed"
+  ): TypedContractMethod<[], [boolean], "view">;
+  getFunction(
     nameOrSignature: "matchingPool"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
@@ -708,6 +758,9 @@ export interface QuadraticFunding extends BaseContract {
     [QuadraticFunding.ParticipantStructOutput],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "poolFunds"
+  ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "previewMatch"
   ): TypedContractMethod<[projectId: BigNumberish], [bigint], "view">;
@@ -767,6 +820,13 @@ export interface QuadraticFunding extends BaseContract {
     FundsWithdrawnEvent.InputTuple,
     FundsWithdrawnEvent.OutputTuple,
     FundsWithdrawnEvent.OutputObject
+  >;
+  getEvent(
+    key: "MatchingCalculated"
+  ): TypedContractEvent<
+    MatchingCalculatedEvent.InputTuple,
+    MatchingCalculatedEvent.OutputTuple,
+    MatchingCalculatedEvent.OutputObject
   >;
   getEvent(
     key: "MatchingPoolFunded"
@@ -842,6 +902,17 @@ export interface QuadraticFunding extends BaseContract {
       FundsWithdrawnEvent.InputTuple,
       FundsWithdrawnEvent.OutputTuple,
       FundsWithdrawnEvent.OutputObject
+    >;
+
+    "MatchingCalculated(uint256,uint256)": TypedContractEvent<
+      MatchingCalculatedEvent.InputTuple,
+      MatchingCalculatedEvent.OutputTuple,
+      MatchingCalculatedEvent.OutputObject
+    >;
+    MatchingCalculated: TypedContractEvent<
+      MatchingCalculatedEvent.InputTuple,
+      MatchingCalculatedEvent.OutputTuple,
+      MatchingCalculatedEvent.OutputObject
     >;
 
     "MatchingPoolFunded(address,uint256,uint256)": TypedContractEvent<

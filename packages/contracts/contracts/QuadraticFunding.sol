@@ -18,6 +18,7 @@ contract QuadraticFunding is AccessControl {
     uint256 public matchingPool;
     uint256 public distributedMatching;
     bool public roundClosed;
+    bool public matchesComputed;
 
     struct Participant {
         uint256 trustScore;
@@ -31,6 +32,7 @@ contract QuadraticFunding is AccessControl {
         uint256 sumOfSqrtContributions;
         bool exists;
         bool withdrawn;
+        uint256 matchedAmount;
     }
 
     mapping(address => Participant) private participants;
@@ -42,6 +44,7 @@ contract QuadraticFunding is AccessControl {
     event VoteCast(uint256 indexed projectId, address indexed voter, uint256 amount, uint256 totalContribution);
     event MatchingPoolFunded(address indexed from, uint256 amount, uint256 totalPool);
     event RoundClosed(uint256 indexed atBlock);
+    event MatchingCalculated(uint256 indexed projectId, uint256 matchAmount);
     event FundsWithdrawn(uint256 indexed projectId, address indexed recipient, uint256 amount);
     event MinTrustScoreUpdated(uint256 minTrustScore);
 
@@ -81,19 +84,28 @@ contract QuadraticFunding is AccessControl {
             totalContributions: 0,
             sumOfSqrtContributions: 0,
             exists: true,
-            withdrawn: false
+            withdrawn: false,
+            matchedAmount: 0
         });
 
         emit ProjectRegistered(projectId, recipient);
     }
 
-    function fundMatchingPool(uint256 amount) external onlyRole(TREASURER_ROLE) {
+    function _fundMatchingPool(uint256 amount) internal {
         require(amount > 0, "amount required");
         matchingPool += amount;
         bool ok = rgu.transferFrom(msg.sender, address(this), amount);
         require(ok, "transfer failed");
 
         emit MatchingPoolFunded(msg.sender, amount, matchingPool);
+    }
+
+    function fundMatchingPool(uint256 amount) external onlyRole(TREASURER_ROLE) {
+        _fundMatchingPool(amount);
+    }
+
+    function poolFunds(uint256 amount) external onlyRole(TREASURER_ROLE) {
+        _fundMatchingPool(amount);
     }
 
     function castVote(uint256 projectId, uint256 amount) external {
@@ -134,6 +146,29 @@ contract QuadraticFunding is AccessControl {
         emit RoundClosed(block.number);
     }
 
+    function matchFunds() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(roundClosed, "round open");
+        require(!matchesComputed, "already matched");
+        require(totalWeight > 0, "no weight");
+
+        uint256 remainingPool = matchingPool;
+        for (uint256 projectId = 1; projectId <= projectCount; projectId++) {
+            Project storage project = projects[projectId];
+            if (!project.exists || project.sumOfSqrtContributions == 0) {
+                continue;
+            }
+            uint256 weight = project.sumOfSqrtContributions * project.sumOfSqrtContributions;
+            uint256 matchAmount = (matchingPool * weight) / totalWeight;
+            if (matchAmount > remainingPool) {
+                matchAmount = remainingPool;
+            }
+            project.matchedAmount = matchAmount;
+            remainingPool -= matchAmount;
+            emit MatchingCalculated(projectId, matchAmount);
+        }
+        matchesComputed = true;
+    }
+
     function previewMatch(uint256 projectId) public view returns (uint256) {
         Project memory project = projects[projectId];
         if (!project.exists || project.sumOfSqrtContributions == 0 || totalWeight == 0) {
@@ -151,7 +186,7 @@ contract QuadraticFunding is AccessControl {
         require(!project.withdrawn, "already withdrawn");
         require(project.recipient == msg.sender, "not recipient");
 
-        uint256 matchAmount = previewMatch(projectId);
+        uint256 matchAmount = project.matchedAmount > 0 ? project.matchedAmount : previewMatch(projectId);
         uint256 totalPayout = project.totalContributions + matchAmount;
         project.withdrawn = true;
 

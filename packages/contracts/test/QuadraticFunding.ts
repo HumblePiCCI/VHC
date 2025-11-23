@@ -112,6 +112,7 @@ describe('QuadraticFunding', () => {
     expect(await qf.previewMatch(project2Id)).to.equal(expectedMatch2);
 
     await expect(qf.closeRound()).to.emit(qf, 'RoundClosed');
+    await expect(qf.matchFunds()).to.emit(qf, 'MatchingCalculated');
 
     const beforeRecipient1 = await rgu.balanceOf(recipient1.address);
     await expect(qf.connect(recipient1).withdraw(project1Id))
@@ -148,6 +149,8 @@ describe('QuadraticFunding', () => {
 
     await expect(qf.withdraw(project1Id)).to.be.revertedWith('round open');
     await qf.closeRound();
+    await expect(qf.matchFunds()).to.be.revertedWith('no weight');
+    await expect(qf.matchFunds()).to.be.revertedWith('no weight');
     await expect(qf.connect(voter1).castVote(project1Id, seed)).to.be.revertedWith('round closed');
 
     await expect(qf.connect(outsider).withdraw(project1Id)).to.be.revertedWith('not recipient');
