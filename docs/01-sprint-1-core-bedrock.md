@@ -44,21 +44,21 @@
 ## Phase 2: GWC (Economics & Ledger)
 
 ### 2.1 Testnet Deployment
-- [ ] **Infra:** Configure Hardhat for Sepolia/Base Testnet deployment.
-- [ ] **Security:** Enforce strict separation of environment variables (no Mainnet keys in Testnet env).
-- [ ] **Script:** Create `deploy-testnet.ts` with **Etherscan verification**.
-- [ ] **Faucet:** Implement a simple testnet faucet for RGU tokens (rate-limited by Attestation).
+- [x] **Infra:** Configure Hardhat for Sepolia/Base Testnet deployment.
+- [x] **Security:** Enforce strict separation of environment variables (no Mainnet keys in Testnet env).
+- [x] **Script:** Create `deploy-testnet.ts` with **Etherscan verification**.
+- [x] **Faucet:** Implement a simple testnet faucet for RGU tokens (rate-limited by Attestation).
 
 ### 2.2 UBE Drip (Universal Basic Equity)
-- [ ] **Contract:** Implement `UBE.sol` (Drip logic based on verified identity).
-- [ ] **Auditability:** Ensure all claim events are indexed for off-chain verification.
-- [ ] **Integration:** Connect PWA to `UBE` contract to claim daily drip.
-- [ ] **Coverage:** 100% test coverage for new `UBE` contract.
+- [x] **Contract:** Implement `UBE.sol` (Drip logic based on verified identity).
+- [x] **Auditability:** Ensure all claim events are indexed for off-chain verification.
+- [x] **Integration:** Connect PWA to `UBE` contract to claim daily drip.
+- [x] **Coverage:** 100% test coverage for new `UBE` contract.
 
 ### 2.3 Quadratic Funding (Basic)
-- [ ] **Contract:** Implement `QuadraticFunding.sol` (Pool matching logic).
-- [ ] **Vote:** Implement `castVote` function (Attestation-gated).
-- [ ] **Coverage:** 100% test coverage for `QuadraticFunding` contract.
+- [x] **Contract:** Implement `QuadraticFunding.sol` (Pool matching logic).
+- [x] **Vote:** Implement `castVote` function (Attestation-gated).
+- [x] **Coverage:** 100% test coverage for `QuadraticFunding` contract.
 
 **DoD:** Contracts deployed to Testnet, verified on Explorer, and PWA can claim UBE drip. All new contracts meet 100% coverage.
 
