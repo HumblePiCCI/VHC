@@ -5,7 +5,8 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: true
+    host: true,
+    port: 2048
   },
   define: {
     'process.env': {},

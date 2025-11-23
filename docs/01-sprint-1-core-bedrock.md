@@ -85,25 +85,25 @@
 ## Phase 4: Integration & Acceptance
 
 ### 4.1 E2E Tests
-- [ ] **Flow:** Full "Zero to Hero" flow:
+- [x] **Flow:** Full "Zero to Hero" flow:
     1. Attest & Create Identity.
     2. Claim UBE (Mock Chain).
     3. Analyze a URL (First-to-File).
     4. Link Second Device.
     5. Verify Sync.
-- [ ] **Constraint:** E2E tests must run with `VITE_E2E_MODE=true` forcing zero network access (True Offline Mode).
+- [x] **Constraint:** E2E tests must run with `VITE_E2E_MODE=true` forcing zero network access (True Offline Mode).
 
 ### 4.2 Performance & Security
-- [ ] **Audit:** Internal security review of `AttestationVerifier`.
-- [ ] **Perf:** Lighthouse CI gate passing (Perf ≥ 90).
+- [x] **Audit:** Internal security review of `AttestationVerifier`.
+- [x] **Perf:** Lighthouse CI gate passing (Perf ≥ 90).
 
 **DoD:** All E2E tests pass, CI is green (Quality, Unit, Build, E2E, Bundle, Lighthouse), and public beta candidates are ready.
 
 ---
 
 ## Exit Criteria for Sprint 1
-- [ ] **CI Green:** All gates (Quality, Unit, Build, E2E, Bundle, Lighthouse) passing.
-- [ ] **Non-Negotiables:** 100% Coverage and LOC caps satisfied.
-- [ ] **Attestation Enforced:** No session creation without verified `trust_score`.
-- [ ] **Public Beta:** v0.1 released to internal testers.
-- [ ] **Testnet:** Contracts live on Sepolia/Base.
+- [x] **CI Green:** All gates (Quality, Unit, Build, E2E, Bundle, Lighthouse) passing.
+- [x] **Non-Negotiables:** 100% Coverage and LOC caps satisfied.
+- [x] **Attestation Enforced:** No session creation without verified `trust_score`.
+- [x] **Public Beta:** v0.1 released to internal testers.
+- [x] **Testnet:** Contracts live on Sepolia/Base.

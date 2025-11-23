@@ -260,8 +260,8 @@ const HomeComponent = () => {
               <span data-testid="current-progress">Progress: {progress}%</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-600" data-testid="status-trail">
-              {statusTrail.map((s) => (
-                <span key={s} className="rounded bg-slate-100 px-2 py-1">{`Status: ${s}`}</span>
+              {statusTrail.map((s, i) => (
+                <span key={i} className="rounded bg-slate-100 px-2 py-1">{`Status: ${s}`}</span>
               ))}
             </div>
             {message && <p className="mt-2 text-sm text-slate-600">{message}</p>}

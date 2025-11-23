@@ -27,5 +27,6 @@ if (root) {
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   navigator.serviceWorker
     .register('/sw.js')
+    .then((reg) => console.log('[vh:web-pwa] SW registered:', reg))
     .catch((err) => console.warn('[vh:web-pwa] service worker registration failed', err));
 }
