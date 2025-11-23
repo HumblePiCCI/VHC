@@ -18,6 +18,18 @@ export interface DecayState {
   lastUpdated: number;
 }
 
+export function calculateDecay(current: number, interactions: number): number {
+  let value = current;
+  for (let i = 0; i < interactions; i++) {
+    value = value + (2.0 - value) * 0.3;
+    if (value > 2.0) {
+      value = 2.0;
+      break;
+    }
+  }
+  return Math.min(value, 2.0);
+}
+
 function loadState(storage: DecayStorage): Record<string, DecayState> {
   try {
     const raw = storage.getItem(STORAGE_KEY);

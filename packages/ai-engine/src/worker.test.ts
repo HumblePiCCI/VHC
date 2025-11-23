@@ -61,6 +61,22 @@ describe('worker', () => {
     expect(posts.some((p) => p.type === 'ANALYSIS_COMPLETE')).toBe(true);
   });
 
+  it('returns cached analysis without re-querying engine', async () => {
+    const { default: _ } = await workerModule();
+    const fakeResult = { summary: 'cached', biases: [], counterpoints: [], bias_claim_quote: [], justify_bias_claim: [] };
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify(fakeResult) } }]
+    });
+    await (globalThis as any).onmessage({ data: { type: 'GENERATE_ANALYSIS', payload: { articleText: 'repeat me' } } });
+    expect(posts.some((p) => p.type === 'ANALYSIS_COMPLETE')).toBe(true);
+
+    posts.length = 0;
+    mockCreate.mockClear();
+    await (globalThis as any).onmessage({ data: { type: 'GENERATE_ANALYSIS', payload: { articleText: 'repeat me' } } });
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(posts.some((p) => p.type === 'ANALYSIS_COMPLETE')).toBe(true);
+  });
+
   it('emits error when JSON missing', async () => {
     const { default: _ } = await workerModule();
     mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: 'no json here' } }] });

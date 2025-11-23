@@ -1,5 +1,7 @@
 import type { MLCEngine, InitProgressReport } from '@mlc-ai/web-llm';
 import { generateAnalysisPrompt, AnalysisResult } from './prompts';
+import { hashUrl } from './analysis';
+import { cacheAnalysisResult, cacheModelMeta, getCachedAnalysisResult } from './cache';
 
 let engine: MLCEngine | null = null;
 
@@ -31,10 +33,18 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
       const { modelId } = payload;
       const loadedEngine = await ensureEngine();
       await loadedEngine.reload(modelId);
+      await cacheModelMeta(modelId, { loadedAt: Date.now() });
       self.postMessage({ type: 'MODEL_LOADED' } as WorkerResponse);
     } else if (type === 'GENERATE_ANALYSIS') {
       const loadedEngine = await ensureEngine();
       const { articleText } = payload;
+
+      const articleHash = hashUrl(articleText);
+      const cached = await getCachedAnalysisResult<AnalysisResult>(articleHash);
+      if (cached) {
+        self.postMessage({ type: 'ANALYSIS_COMPLETE', payload: cached } as WorkerResponse);
+        return;
+      }
 
       const prompt = generateAnalysisPrompt({ articleText });
 
@@ -62,6 +72,7 @@ self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
         throw new Error(`Failed to parse JSON: ${(parseError as Error).message}`);
       }
 
+      await cacheAnalysisResult(articleHash, result);
       self.postMessage({ type: 'ANALYSIS_COMPLETE', payload: result } as WorkerResponse);
     }
   } catch (error) {

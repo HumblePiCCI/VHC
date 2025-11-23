@@ -28,7 +28,7 @@ export interface UseAIOptions {
   workerFactory?: () => Worker;
 }
 
-const DEFAULT_MODEL_ID = 'Llama-3-8B-Instruct-q4f32_1-MLC';
+const DEFAULT_MODEL_ID = 'Llama-3-8B-Instruct-q4f16_1-MLC';
 
 class MockWorker implements Worker {
   onmessage: ((this: Worker, ev: MessageEvent<WorkerMessage>) => any) | null = null;

@@ -10,6 +10,7 @@ export interface AnalysisResult {
   biases: string[];
   counterpoints: string[];
   confidence?: number;
+  perspectives?: Array<{ frame: string; reframe: string }>;
 }
 
 // ------------------------------------------------------------------------------
@@ -218,4 +219,30 @@ export function generateAnalysisPrompt(options: {
   ]
     .filter(Boolean)
     .join('\n\n');
+}
+
+export function generateFrameReframePrompt(articleText: string): string {
+  const format = `
+{
+  "summary": "[2-3 sentence summary of the article]",
+  "frame": [
+    "[Concise, assertive 'frame' perspective 1]",
+    "[Concise, assertive 'frame' perspective 2]"
+  ],
+  "reframe": [
+    "[Concise, assertive 'reframe' perspective 1]",
+    "[Concise, assertive 'reframe' perspective 2]"
+  ]
+}
+`.trim();
+
+  return [
+    'You are generating a balanced analysis with two opposing columns: Frame and Reframe.',
+    'Use terse, debate-style claims for each perspective.',
+    'Return JSON only in the format described below.',
+    format,
+    '--- ARTICLE START ---',
+    articleText.trim(),
+    '--- ARTICLE END ---'
+  ].join('\n\n');
 }

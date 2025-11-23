@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { generateAnalysisPrompt, generateOutputFormatReq, shouldUsePreviousPassTemplate } from './prompts';
+import {
+  generateAnalysisPrompt,
+  generateFrameReframePrompt,
+  generateOutputFormatReq,
+  shouldUsePreviousPassTemplate
+} from './prompts';
 
 describe('prompts', () => {
   it('generates output format requirement block', () => {
@@ -36,5 +41,14 @@ describe('prompts', () => {
   it('applies review threshold helper', () => {
     expect(shouldUsePreviousPassTemplate(2, 3)).toBe(false);
     expect(shouldUsePreviousPassTemplate(3, 3)).toBe(true);
+  });
+
+  it('builds frame/reframe prompt with required sections', () => {
+    const text = 'Frame and Reframe body';
+    const prompt = generateFrameReframePrompt(text);
+    expect(prompt).toContain('Frame and Reframe');
+    expect(prompt).toContain('"frame"');
+    expect(prompt).toContain('"reframe"');
+    expect(prompt).toContain(text);
   });
 });

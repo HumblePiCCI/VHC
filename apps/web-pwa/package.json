@@ -17,6 +17,8 @@
     "@vh/types": "workspace:*",
     "@vh/ui": "workspace:*",
     "ethers": "^6.13.4",
+    "react-window": "^1.8.10",
+    "react-virtualized-auto-sizer": "^1.0.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.3"

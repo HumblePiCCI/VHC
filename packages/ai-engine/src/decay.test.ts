@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyDecay, getDecayState, type CivicInteraction } from './decay';
+import { applyDecay, calculateDecay, getDecayState, type CivicInteraction } from './decay';
 
 class MemoryStorage {
   private map = new Map<string, string>();
@@ -52,5 +52,18 @@ describe('civic decay', () => {
       setItem: () => {}
     };
     expect(getDecayState(storage as any)).toEqual({});
+  });
+
+  it('applies asymptotic decay without exceeding 2.0', () => {
+    const first = calculateDecay(0.5, 1);
+    expect(first).toBeLessThanOrEqual(2);
+    const many = calculateDecay(first, 10);
+    expect(many).toBeLessThanOrEqual(2);
+  });
+
+  it('monotonically increases with more interactions', () => {
+    const a = calculateDecay(0.2, 1);
+    const b = calculateDecay(0.2, 2);
+    expect(b).toBeGreaterThan(a);
   });
 });
