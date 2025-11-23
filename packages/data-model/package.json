@@ -12,14 +12,17 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "@vh/types": "workspace:*",
+    "uuid": "^13.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
+    "@types/uuid": "^11.0.0",
     "typescript": "^5.4.5"
   }
 }
