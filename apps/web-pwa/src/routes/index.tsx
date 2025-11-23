@@ -5,6 +5,7 @@ import { useAI, type AnalysisResult } from '@vh/ai-engine';
 import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
 import { WalletPanel } from './WalletPanel';
+import { AnalysisFeed } from './AnalysisFeed';
 
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 
@@ -246,6 +247,7 @@ const HomeComponent = () => {
           )}
 
           <WalletPanel />
+          <AnalysisFeed />
 
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between text-sm text-slate-600">

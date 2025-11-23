@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AnalysisSchema, MessageSchema, ProfileSchema } from './schemas';
+import { AnalysisSchema, CanonicalAnalysisSchema, CivicDecaySchema, MessageSchema, ProfileSchema } from './schemas';
 
 describe('data-model schemas', () => {
   it('accepts a valid profile', () => {
@@ -75,6 +75,49 @@ describe('data-model schemas', () => {
         bias_vector: {},
         weight: 'bad'
       } as any)
+    ).toThrow();
+  });
+
+  it('validates canonical analysis requires urlHash and url', () => {
+    const valid = CanonicalAnalysisSchema.parse({
+      url: 'https://example.com',
+      urlHash: 'abc123',
+      summary: 'summary',
+      biases: ['bias'],
+      counterpoints: ['counter'],
+      sentimentScore: 0.1,
+      timestamp: Date.now()
+    });
+    expect(valid.urlHash).toBe('abc123');
+
+    expect(() =>
+      CanonicalAnalysisSchema.parse({
+        url: 'notaurl',
+        urlHash: '',
+        summary: 's',
+        biases: [],
+        counterpoints: [],
+        sentimentScore: 0,
+        timestamp: 0
+      })
+    ).toThrow();
+  });
+
+  it('enforces civic decay constraints', () => {
+    const decay = CivicDecaySchema.parse({
+      topicId: 'topic',
+      interactions: 2,
+      weight: 1,
+      lastUpdated: Date.now()
+    });
+    expect(decay.weight).toBeGreaterThan(0);
+    expect(() =>
+      CivicDecaySchema.parse({
+        topicId: '',
+        interactions: -1,
+        weight: -1,
+        lastUpdated: -1
+      })
     ).toThrow();
   });
 });

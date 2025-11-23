@@ -30,3 +30,20 @@ export const SignalSchema = z.object({
   bias_vector: z.record(z.boolean()),
   weight: z.number()
 });
+
+export const CanonicalAnalysisSchema = z.object({
+  url: z.string().url(),
+  urlHash: z.string().min(1),
+  summary: z.string().min(1),
+  biases: z.array(z.string().min(1)),
+  counterpoints: z.array(z.string().min(1)),
+  sentimentScore: z.number().min(-1).max(1),
+  timestamp: z.number().int().nonnegative()
+});
+
+export const CivicDecaySchema = z.object({
+  topicId: z.string().min(1),
+  interactions: z.number().int().nonnegative(),
+  weight: z.number().nonnegative(),
+  lastUpdated: z.number().int().nonnegative()
+});
