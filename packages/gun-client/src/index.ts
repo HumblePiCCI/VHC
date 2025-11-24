@@ -69,7 +69,20 @@ function createNamespace<T>(
       }
       await waitForRemote(chain, barrier);
       await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          console.warn('[vh:gun-client] put timed out, proceeding without ack');
+          resolve();
+        }, 1000);
+
         chain.put(value, (ack?: ChainAck) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
           if (ack?.err) {
             reject(new Error(ack.err));
             return;
@@ -84,7 +97,21 @@ function createNamespace<T>(
 async function waitForRemote<T>(chain: ChainLike<T>, barrier: HydrationBarrier): Promise<void> {
   await barrier.prepare();
   await new Promise<void>((resolve) => {
-    chain.once(() => resolve());
+    let resolved = false;
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.warn('[vh:gun-client] waitForRemote timed out, proceeding anyway');
+        resolve();
+      }
+    }, 500);
+    chain.once(() => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve();
+      }
+    });
   });
 }
 

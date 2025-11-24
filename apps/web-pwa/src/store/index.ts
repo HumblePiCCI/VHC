@@ -87,26 +87,26 @@ function createMockClient(): VennClient {
 
   return {
     config: { peers: [] },
-    hydrationBarrier: { ready: true, prepare: async () => {} } as any,
+    hydrationBarrier: { ready: true, prepare: async () => { } } as any,
     storage: {
       backend: 'memory',
-      hydrate: async () => {},
-      write: async () => {},
+      hydrate: async () => { },
+      write: async () => { },
       read: async () => null,
-      close: async () => {}
+      close: async () => { }
     } as any,
     user: {
       is: null,
       create: async () => ({ pub: 'mock-pub', priv: 'mock-priv', epub: '', epriv: '' }),
       auth: async () => ({ pub: 'mock-pub', priv: 'mock-priv', epub: '', epriv: '' }),
-      leave: async () => {}
+      leave: async () => { }
     } as any,
-    chat: { send: async () => {} } as any,
-    outbox: { enqueue: async () => {} } as any,
+    chat: { send: async () => { } } as any,
+    outbox: { enqueue: async () => { } } as any,
     createSession: async () => ({ token: 'mock-token', trustScore: 1, nullifier: 'mock-nullifier' }),
     mesh,
     sessionReady: true,
-    markSessionReady: () => {}
+    markSessionReady: () => { }
   };
 }
 
@@ -170,9 +170,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         pubkey: randomId(),
         username
       };
+      client.markSessionReady?.();
       await client.user.write(profile);
       persistProfile(profile);
-      client.markSessionReady?.();
       set({ profile, identityStatus: 'ready', sessionReady: true });
     } catch (err) {
       set({ identityStatus: 'error', error: (err as Error).message });

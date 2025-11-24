@@ -83,4 +83,15 @@ describe('createClient', () => {
     const client = createClient({ requireSession: true });
     await expect(client.linkDevice('dev')).rejects.toThrow('Session not ready');
   });
+
+  it('user.write resolves even when put callback never fires (offline)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const client = createClient({ requireSession: false });
+    (userChain.put as any).mockImplementationOnce((_value: any, _cb?: (ack?: any) => void) => {
+      /* no ack */
+    });
+    await expect(client.user.write({ foo: 'bar' } as any)).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledWith('[vh:gun-client] put timed out, proceeding without ack');
+    warn.mockRestore();
+  });
 });
