@@ -117,7 +117,9 @@ The system functions as a Monorepo with polyglot micro-services.
     1.  **Lookup:** User opens URL. App queries Mesh for hash of URL.
     2.  **Scenario A (Exists):** User downloads shared Analysis. WebLLM (Local) audits it. If valid, User votes.
     3.  **Scenario B (New):** **WebLLM (Local)** generates Analysis. User signs and publishes it as the **Canonical Record**.
-    4.  **Civic Decay (Asymptotic):**
+  * **Canonical Record:** For each `urlHash`, at most one `CanonicalAnalysis` (schemaVersion `canonical-analysis-v1`) is stored and reused. Civic signals (votes, decay, messaging threads) key off the canonical `urlHash` and immutable timestamp. See `docs/canonical-analysis-v1.md`.
+  * **Immutability:** CanonicalAnalysis objects are append-only in v1. Corrections or disputes are modeled as separate signals or future schema versions; they are not edited in place.
+  * **Civic Decay (Asymptotic):**
           * Formula: $E_{new} = E_{current} + 0.3 * (2.0 - E_{current})$.
           * Logic: Engagement asymptotically approaches 2.0 to prevent brigading while rewarding depth.
 
@@ -215,6 +217,57 @@ interface SentimentSignal {
   }
 }
 ```
+
+-----
+
+### 6.3 Canonical Analysis (v1)
+
+Canonical Analysis is the canonical record of "what this URL means in VENN-world."
+
+**Schema (`canonical-analysis-v1`):**
+
+```typescript
+type BiasEntry = {
+  bias: string;        // Debate-style claim capturing article’s slant
+  quote: string;       // Direct quote from the article supporting the claim
+  explanation: string; // Why this quote evidences the bias (short, academic)
+  counterpoint: string;// Direct rebuttal / alternative framing
+};
+
+interface CanonicalAnalysisV1 {
+  schemaVersion: 'canonical-analysis-v1';
+  url: string;
+  urlHash: string; // Stable hash of normalized URL
+  summary: string; // 4–6 sentence neutral summary
+  bias_claim_quote: string[];
+  justify_bias_claim: string[];
+  biases: string[];
+  counterpoints: string[];
+  perspectives?: Array<{ frame: string; reframe: string }>;
+  sentimentScore: number; // [-1, 1] overall slant
+  confidence?: number;    // [0, 1] model self-confidence
+  timestamp: number;      // ms since epoch (first write)
+}
+```
+
+**Invariants**
+
+1. `bias_claim_quote.length === justify_bias_claim.length === biases.length === counterpoints.length`.
+2. Summary and all arrays are derived only from the article text (**fact-only rule**).
+3. `schemaVersion` is required and immutable once written.
+
+**Fact-only rule**
+
+Summaries and bias tables MUST NOT introduce information absent from the source article (no new entities, dates, locations, quantities, or motives).
+
+**First-to-file semantics (v1)**
+
+* Canonical analysis is keyed by `urlHash`.
+* The first successfully validated analysis for a `urlHash` is reused; later writes cannot overwrite it in v1.
+* Corrections/disagreements are separate signals (votes, sentiment, replies), not mutations of the canonical object.
+* Future versions (e.g., `canonical-analysis-v2`) may introduce explicit amendment/supersession; v1 treats the record as append-only.
+
+See `docs/canonical-analysis-v1.md` for the precise wire-format contract and validation rules.
 
 -----
 

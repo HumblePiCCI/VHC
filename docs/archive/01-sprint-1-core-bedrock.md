@@ -1,6 +1,9 @@
+01-sprint-1-core-bedrock.md
+
 # Sprint 1: Core Bedrock - Implementation Checklist
 
 **Context:** `System_Architecture.md` v0.0.1 (Sprint 1: The "Data Dividend" & Civic Beta)
+**Note:** This sprint is archived. Canonical Analysis is now formalized in `System_Architecture.md` §6.3 and `docs/canonical-analysis-v1.md`.
 **Goal:** Connect the PWA to the Attestation Service, deploy Contracts to Testnet, and enable the "First-to-File" Canonical Analysis protocol.
 **Status:** [ ] In Progress
 

@@ -1,3 +1,5 @@
+03-sprint-3-the-agora.md
+
 # Sprint 3: The Agora - Implementation Checklist
 
 **Context:** `System_Architecture.md` v0.0.1 (Sprint 3: The "Agora")

@@ -1,3 +1,5 @@
+02-sprint-2-advanced-features.md
+
 # Sprint 2: The Civic Nervous System - Implementation Checklist
 
 **Context:** `System_Architecture.md` v0.0.1 (Sprint 2: The "Civic Nervous System")
@@ -114,10 +116,33 @@
     """
     ```
 
+### 2.3 Canonical Analysis Hard Contract (VENN Engine)
+- [ ] **Schema Lock:** `canonical-analysis-v1` Zod schema implemented in `packages/data-model` and exported as the single `CanonicalAnalysis` type (used by ai-engine, storage, and UI); spec anchored in `docs/canonical-analysis-v1.md`.
+- [ ] **AI Engine Alignment:**
+    - [ ] `AnalysisResult` in `packages/ai-engine/src/prompts.ts` matches the contract (`summary`, `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`, `sentimentScore`, `confidence?`, `perspectives?`, `schemaVersion`, `timestamp`, `url`, `urlHash`).
+    - [ ] `PRIMARY_OUTPUT_FORMAT_REQ` shows `sentimentScore` and `confidence` in the sample JSON.
+- [ ] **Worker Contract:**
+    - [ ] `worker.ts` unwraps `{ step_by_step, final_refined }` and validates raw `AnalysisResult` fallback.
+    - [ ] Tests cover wrapped + raw responses and validation failures.
+- [ ] **First-to-File Logic:**
+    - [ ] `getOrGenerate(url, store, generate)` enforces strict first-to-file on `urlHash`.
+    - [ ] Tests cover `reused=true` for existing and storing once for new.
+- [ ] **Array Invariants:**
+    - [ ] Zod refine enforces equal lengths for `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`.
+    - [ ] Tests prove valid payload passes and mismatched lengths fail.
+- [ ] **Fact-Only Enforcement:**
+    - [ ] Checker flags summaries/biases introducing entities absent from source text.
+    - [ ] Fuzz tests: truncating article text cannot produce longer/more specific summaries; invalid outputs are rejected.
+- [ ] **Deterministic JSON:**
+    - [ ] Stable field set/ordering; snapshot example payload stored in tests.
+- [ ] **Docs Wiring:**
+    - [ ] `System_Architecture.md` §6.3 and `docs/canonical-analysis-v1.md` are referenced in code comments or README where the schema is consumed.
+
 ---
 
 ## Exit Criteria for Sprint 2
 - [ ] **CI Green:** All gates (Unit, Build, E2E, Bundle, Lighthouse) passing.
 - [ ] **Governance Live:** Users can submit/vote (Attestation Enforced).
 - [ ] **Civic Feed Polished:** UX is smooth, AI is fast (≤ 2s), and Decay is visible.
+- [ ] **Canonical Contract Locked:** `canonical-analysis-v1` defined, validated, and used end-to-end (LLM → worker → storage → UI) with tests green.
 - [ ] **Docs:** `manual_test_plan.md` updated for Governance flows.
