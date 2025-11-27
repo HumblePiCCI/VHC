@@ -71,7 +71,7 @@ Agent Lane: Can only spend RVU to buy Compute. Cannot mint AU. This ensures that
 
 GWC is not just a wallet and a marketplace; it is wired into a continuous stream of civic sentiment.
 
-At the application layer (VENN), each verified human can read canonical analyses (Eye: decayed read interest) and take stances on specific claims (Lightbulb: decayed engagement weight for the topic). These micro-decisions are converted into typed Civic Sentiment Signals for claims and decayed read metrics for topics:
+At the application layer (VENN), each verified human can read canonical analyses (Eye: decayed read interest) and take stances on specific claims (Lightbulb: decayed engagement weight for the topic). Each human is represented by a stable, pseudonymous nullifier derived from LUMA; trustScores from hardware attestation gate which economic and governance actions they may take (e.g., UBE claims, QF votes). These micro-decisions are converted into typed Civic Sentiment Signals for claims and decayed read metrics for topics:
 
 - Per-claim stance (agree / neutral / disagree).
 - Per-topic engagement weight (bounded, anti-spam).

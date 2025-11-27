@@ -18,7 +18,7 @@
 
 ---
 
-## Phase 1: LHID (Identity & Trust)
+## Phase 1: LUMA (Identity & Trust)
 
 ### 1.1 Attestation Integration
 - [x] **Client:** Update `useIdentity` to fetch real/mock attestation from `AttestationVerifier` service.
@@ -33,6 +33,7 @@
 - [x] **Privacy:** Ensure "No Location Leakage" policy (Privacy Budget) is documented and enforced.
 - [x] **Circuit:** Implement `prove_residency.circom` (Mock/Stub for Sprint 1).
 - [ ] **Integration:** Client generates proof of region (e.g., "US-CA") without revealing exact location.
+*Note:* Identity and RegionNotary shapes are canonicalized in `spec-identity-trust-constituency.md`; Sprint 1 implementation is a prototype and may differ.
 
 ### 1.3 Multi-Device Linking
 - [x] **Graph:** Implement "Add Device" flow in `gun-client`.

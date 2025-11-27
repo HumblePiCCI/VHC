@@ -10,9 +10,12 @@ This document is the normative contract for engagement and sentiment across clie
 - `topic_id` – hash of canonical URL.
 - `analysis_id` – stable ID/hash of the canonical analysis object.
 - `point_id` – ID for a bias/counterpoint/perspective cell.
-- `user_id` / `nullifier` – identity linkage via LHID.
+- `user_id` / `nullifier` – identity linkage via LUMA.
 - `weight` – per-user-per-topic Lightbulb engagement weight in `[0, 2]`.
 - `agreement` – per `(topic_id, point_id)` stance in `{-1, 0, +1}`.
+- `UniquenessNullifier` – stable, pseudonymous human key from LUMA.
+- `district_hash` – hash of a region code (e.g., US-CA-12), used for constituency aggregation.
+- `ConstituencyProof` – `{ district_hash, nullifier, merkle_root }` derived from RegionProof public signals.
 
 ## 2. Event-Level Contract: SentimentSignal
 
@@ -27,7 +30,7 @@ interface SentimentSignal {
 
   constituency_proof: {
     district_hash: string;
-    nullifier: string;
+    nullifier: string;     // UniquenessNullifier or its hash
     merkle_root: string;
   };
 
@@ -35,18 +38,21 @@ interface SentimentSignal {
 }
 ```
 
-`weight` is the user’s engagement Lightbulb for this topic (from table interactions), not their read score; Eye is derived separately from per-topic read events.
+`weight` is the user’s engagement Lightbulb for this topic (from table interactions), not their read score; Eye is derived separately from per-topic read events. `constituency_proof` is derived from a RegionProof as defined in `spec-identity-trust-constituency.md`.
 
 Invariants:
 
 - `0 ≤ weight ≤ 2`.
 - For any topic and user, `weight` is updated only via the Civic Decay function on engagement interactions.
 - `agreement` is a 3-state toggle; there is no partial sentiment.
+- `constituency_proof.nullifier` equals the user’s identity nullifier.
+- `district_hash` MUST come from a valid RegionProof (or dev stub shape).
 
 Emission rules:
 
 - Emit on any change to `agreement` for a `(topic_id, point_id)`.
 - Emit when constituency proof changes for the user to preserve rollup integrity.
+- `constituency_proof` is derived from a RegionProof as defined in `spec-identity-trust-constituency.md` (dev stub allowed; field shape must match).
 
 ## 3. Aggregate Contract: AggregateSentiment
 
@@ -94,7 +100,7 @@ export function applyDecay(current: number): number {
 }
 ```
 
-Example progression (starting at `0.0`): `0.0 → 0.6 → 1.02 → 1.414 → 1.6898 → 1.8829 → …` approaching `2.0`.
+Example progression (starting at `0.0`): `0.0 → 0.6 → 1.02 → 1.314 → 1.5198 → 1.6639 → …` approaching `2.0`.
 
 Invariants:
 

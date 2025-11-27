@@ -12,6 +12,7 @@
 - [x] Local-First data plan documented (CRDT conflict policy, offline queues, hydration barrier).
 - [x] AI-driven development guardrails codified (LOC caps, module boundaries, 200% coverage).
 - [x] Vite + React + Node 20 + pnpm confirmed as the canonical toolchain.
+- [x] Identity, trustScore, and constituency contracts are documented in `/docs/spec-identity-trust-constituency.md` and referenced from `System_Architecture.md`.
 
 ---
 
@@ -79,7 +80,7 @@
 - [x] **Service:** Build `services/attestation-verifier` (Rust/WASM) to verify Apple/Google cert chains.
 - [x] **Test:** Write `attestation.test.ts` using mock certificates.
 
-### 2.3 LHID Core & Networking
+### 2.3 LUMA Core & Networking
 - [x] **Graph:** Initialize `packages/gun-client` (Strict Isolation - The ONLY package importing `gun`).
 - [x] **Auth:** Implement `createSession(attestation)` -> returns `UniquenessNullifier`.
 - [x] **Storage:** Implement `EncryptedStorageAdapter` (IndexedDB + WebCrypto).

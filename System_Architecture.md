@@ -1,6 +1,6 @@
 # BIO-EC OS: Source of Truth
 
-**Codename:** TRINITY (GWC x LHID x VENN)
+**Codename:** TRINITY (GWC x LUMA x VENN)
 **Version:** 0.2.0 (Sprint 2 Baseline)
 **Status:** APPROVED FOR EXECUTION
 
@@ -12,7 +12,7 @@ TRINITY is a **Parallel Institution**: A self-sovereign Operating System for Ide
 
 **The Triad:**
 
-1.  **LHID (The Immune System):** Biological reality (Hardware TEE + Biometrics) to filter Sybils.
+1.  **LUMA (The Immune System):** Biological reality (Hardware TEE + Biometrics) to filter Sybils.
 2.  **GWC (The Circulatory System):** Resource-backed wealth (ZK-Rollup + Oracles) to distribute value.
 3.  **VENN (The Nervous System):** Local-first intent sensing (P2P Mesh + Edge AI) to act on information.
 
@@ -35,7 +35,7 @@ TRINITY is a **Parallel Institution**: A self-sovereign Operating System for Ide
   * **Tech:** Secure Enclave (iOS), StrongBox (Android), TPM (Desktop).
   * **Function:** Generates non-exportable keys. Attests to device integrity (AppAttest/Play Integrity). This layer prevents emulation and virtual machine attacks.
 
-### Layer 1: Identity (LHID - The Synapse)
+### Layer 1: Identity (LUMA - The Synapse)
 
   * **Role:** Sybil resistance, Data Sync, & Recovery.
   * **Tech:** Rust (Core), GUN (Sync Mesh), Pedersen Commitments, ZK-SNARKs.
@@ -93,13 +93,23 @@ The system functions as a Monorepo with polyglot micro-services.
 
 ## 4. Core Modules & Implementation Details
 
-### 4.1 LHID: Bio-Tethering & Recovery
+### 4.1 LUMA: Bio-Tethering & Recovery
 
   * **Purpose:** Prevent "Account Renting" and mitigate device loss.
   * **Mechanism:**
     1.  **Session Start:** VIO (Visual Inertial Odometry) scan signed by TEE.
     2.  **Challenge:** Random micro-gesture (e.g., "Tilt left 15°") to prove liveness.
     3.  **Recovery:** Users designate Guardians or secondary devices. Restoring an identity requires `M-of-N` signatures to rotate the underlying Enclave Key without losing the Identity Nullifier.
+
+#### 4.1.5 Identity, Trust & Constituency Model
+
+We unify identity across LUMA, GWC, and VENN using three primitives:
+
+* **TrustScore (0–1):** Device/session trust derived from hardware attestation. On-chain representation: integer 0–10000 (`scaled = Math.round(trustScore * 10000)`, using `TRUST_SCORE_SCALE`). Thresholds (v0): 0.5 for session/UBE/Faucet, 0.7 for QF.
+* **UniquenessNullifier:** Stable per-human key. Off-chain: string. On-chain: `bytes32` hash. Shared across PWA identity, `SentimentSignal.constituency_proof.nullifier`, Region proofs, and UBE/QF attestation.
+* **ConstituencyProof:** Derived from a RegionProof SNARK. Public signals: `[district_hash, nullifier, merkle_root]`. Used to attribute civic signals to a district without exposing raw region codes.
+
+Invariants: same human → same nullifier across all layers; scaled trustScore = `Math.round(trustScore * 10000)`. See `docs/spec-identity-trust-constituency.md` for the canonical contract.
 
 ### 4.2 GWC: The Holographic Oracle
 
@@ -149,7 +159,7 @@ Civic Decay is applied per-user-per-topic. Reads (expanding an analysis) advance
   * **Purpose:** Verified influence that cannot be blocked.
   * **Mechanism:**
     1.  **Aggregate:** Nodes collect proposals via HRW hashing.
-    2.  **Verify:** LHID attaches **ZK-Proof of Constituency**.
+    2.  **Verify:** LUMA attaches **ZK-Proof of Constituency**.
     3.  **Deliver (Sovereign Fallback):**
           * **Desktop:** Local Playwright instance fills the `.gov` form.
           * **Mobile:** Delegate delivery to **Home Guardian Node** (Trusted Relay). The Node fills the form using the user's signed payload.
@@ -170,7 +180,7 @@ Civic Decay is applied per-user-per-topic. Reads (expanding an analysis) advance
 
   * **GWC:** UBE Drip & Basic Quadratic Funding.
   * **VENN:** Canonical Analysis Protocol & Civic Decay Logic.
-  * **LHID:** Region Notary (ZK-Residency) & Multi-Device Linking.
+  * **LUMA:** Region Notary (ZK-Residency) & Multi-Device Linking.
   * **Deliverable:** Public Beta (v0.1). Users verify, earn UBE, and use shared news analysis.
 
 ### Sprint 2: The Civic Nervous System (Weeks 13–20) [NEXT]
@@ -194,7 +204,7 @@ Civic Decay is applied per-user-per-topic. Reads (expanding an analysis) advance
 
 **Goal:** Sovereignty & Anti-Collusion (Mainnet Prep).
 
-  * **LHID:** Memory-Hard VDF (to slow Sybil attacks) & Full Social Recovery.
+  * **LUMA:** Memory-Hard VDF (to slow Sybil attacks) & Full Social Recovery.
   * **GWC:** MACI Governance (Mainnet).
   * **VENN:** Chaos Testing, Audits, & Performance Tuning.
   * **Deliverable:** Mainnet "Ironclad" Release (v1.0).
@@ -211,14 +221,17 @@ Civic Decay is applied per-user-per-topic. Reads (expanding an analysis) advance
   "version": "3.1",
   "device_id": "DEVICE_PUBKEY_HASH",
   "timestamp": 1699982735,
+  "trustScore": 0.95,
   "client_integrity": { "app_attestation": "Apple_AppAttest_v1" },
   "proof": {
-    "uniqueness_nullifier": "0xZK_NULLIFIER...",
+    "uniqueness_nullifier": "nullifier-abc123...",
     "vio_integrity_score": 0.99,
     "tee_signature": "BASE64_SIGNED_BLOB"
   }
 }
 ```
+
+AttestationVerifier derives a stable nullifier from device- or LUMA-bound keys and issues a per-session token. The nullifier is the canonical human key shared with GWC contracts (via UBE/QF attestation) and VENN civic signals; session tokens are per-session.
 
 ### 6.2 The Civic Sentiment Signal
 
@@ -270,6 +283,7 @@ Invariants:
 * For any topic and user, Lightbulb `weight` is updated only via the Civic Decay function on engagement interactions.
 * Per-point aggregates ignore neutral (`0`) when computing `point_stats`; `bias_vector` is derived from `point_stats` (e.g., sign of `agree - disagree`).
 * `AggregateSentiment` is a deterministic function of the stream of SentimentSignal events.
+* `constituency_proof` MUST be derived from a valid RegionProof: `district_hash = publicSignals[0]`, `nullifier = publicSignals[1]` (same UniquenessNullifier as identity), `merkle_root = publicSignals[2]`.
 
 See `docs/spec-civic-sentiment.md` for the normative contract across client, mesh, and chain.
 
@@ -339,6 +353,7 @@ See `docs/canonical-analysis-v1.md` for the precise wire-format contract and val
 | **R-05** | Device Loss | L1 | **Recovery:** Multi-device linking & Social Recovery. |
 | **R-06** | Malicious Analysis | L3 | **Distributed Moderation:** Local AI audits & community override votes. |
 | **R-07** | Civic Signal Drift (types/math diverge between client, mesh, and chain) | L1/L3 | **Canonical Contract:** Enforce single spec (`spec-civic-sentiment.md`), shared types in `packages/types`, and Zod schemas in `packages/data-model`. CI blocks on schema mismatch. |
+| **R-08** | Identity/Trust Drift | L1/L2/L3 | **Canonical Contract:** Enforce single spec (`spec-identity-trust-constituency.md`), shared types (`TrustScore`, `UniquenessNullifier`, `ConstituencyProof`), and bridge logic. CI blocks on schema mismatch. |
 
 -----
 
@@ -369,7 +384,7 @@ pnpm --filter apps/web-pwa dev
 *Paste this context at the start of every AI coding session.*
 
 ```text
-You are a Senior Engineer building the TRINITY Bio-Economic OS (GWC x LHID x VENN).
+You are a Senior Engineer building the TRINITY Bio-Economic OS (GWC x LUMA x VENN).
 
 Core Constraints:
 1.  **Local-First:** User data stays on device. Cloud is for encrypted transport only.

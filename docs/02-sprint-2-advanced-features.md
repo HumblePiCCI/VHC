@@ -56,7 +56,7 @@
 - [x] **Civic Decay Algorithm:**
     - **Formula:** `next = current + (2.0 - current) * 0.3`.
     - **Tests:** Verify asymptotic ceiling (never > 2.0) and monotonic growth.
-    - **Scope:** Applied to the user's per-topic Lightbulb weight. Each qualifying interaction = one decay step.
+    - **Scope:** Applied to the user's per-topic Lightbulb weight. Each qualifying interaction = one decay step (engagement only per `spec-civic-sentiment.md` §4; reads update Eye separately).
 - [x] **Local State:** Persist `article_interaction_state` (current score) in Gun/IDB.
 - [x] **Optimization:** Integrate `q4f16_1` (or optimal) weights.
     - **Validation:** Worker entry < 20KB, Lazy Chunk < 10MB.
@@ -183,6 +183,45 @@
     - [ ] Stable field set/ordering; snapshot example payload stored in tests.
 - [ ] **Docs Wiring:**
     - [ ] `System_Architecture.md` §6.3 and `docs/canonical-analysis-v1.md` are referenced in code comments or README where the schema is consumed.
+
+## Phase 2.5 Identity, Trust & Constituency Unification
+
+**Goal:** Align off-chain sessions, on-chain attestation, and civic signals around a single human key (nullifier) and trustScore model.
+
+- [ ] **Canonical Types (`packages/types`):**
+  - [ ] Add `TrustScore` (0..1), `ScaledTrustScore` (0..10000), and `UniquenessNullifier` (string) type aliases.
+  - [ ] Update `SessionResponse` to use `TrustScore` and `UniquenessNullifier` (stable) for `nullifier`.
+  - [ ] Define `RegionProof` as a tuple-shaped `publicSignals: [district_hash, nullifier, merkle_root]`.
+  - [ ] Add `ConstituencyProof` and `decodeRegionProof()` helper.
+
+- [ ] **Attestation-Verifier (`services/attestation-verifier`):**
+  - [ ] Implement `derive_nullifier(device_key)` (stable hash).
+  - [ ] Construct `SessionResponse` with:
+        `token = "session-<device>-<nonce>-<timestamp>"`,
+        `nullifier = derive_nullifier(device_key)`.
+  - [ ] Document trustScore thresholds (0.5 min, 0.7+ strong) and mapping to scaled on-chain values.
+
+- [ ] **Identity Hook (`useIdentity`):**
+  - [ ] Extend `IdentityRecord` to store `nullifier` (identity-level) and `scaledTrustScore`.
+  - [ ] In `createIdentity`, compute `scaledTrustScore = Math.round(trustScore * 10000)` and persist it.
+  - [ ] Update downstream code (sentiment, proposals) to use `identity.nullifier` as the human key.
+
+- [ ] **Region & Constituency:**
+  - [ ] Add client-side `RegionProof` placeholder (mock in dev, real later) and persist it alongside identity.
+  - [ ] Use `decodeRegionProof()` wherever a `ConstituencyProof` is required (SentimentSignal, proposal creation).
+  - [ ] Enforce that emitting a `SentimentSignal` requires a `RegionProof` (or explicit dev stub).
+
+- [ ] **On-Chain Bridge Design (stub):**
+  - [ ] Document a minimal "attestor bridge" flow:
+        `SessionResponse (trustScore, nullifier)` + `wallet address` →
+        `scaledTrustScore`, `bytes32Nullifier` →
+        `UBE.registerIdentity`, `Faucet.recordAttestation`, `QF.recordParticipant`.
+  - [ ] Provide a placeholder script/service interface even if not fully wired this sprint.
+
+- [ ] **Tests & Invariants:**
+  - [ ] Unit tests for `derive_nullifier` (stable for same device_key).
+  - [ ] Tests for `decodeRegionProof` mapping to `ConstituencyProof`.
+  - [ ] Assert `wallet.trustScore` ≈ `identity.scaledTrustScore` once the bridge is wired.
 
 ---
 

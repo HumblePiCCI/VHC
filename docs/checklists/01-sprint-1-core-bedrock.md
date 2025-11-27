@@ -11,7 +11,7 @@
 
 ---
 
-## Phase 1: LHID (Identity & Trust)
+## Phase 1: LUMA (Identity & Trust)
 
 ### 1.1 Attestation Integration
 - [ ] **Client:** Update `useIdentity` to fetch real/mock attestation from `AttestationVerifier` service.

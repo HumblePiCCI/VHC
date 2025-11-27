@@ -1,4 +1,4 @@
-# TRINITY / GWC Project Brief  
+# TRINITY - VH/LUMA/GWC Project Brief  
 *A parallel operating system for identity, wealth, and governance in the post‑labour era.*
 
 ---
@@ -34,9 +34,10 @@ We’re building a **parallel civic-and-economic OS for the post‑labour world*
 
 The system operates three tightly‑coupled layers:
 
-1. **LHID – Identity / “Proof of Human”**  
+1. **LUMA – Identity / “Proof of Human”**  
    - Hardware‑attested identity (device secure enclave + biometrics / liveness).  
-   - One real human → one **nullifier** (a stable, non‑reusable unique ID).  
+   - One real human → one **nullifier** (stable per-human key, reused everywhere).  
+   - Outputs a **trustScore** (0..1) and a **scaledTrustScore** (0..10000) for gating actions (sessions, UBE, QF).  
    - Optional region proof → the person becomes a **constituent** in a district, without doxxing their address.
 
 2. **GWC – Global Wealth Chain (Economics)**  
@@ -55,7 +56,7 @@ The system operates three tightly‑coupled layers:
 
 A useful mental model:
 
-> LHID = the immune system,  
+> LUMA = the immune system,  
 > GWC = the circulatory system,  
 > VENN = the nervous system.
 
@@ -69,9 +70,9 @@ In **Season 0**, the app is deliberately framed as a **news & participation app 
 
 1. **Onboard & prove “humanness”**  
    - The user creates an identity.  
-   - Behind the scenes, LHID/attestors give them:
-     - A **trust score**,  
-     - A unique **nullifier** (one per human),  
+   - Behind the scenes, LUMA/attestors give them:
+     - A **trust score** (0..1) and **scaledTrustScore** (0..10000),  
+     - A unique **nullifier** (one per human, reused in VENN, GWC, and constituency proofs),  
      - Optional region proof → they become a constituent of district X.
 
 2. **Scroll a clean civic feed**  
@@ -112,7 +113,7 @@ In **Season 0**, the app is deliberately framed as a **news & participation app 
 6. **Get a daily “boost”**  
    - Once per day, an attested human can claim a **Daily Boost** (backed by UBE).  
    - Their visible **score** (XP) ticks up.  
-   - Under the hood, that claim can also mint testnet **RVU** to their wallet.
+   - Under the hood, that claim can also mint testnet **RVU** to their wallet. Only verified humans above threshold trustScore can claim or vote (QF).
 
 The loop feels like:
 
