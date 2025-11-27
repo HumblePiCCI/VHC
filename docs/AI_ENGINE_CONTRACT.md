@@ -1,0 +1,76 @@
+# AI Engine & Analysis Contract
+
+Version: 0.1  
+Status: Canonical for Sprints 2–3
+
+Defines the contract between raw article text, AI engines (remote/local), JSON responses, validation/guardrails, and `CanonicalAnalysisV1` objects.
+
+## 1. Purpose
+
+Create a precise, engine-agnostic pipeline: prompt → engine → JSON → validation/guardrails → canonical analysis. Swapping engines must not change the canonical contract.
+
+## 2. Prompt Contract
+
+`buildPrompt(articleText: string) -> string` (in `packages/ai-engine/src/prompts.ts`):
+- Inlines GOALS/GUIDELINES for summary + bias detection (see Sprint 2 §2.2).
+- Specifies output wrapper:
+  - `step_by_step: string[]`
+  - `final_refined: AnalysisResult`
+- Surrounds the article with `ARTICLE_START` / `ARTICLE_END`.
+
+## 3. Engine Interface & Policy
+
+- `JsonCompletionEngine`: `{ id, kind: 'remote' | 'local', modelName, completeJson(prompt) }`.
+- `EnginePolicy`: `remote-first`, `local-first`, `remote-only`, `local-only`, `shadow`.
+- `EngineRouter.run(articleText)`: generates prompt, selects engine per policy, returns `{ raw, engine }`.
+- Migration: Season 0 prod = `remote-first`; dev/E2E = `local-only`; later `local-first` / `shadow`.
+
+## 4. JSON Schema & Parsing
+
+- Expected wrapper (new engines MUST support):
+```jsonc
+{
+  "step_by_step": ["..."],
+  "final_refined": {
+    "summary": "...",
+    "bias_claim_quote": ["..."],
+    "justify_bias_claim": ["..."],
+    "biases": ["..."],
+    "counterpoints": ["..."],
+    "sentimentScore": 0.0,
+    "confidence": 0.0
+  }
+}
+```
+- Back-compat: bare `AnalysisResult` accepted but discouraged.
+- `AnalysisResultSchema` mirrors `canonical-analysis-v1`.
+- `parseAnalysisResponse(raw)` supports wrapped + bare; errors: `NO_JSON_OBJECT_FOUND`, `JSON_PARSE_ERROR`, `SCHEMA_VALIDATION_ERROR`.
+
+## 5. Hallucination Guardrails
+
+- `validateAnalysisAgainstSource(articleText, analysis)`:
+  - `bias_claim_quote` entries must appear in the article.
+  - Simple time/date sanity checks (e.g., years).
+- Emits `warnings[]`; non-fatal.
+
+## 6. Canonicalization
+
+- Build `CanonicalAnalysisV1` from validated `AnalysisResult` plus:
+  - `engine` provenance `{ id, kind, modelName }`.
+  - `warnings`.
+- Validate with `CanonicalAnalysisSchema` (see `docs/canonical-analysis-v1.md`); persist via mesh/First-to-File logic.
+
+## 7. Failure Modes & Logging
+
+- Engine failure → fallback per `EnginePolicy`.
+- Parse failure → `AnalysisParseError` surfaced to worker caller.
+- Guardrail warnings attached (non-fatal).
+- Shadow mode: log/compare primary vs shadow outputs for evaluation.
+
+## 8. Test Matrix
+
+- Prompt tests: required keys present; article enclosed.
+- EngineRouter tests: policy behaviors, fallbacks.
+- Schema tests: valid/invalid payloads; wrapper + bare.
+- Validation tests: quote/year mismatches generate warnings.
+- Worker integration: end-to-end success, parse error paths, caching.

@@ -14,6 +14,7 @@
 - [x] Vite + React + Node 20 + pnpm confirmed as the canonical toolchain.
 - [x] Identity, trustScore, and constituency contracts are documented in `/docs/spec-identity-trust-constituency.md` and referenced from `System_Architecture.md`.
 - [x] Season 0 RVU/UBE/Faucet/QF economics are documented in `/docs/spec-rvu-economics-v0.md` and referenced from `System_Architecture.md`.
+- [x] AI analysis contract (prompt → JSON → validation → CanonicalAnalysis) is documented in `/docs/AI_ENGINE_CONTRACT.md` and referenced from `System_Architecture.md` and `docs/canonical-analysis-v1.md`.
 
 ---
 

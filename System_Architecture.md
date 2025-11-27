@@ -172,6 +172,50 @@ For each canonical article (topic):
 
 Civic Decay is applied per-user-per-topic. Reads (expanding an analysis) advance the user’s `eye_weight`; engagement interactions (stance changes, feedback) advance the user’s Lightbulb `weight`, each step using `E_new = E_current + 0.3 * (2.0 - E_current)` toward a 2.0 ceiling. This ensures diminishing returns on repeat interactions while rewarding sustained engagement.
 
+#### 4.3.2 AI Engine & Analysis Pipeline
+
+Article analyses are generated via a fixed 5-step pipeline:
+
+1. **Prompt Builder**
+   * `buildPrompt(articleText: string)` constructs the full analysis prompt:
+     * Includes GOALS/GUIDELINES (summary + bias detection),
+     * Specifies the JSON wrapper shape,
+     * Embeds the raw article text between `ARTICLE_START` / `ARTICLE_END`.
+2. **Engine Router (Remote / Local / Hybrid)**
+   * A pluggable engine interface (`JsonCompletionEngine`) abstracts over remote models (gateway API) and local models (WebLLM/MLC in a Worker).
+   * `EngineRouter` selects an engine per `EnginePolicy` (`remote-first`, `local-first`, `remote-only`, `local-only`, `shadow`). Remote vs local is invisible to the rest of the system.
+3. **Parser & Schema Validation**
+   * All engine responses must be valid JSON with shape:
+   ```jsonc
+   {
+     "step_by_step": ["..."],
+     "final_refined": {
+       "summary": "...",
+       "bias_claim_quote": ["..."],
+       "justify_bias_claim": ["..."],
+       "biases": ["..."],
+       "counterpoints": ["..."],
+       "sentimentScore": 0.0,
+       "confidence": 0.0
+     }
+   }
+   ```
+   * The worker extracts the outermost JSON object, unwraps `final_refined` if present, and validates it against `AnalysisResultSchema` (see `canonical-analysis-v1`).
+4. **Hallucination Guardrails**
+   * `validateAnalysisAgainstSource(articleText, analysis)` performs checks:
+     * All `bias_claim_quote` entries must appear in the article text.
+     * Obvious temporal inconsistencies (e.g., years in summary that never appear in the article) are flagged.
+   * Guardrails produce warnings (non-fatal) attached to the canonical record.
+5. **Canonicalization & Storage**
+   * A `CanonicalAnalysisV1` object is built:
+     * `schemaVersion`, `url`, `urlHash`, `timestamp`,
+     * Fields from `AnalysisResult`,
+     * Optional engine provenance `{ id, kind, modelName }`,
+     * Optional `warnings`.
+   * `CanonicalAnalysisSchema.parse(...)` enforces the contract before persistence in the mesh.
+
+This pipeline is independent of model choice; swapping remote/local engines only changes the engine implementation/policy, not the canonical analysis contract. See `docs/AI_ENGINE_CONTRACT.md` for the detailed AI engine contract.
+
 ### 4.4 HERMES: The Sovereign Legislative Bridge
 
   * **Purpose:** Verified influence that cannot be blocked.
@@ -394,6 +438,7 @@ See `docs/spec-rvu-economics-v0.md` for detailed Season 0 economic semantics.
 | **R-06** | Malicious Analysis | L3 | **Distributed Moderation:** Local AI audits & community override votes. |
 | **R-07** | Civic Signal Drift (types/math diverge between client, mesh, and chain) | L1/L3 | **Canonical Contract:** Enforce single spec (`spec-civic-sentiment.md`), shared types in `packages/types`, and Zod schemas in `packages/data-model`. CI blocks on schema mismatch. |
 | **R-08** | Identity/Trust Drift | L1/L2/L3 | **Canonical Contract:** Enforce single spec (`spec-identity-trust-constituency.md`), shared types (`TrustScore`, `UniquenessNullifier`, `ConstituencyProof`), and bridge logic. CI blocks on schema mismatch. |
+| **R-09** | AI Contract Drift | L3 | **Canonical Contract:** Enforce `AI_ENGINE_CONTRACT.md`, `canonical-analysis-v1` schema, and worker/schema tests on prompt/parse/validation. |
 
 -----
 

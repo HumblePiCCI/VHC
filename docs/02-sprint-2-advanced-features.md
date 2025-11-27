@@ -155,7 +155,41 @@
         on every agreement change and log/store it in a local queue.
   - [ ] Add tests that validate emitted objects via `SentimentSignalSchema.parse`.
 
-### 2.4 Canonical Analysis Hard Contract (VENN Engine)
+### 2.4 AI Engine Contract & Routing
+
+**Goal:** Make the analysis pipeline (prompt → engine → JSON → validation → canonical analysis) explicit, testable, and decoupled from engine choice (remote vs local).
+
+- [ ] **Prompt Builder:**
+  - [ ] Implement `buildPrompt(articleText)` in `packages/ai-engine/src/prompts.ts` as the canonical entry point.
+  - [ ] Ensure the prompt embeds GOALS/GUIDELINES, specifies the JSON wrapper (`step_by_step` + `final_refined`), and includes the full article between `ARTICLE_START` / `ARTICLE_END`.
+  - [ ] Tests: assert required keys (`summary`, `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`, `sentimentScore`) appear in the prompt.
+
+- [ ] **Engine Abstraction:**
+  - [ ] Introduce `JsonCompletionEngine` and `EnginePolicy` types in `packages/ai-engine/src/engines.ts`.
+  - [ ] Implement `RemoteApiEngine` (calls `/api/analyze` proxy) and `LocalMlEngine` (wraps WebLLM/MLC).
+  - [ ] Implement `EngineRouter` supporting `remote-first`, `local-first`, `remote-only`, `local-only`, and `shadow` modes with fallback behavior.
+  - [ ] Tests: simulate engine failures and verify correct fallback per policy.
+
+- [ ] **Parsing & Schema Validation:**
+  - [ ] Add `AnalysisResultSchema` and `parseAnalysisResponse(raw)` in `packages/ai-engine/src/schema.ts` mirroring `AnalysisResult` from `canonical-analysis-v1`.
+  - [ ] Support wrapped (`{ step_by_step, final_refined }`) and bare `AnalysisResult` forms.
+  - [ ] Define `AnalysisParseError` with `NO_JSON_OBJECT_FOUND`, `JSON_PARSE_ERROR`, `SCHEMA_VALIDATION_ERROR`.
+  - [ ] Tests: verify correct error kinds for malformed responses.
+
+- [ ] **Hallucination Guardrails:**
+  - [ ] Implement `validateAnalysisAgainstSource(articleText, analysis)` in `packages/ai-engine/src/validation.ts` (quotes present, simple date/year checks).
+  - [ ] Attach warnings to the analysis payload; do not block canonicalization.
+  - [ ] Tests: quotes/year mismatch produce warnings.
+
+- [ ] **Worker Integration:**
+  - [ ] Update `packages/ai-engine/src/worker.ts` to use `EngineRouter`, run `parseAnalysisResponse`, `validateAnalysisAgainstSource`, cache by `urlHash`, and attach `{ engine, warnings }`.
+  - [ ] Tests: success path + parse-error path, caching behavior.
+
+- [ ] **Canonicalization:**
+  - [ ] Update `getOrGenerate` to accept a generator returning `ValidatedAnalysisResult` + `{ engine?, warnings? }`, construct `CanonicalAnalysisV1`, and validate with `CanonicalAnalysisSchema`.
+  - [ ] Tests: invalid generator payload fails; engine metadata preserved.
+
+### 2.5 Canonical Analysis Hard Contract (VENN Engine)
 - [ ] **Schema Lock:** `canonical-analysis-v1` Zod schema implemented in `packages/data-model` and exported as the single `CanonicalAnalysis` type (used by ai-engine, storage, and UI); spec anchored in `docs/canonical-analysis-v1.md`.
 - [ ] **AI Engine Alignment:**
     - [ ] `AnalysisResult` in `packages/ai-engine/src/prompts.ts` matches the contract:
@@ -186,7 +220,7 @@
 - [ ] **Docs Wiring:**
     - [ ] `System_Architecture.md` §6.3 and `docs/canonical-analysis-v1.md` are referenced in code comments or README where the schema is consumed.
 
-## Phase 2.5 Identity, Trust & Constituency Unification
+## Phase 2.6 Identity, Trust & Constituency Unification
 
 **Goal:** Align off-chain sessions, on-chain attestation, and civic signals around a single human key (nullifier) and trustScore model.
 
@@ -225,7 +259,7 @@
   - [ ] Tests for `decodeRegionProof` mapping to `ConstituencyProof`.
   - [ ] Assert `wallet.trustScore` ≈ `identity.scaledTrustScore` once the bridge is wired.
 
-## Phase 2.6 Season 0 Economics & Metrics (RVU / UBE / Faucet / QF)
+## Phase 2.7 Season 0 Economics & Metrics (RVU / UBE / Faucet / QF)
 
 **Goal:** Make RVU v0, UBE, Faucet, and QF behavior explicit, measurable, and aligned with Season 0 UX.
 
