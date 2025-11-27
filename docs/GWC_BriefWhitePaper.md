@@ -67,6 +67,18 @@ Human Lane: Requires Hardware Attestation. Can mint AU.
 
 Agent Lane: Can only spend RVU to buy Compute. Cannot mint AU. This ensures that the upside of the AI economy flows to human participants.
 
+3.3 Civic Sentiment Channel
+
+GWC is not just a wallet and a marketplace; it is wired into a continuous stream of civic sentiment.
+
+At the application layer (VENN), each verified human can read canonical analyses, take a stance on specific claims, and accumulate an engagement weight for the topic. These micro-decisions are converted into typed Civic Sentiment Signals:
+
+- Per-claim stance (agree / neutral / disagree).
+- Per-topic engagement weight (bounded, anti-spam).
+- Per-constituency aggregation (district-level rollups).
+
+These signals are aggregated into public dashboards and feed directly into MACI-governed decisions and Quadratic Funding rounds. The protocol does not guess what people want; it samples their will through a cryptographically verifiable channel.
+
 4. The Ironclad Technical Stack
 We reject the fragility of current crypto-systems. We build for a hostile 2025 threat landscape.
 
@@ -134,4 +146,3 @@ To the Regulator: We offer a transparent, compliant, and regulated benchmark tha
 We are building the Iron Bank. It is time to secure your share of the future.
 
 Join the GWC. The Protocol is the Promise.
-

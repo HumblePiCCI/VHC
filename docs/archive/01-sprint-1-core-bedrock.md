@@ -71,11 +71,16 @@
 
 ### 3.1 Canonical Analysis Protocol
 *Note:* CanonicalAnalysis shape is now governed by `docs/canonical-analysis-v1.md`; this section captures the historical first implementation.
-- [x] **Schema:** Define `CanonicalAnalysis` (with `urlHash`) and `CivicDecay` schemas.
+- [x] **Schema:** Define `CanonicalAnalysis` with:
+      - `topic_id` (urlHash)
+      - `analysis_id` (canonical analysis hash)
+      - summary, biases, counterpoints, metadata
 - [x] **Protocol:** Implement `getOrGenerate` (First-to-File) and `applyDecay` logic.
 
 ### 3.2 Civic Decay Logic
 - [x] **Storage:** Persist decay state locally to ensure idempotent application across sessions.
+
+Note: Civic Decay logic implemented in Sprint 1 is a prototype. The canonical Civic Decay semantics (including 0–2 Lightbulb bounds and SentimentSignal emission) are defined in `System_Architecture.md` §6.2 and `spec-civic-sentiment.md`, and fully enforced in Sprint 2.
 
 ### 3.3 UI Polish & Integration
 - [x] **Feed:** Create a "News Feed" view showing recent Canonical Analyses.

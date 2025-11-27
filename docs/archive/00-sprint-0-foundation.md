@@ -21,6 +21,7 @@
 - [x] Publish `System_Architecture.md` to `/docs` and reference it from `README`.
 - [x] Add `ARCHITECTURE_LOCK.md` summarizing Zero-Trust, Local-First, and Local-Only storage guarantees.
 - [x] Capture risk register (Lamport overflow, TURN cost, AI drift) in `docs/risks.md`.
+- [x] Civic engagement & sentiment contracts documented in `/docs/spec-civic-sentiment.md` and referenced from `System_Architecture.md`.
 
 ### 0.2 Quality Gates & Tooling Alignment
 - [x] Configure `.nvmrc` → Node 20 LTS and `.npmrc` → `strict-peer-dependencies=false`.
@@ -65,7 +66,7 @@
 ## Phase 2: Core Packages & Identity (The Bedrock)
 
 ### 2.1 Core Libraries
-- [x] **Types:** Create `packages/types` (Zod schemas & TS Interfaces).
+- [x] **Types:** Create `packages/types` (Zod schemas & TS Interfaces), including shared civic data contracts (e.g. SentimentSignal, AggregateSentiment) as defined in `System_Architecture.md`.
 - [x] **Crypto:** Create `packages/crypto` (E2EE primitives, wrappers for `window.crypto.subtle`).
 - [x] **CRDT:** Create `packages/crdt` (Lamport, LWW, Vector Clocks).
 - [x] **Data:** Create `packages/data-model` (High-level Entities: Msg, Post).

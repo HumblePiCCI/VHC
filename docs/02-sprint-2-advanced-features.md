@@ -38,8 +38,8 @@
 - [x] **Feed:** Virtualized infinite scroll.
     - **Tests:** Component tests for windowing thresholds, empty/error states.
 - [x] **Metrics:**
-    - **Eye:** Read Count (Unique Expansions).
-    - **Lightbulb:** Global Engagement Score (Sum of all User Scores).
+    - **Eye:** Read Count (number of distinct users who expanded the analysis at least once).
+    - **Lightbulb:** Global Engagement Score (aggregate of all per-user Lightbulb weights for the topic).
 - [x] **Transitions:** "Lift & Hover" effect (Scale + Z-Index) on expansion.
     - **Tests:** Verify lift state, metric rendering, and a11y/keyboard support.
 - [x] **Analysis UI:**
@@ -56,7 +56,7 @@
 - [x] **Civic Decay Algorithm:**
     - **Formula:** `next = current + (2.0 - current) * 0.3`.
     - **Tests:** Verify asymptotic ceiling (never > 2.0) and monotonic growth.
-    - **Scope:** Applied to the User's contribution to the Article's "Lightbulb" score.
+    - **Scope:** Applied to the user's per-topic Lightbulb weight. Each qualifying interaction = one decay step.
 - [x] **Local State:** Persist `article_interaction_state` (current score) in Gun/IDB.
 - [x] **Optimization:** Integrate `q4f16_1` (or optimal) weights.
     - **Validation:** Worker entry < 20KB, Lazy Chunk < 10MB.
@@ -116,7 +116,43 @@
     """
     ```
 
-### 2.3 Canonical Analysis Hard Contract (VENN Engine)
+### 2.3 Engagement & Sentiment Unification
+
+**Goal:** Make Eye, Lightbulb, and SentimentSignal consistent from UI → types → mesh.
+
+- [ ] **Canonical Types:**
+  - [ ] Replace generic `SentimentSignal` in `packages/types` with the event-level shape from `System_Architecture.md` §6.2.
+  - [ ] Introduce `AggregateSentimentSchema` in `packages/data-model` (formerly `SignalSchema`) for aggregate topic sentiment.
+  - [ ] Add `SentimentSignalSchema` (Zod) mirroring the event-level type; all emitted signals must validate against it in tests.
+
+- [ ] **Civic Decay Consolidation:**
+  - [ ] Update `packages/ai-engine/src/decay.ts`:
+    - [ ] `calculateDecay` is the only implementation of the Civic Decay formula.
+    - [ ] `applyDecay` delegates to `calculateDecay` and enforces `0 ≤ weight ≤ 2`.
+  - [ ] Ensure `CivicDecaySchema` bounds `weight` to `[0, 2]` and tests cover monotonic, asymptotic behavior.
+
+- [ ] **3-State Sentiment UI:**
+  - [ ] Replace float-based `useCivicState` with `useSentimentState` (`agreement ∈ {-1,0,1}` per `(topic_id, point_id)`).
+  - [ ] Update `AnalysisView` / `PerspectiveRow` to use 3-state toggles:
+        0 → +1, +1 → 0, 0 → -1, -1 → 0.
+  - [ ] Update component tests to assert 3-state behavior and persistence.
+
+- [ ] **Eye & Lightbulb Wiring:**
+  - [ ] Implement `useReadTracker` to record first-time expansions per `topic_id`.
+  - [ ] On first expand of a headline card, increment `readCount` once per user (local stub).
+  - [ ] Implement `useEngagementState` (per-topic `weight ∈ [0,2]`),
+        calling `calculateDecay` on each sentiment change.
+  - [ ] Render per-user Lightbulb from `useEngagementState` in `HeadlineCard`
+        (global aggregate will later come from `AggregateSentiment`).
+
+- [ ] **SentimentSignal Emission:**
+  - [ ] Implement `buildSentimentSignal()` helper in the PWA that constructs an event from:
+        `(topic_id, analysis_id, point_id, agreement, weight)`.
+  - [ ] Wire `PerspectiveRow` (or container) to emit a `SentimentSignal`
+        on every agreement change and log/store it in a local queue.
+  - [ ] Add tests that validate emitted objects via `SentimentSignalSchema.parse`.
+
+### 2.4 Canonical Analysis Hard Contract (VENN Engine)
 - [ ] **Schema Lock:** `canonical-analysis-v1` Zod schema implemented in `packages/data-model` and exported as the single `CanonicalAnalysis` type (used by ai-engine, storage, and UI); spec anchored in `docs/canonical-analysis-v1.md`.
 - [ ] **AI Engine Alignment:**
     - [ ] `AnalysisResult` in `packages/ai-engine/src/prompts.ts` matches the contract:
@@ -152,6 +188,6 @@
 ## Exit Criteria for Sprint 2
 - [ ] **CI Green:** All gates (Unit, Build, E2E, Bundle, Lighthouse) passing.
 - [ ] **Governance Live:** Users can submit/vote (Attestation Enforced).
-- [ ] **Civic Feed Polished:** UX is smooth, AI is fast (≤ 2s), and Decay is visible.
+- [ ] **Civic Feed Polished:** UX is smooth, AI is fast (≤ 2s), Decay is visible, Eye/Lightbulb behave according to `spec-civic-sentiment.md`, and SentimentSignal events are emitted and validated locally.
 - [ ] **Canonical Contract Locked:** `canonical-analysis-v1` defined, validated, and used end-to-end (LLM → worker → storage → UI) with tests green.
 - [ ] **Docs:** `manual_test_plan.md` updated for Governance flows.

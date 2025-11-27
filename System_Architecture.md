@@ -123,6 +123,23 @@ The system functions as a Monorepo with polyglot micro-services.
           * Formula: $E_{new} = E_{current} + 0.3 * (2.0 - E_{current})$.
           * Logic: Engagement asymptotically approaches 2.0 to prevent brigading while rewarding depth.
 
+#### 4.3.1 Civic Signals (Eye, Lightbulb, Sentiment)
+
+For each canonical article (topic):
+
+* **Eye (👁 Read Count):** Number of distinct verified humans who have opened the full analysis (not just seen the headline). Tracked per `topic_id`, aggregated across users.
+* **Lightbulb (💡 Engagement Weight):**
+  * Per-user-per-topic engagement weight `weight ∈ [0, 2]`.
+  * Updated via Civic Decay on each meaningful interaction:
+    * Formula: `E_new = E_current + 0.3 * (2.0 - E_current)`.
+    * Monotonic, asymptotically approaches 2.0, never exceeds it.
+  * Aggregate Lightbulb per topic is a function of all user weights (e.g., sum or average) stored in `AggregateSentiment`.
+* **Per-point Sentiment:**
+  * For each `(topic_id, point_id)` (bias or counterpoint), each user has `agreement ∈ {-1, 0, +1}` representing Disagree / Neutral / Agree.
+  * Changes in `agreement` plus the user’s current `weight` are emitted as `SentimentSignal` events.
+
+Civic Decay is applied per-user-per-topic. Each qualifying interaction (expanding an analysis, changing a per-point stance, submitting feedback) advances the user’s Lightbulb weight one step closer to 2.0 using `E_new = E_current + 0.3 * (2.0 - E_current)`. This ensures diminishing returns on spammy interactions while rewarding sustained engagement.
+
 ### 4.4 HERMES: The Sovereign Legislative Bridge
 
   * **Purpose:** Verified influence that cannot be blocked.
@@ -201,25 +218,47 @@ The system functions as a Monorepo with polyglot micro-services.
 
 ### 6.2 The Civic Sentiment Signal
 
+We distinguish between event-level signals and aggregate sentiment.
+
 ```typescript
+// Event-level: one user, one point, one interaction
 interface SentimentSignal {
-  topic_id: string; // Hash of Canonical URL
-  analysis_id: string; // Hash of the Canonical Analysis Object
-  bias_vector: { 
-    point_id: string; 
-    agreement: 1 | 0 | -1; // 3-State Logic (Agree/None/Disagree)
-  };
-  weight: number; // Asymptotic Engagement Score (1.0 -> 2.0)
+  topic_id: string;       // Hash of Canonical URL
+  analysis_id: string;    // Hash of the Canonical Analysis Object
+  point_id: string;       // ID of the bias/counterpoint/perspective
+  agreement: 1 | 0 | -1;  // 3-state Agree / None / Disagree
+  weight: number;         // User’s per-topic Lightbulb, in [0, 2]
+
   constituency_proof: {
       district_hash: string; 
       nullifier: string;
       merkle_root: string;
-  }
+  };
+
+  emitted_at: number;     // Unix timestamp
 }
 
+// Aggregate-level: mesh / ledger projection
+interface AggregateSentiment {
+  topic_id: string;
+  analysis_id: string;
+
+  // For each point_id, the dominant stance or distribution
+  bias_vector: Record<string, 1 | 0 | -1>;
+
+  // Global engagement signal (function of all user weights, e.g. sum or average)
+  weight: number;          // Aggregate Lightbulb
+  engagementScore: number; // Additional metric if needed (e.g. entropy, variance)
+}
 ```
 
-`analysis_id` SHOULD be the hash of the serialized `CanonicalAnalysis` object; `topic_id` is the `urlHash` derived from the normalized URL.
+Invariants:
+
+* For any SentimentSignal, `0 ≤ weight ≤ 2`.
+* For any topic and user, `weight` is updated only via the Civic Decay function.
+* `AggregateSentiment` is a deterministic function of the stream of SentimentSignal events.
+
+See `docs/spec-civic-sentiment.md` for the normative contract across client, mesh, and chain.
 
 -----
 
@@ -286,6 +325,7 @@ See `docs/canonical-analysis-v1.md` for the precise wire-format contract and val
 | **R-04** | Legislative Blocking | L3 | **Sovereign Delivery:** Headless Browser Automation (Playwright). |
 | **R-05** | Device Loss | L1 | **Recovery:** Multi-device linking & Social Recovery. |
 | **R-06** | Malicious Analysis | L3 | **Distributed Moderation:** Local AI audits & community override votes. |
+| **R-07** | Civic Signal Drift (types/math diverge between client, mesh, and chain) | L1/L3 | **Canonical Contract:** Enforce single spec (`spec-civic-sentiment.md`), shared types in `packages/types`, and Zod schemas in `packages/data-model`. CI blocks on schema mismatch. |
 
 -----
 
