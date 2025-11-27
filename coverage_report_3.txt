@@ -1,0 +1,94 @@
+
+> vh-monorepo@0.0.0 test:coverage /opt/venn-hermes
+> vitest run --coverage
+
+
+ RUN  v2.1.9 /opt/venn-hermes
+      Coverage enabled with v8
+
+ ✓ packages/data-model/src/schemas.test.ts (9 tests) 11ms
+stdout | apps/web-pwa/src/store/store.test.ts > useAppStore > init uses empty peers in E2E mode
+[vh:web-pwa] Starting in E2E/Offline Mode with mocked client
+
+ ✓ apps/web-pwa/src/store/store.test.ts (9 tests) 38ms
+stdout | packages/gun-client/src/client.test.ts
+Hello wonderful person! :) Thanks for using GUN, please ask for help on http://chat.gun.eco if anything takes you longer than 5min to figure out!
+
+ ✓ packages/ai-engine/src/worker.test.ts (2 tests) 23ms
+ ✓ packages/data-model/src/governance.test.ts (5 tests) 7ms
+ ✓ apps/web-pwa/src/hooks/useSentimentState.test.ts (2 tests) 9ms
+stdout | apps/web-pwa/src/hooks/useGovernance.test.ts
+Hello wonderful person! :) Thanks for using GUN, please ask for help on http://chat.gun.eco if anything takes you longer than 5min to figure out!
+
+ ✓ packages/ai-engine/src/decay.test.ts (8 tests) 8ms
+stdout | apps/web-pwa/src/components/ProposalList.test.tsx
+Hello wonderful person! :) Thanks for using GUN, please ask for help on http://chat.gun.eco if anything takes you longer than 5min to figure out!
+
+ ✓ apps/web-pwa/src/hooks/useIdentity.test.ts (2 tests) 56ms
+ ✓ apps/web-pwa/src/components/VoteControl.test.tsx (2 tests) 53ms
+ ✓ apps/web-pwa/src/components/ProposalCard.test.tsx (1 test) 49ms
+ ✓ apps/web-pwa/src/components/AnalysisView.test.tsx (1 test) 50ms
+ ✓ apps/web-pwa/src/components/HeadlineCard.test.tsx (1 test) 73ms
+ ✓ apps/web-pwa/src/hooks/useGovernance.test.ts (2 tests) 22ms
+ ✓ packages/ai-engine/src/analysis.test.ts (4 tests) 6ms
+ ✓ apps/web-pwa/src/components/FeedList.test.tsx (2 tests) 104ms
+ ✓ apps/web-pwa/src/routes/WalletPanel.test.tsx (7 tests) 98ms
+ ✓ apps/web-pwa/src/components/ProposalList.test.tsx (1 test) 55ms
+ ✓ packages/crypto/src/primitives.test.ts (9 tests) 150ms
+ ✓ packages/ai-engine/src/cache.test.ts (4 tests) 10ms
+ ✓ apps/web-pwa/src/hooks/useWallet.test.ts (10 tests) 114ms
+ ✓ packages/crypto/src/provider.test.ts (6 tests) 27ms
+ ✓ packages/ai-engine/src/prompts.test.ts (5 tests) 5ms
+ ✓ packages/types/src/index.test.ts (8 tests) 11ms
+ ✓ packages/crdt/src/lww.test.ts (4 tests) 4ms
+ ✓ packages/gun-client/src/auth.test.ts (2 tests) 6ms
+ ✓ apps/web-pwa/src/hooks/useFeedStore.test.ts (2 tests) 3ms
+ ✓ packages/crdt/src/clock.test.ts (2 tests) 4ms
+ ✓ packages/crdt/src/index.test.ts (1 test) 3ms
+ ✓ packages/gun-client/src/storage/encryption.test.ts (1 test) 34ms
+ ✓ packages/data-model/src/index.test.ts (1 test) 3ms
+ ✓ packages/gun-client/src/client.test.ts (6 tests) 1015ms
+   ✓ createClient > user.write resolves even when put callback never fires (offline) 1002ms
+ ✓ apps/web-pwa/src/routes/AnalysisFeed.test.tsx (11 tests) 711ms
+
+ Test Files  31 passed (31)
+      Tests  130 passed (130)
+   Start at  20:25:11
+   Duration  2.10s (transform 1.06s, setup 0ms, collect 4.50s, tests 2.76s, environment 7.20s, prepare 2.84s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |     100 |      100 |     100 |     100 |                   
+ ...-pwa/src/hooks |     100 |      100 |     100 |     100 |                   
+  useWallet.ts     |     100 |      100 |     100 |     100 |                   
+ ...pwa/src/routes |     100 |      100 |     100 |     100 |                   
+  AnalysisFeed.tsx |     100 |      100 |     100 |     100 |                   
+  WalletPanel.tsx  |     100 |      100 |     100 |     100 |                   
+ .../ai-engine/src |     100 |      100 |     100 |     100 |                   
+  analysis.ts      |     100 |      100 |     100 |     100 |                   
+  decay.ts         |     100 |      100 |     100 |     100 |                   
+ packages/crdt/src |     100 |      100 |     100 |     100 |                   
+  clock.test.ts    |     100 |      100 |     100 |     100 |                   
+  clock.ts         |     100 |      100 |     100 |     100 |                   
+  index.test.ts    |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  lww.test.ts      |     100 |      100 |     100 |     100 |                   
+  lww.ts           |     100 |      100 |     100 |     100 |                   
+ ...ges/crypto/src |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  ...tives.test.ts |     100 |      100 |     100 |     100 |                   
+  primitives.ts    |     100 |      100 |     100 |     100 |                   
+  provider.test.ts |     100 |      100 |     100 |     100 |                   
+  provider.ts      |     100 |      100 |     100 |     100 |                   
+ ...data-model/src |     100 |      100 |     100 |     100 |                   
+  ...nance.test.ts |     100 |      100 |     100 |     100 |                   
+  index.test.ts    |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+  schemas.test.ts  |     100 |      100 |     100 |     100 |                   
+  schemas.ts       |     100 |      100 |     100 |     100 |                   
+ ...ages/types/src |     100 |      100 |     100 |     100 |                   
+  index.test.ts    |     100 |      100 |     100 |     100 |                   
+  index.ts         |     100 |      100 |     100 |     100 |                   
+-------------------|---------|----------|---------|---------|-------------------

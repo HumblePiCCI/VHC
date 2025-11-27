@@ -4,6 +4,7 @@ export interface VennClientConfig {
   peers?: string[];
   storage?: StorageAdapter;
   requireSession?: boolean;
+  topologyGuard?: TopologyGuard;
 }
 
 export interface Namespace<T = unknown> {

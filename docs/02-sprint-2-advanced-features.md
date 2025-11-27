@@ -122,77 +122,77 @@
 
 **Goal:** Make Eye, Lightbulb, and SentimentSignal consistent from UI → types → mesh.
 
-- [ ] **Canonical Types:**
-  - [ ] Replace generic `SentimentSignal` in `packages/types` with the event-level shape from `System_Architecture.md` §6.2.
-  - [ ] Introduce `AggregateSentimentSchema` in `packages/data-model` (formerly `SignalSchema`) for aggregate topic sentiment.
-  - [ ] Add `SentimentSignalSchema` (Zod) mirroring the event-level type; all emitted signals must validate against it in tests.
+- [x] **Canonical Types:**
+  - [x] Replace generic `SentimentSignal` in `packages/types` with the event-level shape from `System_Architecture.md` §6.2.
+  - [x] Introduce `AggregateSentimentSchema` in `packages/data-model` (formerly `SignalSchema`) for aggregate topic sentiment.
+  - [x] Add `SentimentSignalSchema` (Zod) mirroring the event-level type; all emitted signals must validate against it in tests.
 
-- [ ] **Civic Decay Consolidation:**
-  - [ ] Update `packages/ai-engine/src/decay.ts`:
-    - [ ] `calculateDecay` is the only implementation of the Civic Decay formula.
-    - [ ] `applyDecay` delegates to `calculateDecay` and enforces `0 ≤ weight ≤ 2`.
-  - [ ] Ensure `CivicDecaySchema` bounds `weight` to `[0, 2]` and tests cover monotonic, asymptotic behavior.
+- [x] **Civic Decay Consolidation:**
+  - [x] Update `packages/ai-engine/src/decay.ts`:
+    - [x] `calculateDecay` is the only implementation of the Civic Decay formula.
+    - [x] `applyDecay` delegates to `calculateDecay` and enforces `0 ≤ weight ≤ 2`.
+  - [x] Ensure `CivicDecaySchema` bounds `weight` to `[0, 2]` and tests cover monotonic, asymptotic behavior.
 
-- [ ] **3-State Sentiment UI:**
-  - [ ] Replace float-based `useCivicState` with `useSentimentState` (`agreement ∈ {-1,0,1}` per `(topic_id, point_id)`).
-  - [ ] Update `AnalysisView` / `PerspectiveRow` to use 3-state toggles:
+- [x] **3-State Sentiment UI:**
+  - [x] Replace float-based `useCivicState` with `useSentimentState` (`agreement ∈ {-1,0,1}` per `(topic_id, point_id)`).
+  - [x] Update `AnalysisView` / `PerspectiveRow` to use 3-state toggles:
         0 → +1, +1 → 0, 0 → -1, -1 → 0.
-  - [ ] Update component tests to assert 3-state behavior and persistence.
-  - [ ] Per-cell aggregates use committed votes only: `agreement = +1` increments `agree`, `agreement = -1` increments `disagree`, `agreement = 0` is not counted.
+  - [x] Update component tests to assert 3-state behavior and persistence.
+  - [x] Per-cell aggregates use committed votes only: `agreement = +1` increments `agree`, `agreement = -1` increments `disagree`, `agreement = 0` is not counted.
 
-- [ ] **Eye & Lightbulb Wiring:**
-  - [ ] Implement `useReadTracker` / `useReadState` to store per-topic `eye_weight ∈ [0,2]`, applying `calculateDecay` on each expand/read.
-  - [ ] Aggregate Eye metrics for display from per-user `eye_weight` (e.g., sum / average and unique readers).
-  - [ ] Implement `useEngagementState` (per-topic `lightbulb_weight ∈ [0,2]`),
+- [x] **Eye & Lightbulb Wiring:**
+  - [x] Implement `useReadTracker` / `useReadState` to store per-topic `eye_weight ∈ [0,2]`, applying `calculateDecay` on each expand/read.
+  - [x] Aggregate Eye metrics for display from per-user `eye_weight` (e.g., sum / average and unique readers).
+  - [x] Implement `useEngagementState` (per-topic `lightbulb_weight ∈ [0,2]`),
         calling `calculateDecay` only on engagement interactions (stance changes, later feedback), not on reads.
-  - [ ] Render per-user Lightbulb from `useEngagementState` in `HeadlineCard`
+  - [x] Render per-user Lightbulb from `useEngagementState` in `HeadlineCard`
         (global aggregate will later come from `AggregateSentiment`).
 
-- [ ] **SentimentSignal Emission:**
-  - [ ] Implement `buildSentimentSignal()` helper in the PWA that constructs an event from:
+- [x] **SentimentSignal Emission:**
+  - [x] Implement `buildSentimentSignal()` helper in the PWA that constructs an event from:
         `(topic_id, analysis_id, point_id, agreement, weight)`.
-  - [ ] Wire `PerspectiveRow` (or container) to emit a `SentimentSignal`
+  - [x] Wire `PerspectiveRow` (or container) to emit a `SentimentSignal`
         on every agreement change and log/store it in a local queue.
-  - [ ] Add tests that validate emitted objects via `SentimentSignalSchema.parse`.
+  - [x] Add tests that validate emitted objects via `SentimentSignalSchema.parse`.
 
 ### 2.4 AI Engine Contract & Routing
 
 **Goal:** Make the analysis pipeline (prompt → engine → JSON → validation → canonical analysis) explicit, testable, and decoupled from engine choice (remote vs local).
 
-- [ ] **Prompt Builder:**
-  - [ ] Implement `buildPrompt(articleText)` in `packages/ai-engine/src/prompts.ts` as the canonical entry point.
-  - [ ] Ensure the prompt embeds GOALS/GUIDELINES, specifies the JSON wrapper (`step_by_step` + `final_refined`), and includes the full article between `ARTICLE_START` / `ARTICLE_END`.
-  - [ ] Tests: assert required keys (`summary`, `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`, `sentimentScore`) appear in the prompt.
+- [x] **Prompt Builder:**
+  - [x] Implement `buildPrompt(articleText)` in `packages/ai-engine/src/prompts.ts` as the canonical entry point.
+  - [x] Ensure the prompt embeds GOALS/GUIDELINES, specifies the JSON wrapper (`step_by_step` + `final_refined`), and includes the full article between `ARTICLE_START` / `ARTICLE_END`.
+  - [x] Tests: assert required keys (`summary`, `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`, `sentimentScore`) appear in the prompt.
 
-- [ ] **Engine Abstraction:**
-  - [ ] Introduce `JsonCompletionEngine` and `EnginePolicy` types in `packages/ai-engine/src/engines.ts`.
-  - [ ] Implement `RemoteApiEngine` (calls `/api/analyze` proxy) and `LocalMlEngine` (wraps WebLLM/MLC).
-  - [ ] Implement `EngineRouter` supporting `remote-first`, `local-first`, `remote-only`, `local-only`, and `shadow` modes with fallback behavior.
-  - [ ] Tests: simulate engine failures and verify correct fallback per policy.
+- [x] **Engine Abstraction:**
+  - [x] Introduce `JsonCompletionEngine` and `EnginePolicy` types in `packages/ai-engine/src/engines.ts`.
+  - [x] Implement `RemoteApiEngine` (calls `/api/analyze` proxy) and `LocalMlEngine` (wraps WebLLM/MLC).
+  - [x] Implement `EngineRouter` supporting `remote-first`, `local-first`, `remote-only`, `local-only`, and `shadow` modes with fallback behavior.
+  - [x] Tests: simulate engine failures and verify correct fallback per policy.
 
-- [ ] **Parsing & Schema Validation:**
-  - [ ] Add `AnalysisResultSchema` and `parseAnalysisResponse(raw)` in `packages/ai-engine/src/schema.ts` mirroring `AnalysisResult` from `canonical-analysis-v1`.
-  - [ ] Support wrapped (`{ step_by_step, final_refined }`) and bare `AnalysisResult` forms.
-  - [ ] Define `AnalysisParseError` with `NO_JSON_OBJECT_FOUND`, `JSON_PARSE_ERROR`, `SCHEMA_VALIDATION_ERROR`.
-  - [ ] Tests: verify correct error kinds for malformed responses.
+- [x] **Parsing & Schema Validation:**
+  - [x] Add `AnalysisResultSchema` and `parseAnalysisResponse(raw)` in `packages/ai-engine/src/schema.ts` mirroring `AnalysisResult` from `canonical-analysis-v1`.
+  - [x] Support wrapped (`{ step_by_step, final_refined }`) and bare `AnalysisResult` forms.
+  - [x] Define `AnalysisParseError` with `NO_JSON_OBJECT_FOUND`, `JSON_PARSE_ERROR`, `SCHEMA_VALIDATION_ERROR`.
+  - [x] Tests: verify correct error kinds for malformed responses.
 
-- [ ] **Hallucination Guardrails:**
-  - [ ] Implement `validateAnalysisAgainstSource(articleText, analysis)` in `packages/ai-engine/src/validation.ts` (quotes present, simple date/year checks).
-  - [ ] Attach warnings to the analysis payload; do not block canonicalization.
-  - [ ] Tests: quotes/year mismatch produce warnings.
+- [x] **Hallucination Guardrails:**
+  - [x] Implement `validateAnalysisAgainstSource(articleText, analysis)` in `packages/ai-engine/src/validation.ts` (quotes present, simple date/year checks).
+  - [x] Attach warnings to the analysis payload; do not block canonicalization.
+  - [x] Tests: quotes/year mismatch produce warnings.
 
-- [ ] **Worker Integration:**
-  - [ ] Update `packages/ai-engine/src/worker.ts` to use `EngineRouter`, run `parseAnalysisResponse`, `validateAnalysisAgainstSource`, cache by `urlHash`, and attach `{ engine, warnings }`.
-  - [ ] Tests: success path + parse-error path, caching behavior.
+- [x] **Worker Integration:**
+  - [x] Update `packages/ai-engine/src/worker.ts` to use `EngineRouter`, run `parseAnalysisResponse`, `validateAnalysisAgainstSource`, cache by `urlHash`, and attach `{ engine, warnings }`.
+  - [x] Tests: success path + parse-error path, caching behavior.
 
-- [ ] **Canonicalization:**
-  - [ ] Update `getOrGenerate` to accept a generator returning `ValidatedAnalysisResult` + `{ engine?, warnings? }`, construct `CanonicalAnalysisV1`, and validate with `CanonicalAnalysisSchema`.
-  - [ ] Tests: invalid generator payload fails; engine metadata preserved.
+- [x] **Canonicalization:**
+  - [x] Update `getOrGenerate` to accept a generator returning `ValidatedAnalysisResult` + `{ engine?, warnings? }`, construct `CanonicalAnalysisV1`, and validate with `CanonicalAnalysisSchema`.
+  - [x] Tests: invalid generator payload fails; engine metadata preserved.
 
 ### 2.5 Canonical Analysis Hard Contract (VENN Engine)
-- [ ] **Schema Lock:** `canonical-analysis-v1` Zod schema implemented in `packages/data-model` and exported as the single `CanonicalAnalysis` type (used by ai-engine, storage, and UI); spec anchored in `docs/canonical-analysis-v1.md`.
-- [ ] **AI Engine Alignment:**
-    - [ ] `AnalysisResult` in `packages/ai-engine/src/prompts.ts` matches the contract:
+- [x] **Schema Lock:** `canonical-analysis-v1` Zod schema implemented in `packages/data-model` and exported as the single `CanonicalAnalysis` type (used by ai-engine, storage, and UI); spec anchored in `docs/canonical-analysis-v1.md`.
+- [x] **AI Engine Alignment:**
+    - [x] `AnalysisResult` in `packages/ai-engine/src/prompts.ts` matches the contract:
         - `summary`
         - `bias_claim_quote`
         - `justify_bias_claim`
@@ -201,46 +201,46 @@
         - `sentimentScore`
         - `confidence?`
         - `perspectives?`
-    - [ ] `PRIMARY_OUTPUT_FORMAT_REQ` shows `sentimentScore` and `confidence` in the sample JSON.
-    - [ ] Canonical metadata (`schemaVersion`, `url`, `urlHash`, `timestamp`) is added in `getOrGenerate` when constructing `CanonicalAnalysis`, not emitted by the model.
-- [ ] **Worker Contract:**
-    - [ ] `worker.ts` unwraps `{ step_by_step, final_refined }` and validates raw `AnalysisResult` fallback.
-    - [ ] Tests cover wrapped + raw responses and validation failures.
-- [ ] **First-to-File Logic:**
-    - [ ] `getOrGenerate(url, store, generate)` enforces strict first-to-file on `urlHash`.
-    - [ ] Tests cover `reused=true` for existing and storing once for new.
-- [ ] **Array Invariants:**
-    - [ ] Zod refine enforces equal lengths for `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`.
-    - [ ] Tests prove valid payload passes and mismatched lengths fail.
-- [ ] **Fact-Only Enforcement:**
-    - [ ] Checker flags summaries/biases introducing entities absent from source text.
-    - [ ] Fuzz tests: truncating article text cannot produce longer/more specific summaries; invalid outputs are rejected.
-- [ ] **Deterministic JSON:**
-    - [ ] Stable field set/ordering; snapshot example payload stored in tests.
-- [ ] **Docs Wiring:**
-    - [ ] `System_Architecture.md` §6.3 and `docs/canonical-analysis-v1.md` are referenced in code comments or README where the schema is consumed.
+    - [x] `PRIMARY_OUTPUT_FORMAT_REQ` shows `sentimentScore` and `confidence` in the sample JSON.
+    - [x] Canonical metadata (`schemaVersion`, `url`, `urlHash`, `timestamp`) is added in `getOrGenerate` when constructing `CanonicalAnalysis`, not emitted by the model.
+- [x] **Worker Contract:**
+    - [x] `worker.ts` unwraps `{ step_by_step, final_refined }` and validates raw `AnalysisResult` fallback.
+    - [x] Tests cover wrapped + raw responses and validation failures.
+- [x] **First-to-File Logic:**
+    - [x] `getOrGenerate(url, store, generate)` enforces strict first-to-file on `urlHash`.
+    - [x] Tests cover `reused=true` for existing and storing once for new.
+- [x] **Array Invariants:**
+    - [x] Zod refine enforces equal lengths for `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`.
+    - [x] Tests prove valid payload passes and mismatched lengths fail.
+- [x] **Fact-Only Enforcement:**
+    - [x] Checker flags summaries/biases introducing entities absent from source text.
+    - [x] Fuzz tests: truncating article text cannot produce longer/more specific summaries; invalid outputs are rejected.
+- [x] **Deterministic JSON:**
+    - [x] Stable field set/ordering; snapshot example payload stored in tests.
+- [x] **Docs Wiring:**
+    - [x] `System_Architecture.md` §6.3 and `docs/canonical-analysis-v1.md` are referenced in code comments or README where the schema is consumed.
 
 ## Phase 2.6 Identity, Trust & Constituency Unification
 
 **Goal:** Align off-chain sessions, on-chain attestation, and civic signals around a single human key (nullifier) and trustScore model.
 
-- [ ] **Canonical Types (`packages/types`):**
-  - [ ] Add `TrustScore` (0..1), `ScaledTrustScore` (0..10000), and `UniquenessNullifier` (string) type aliases.
-  - [ ] Update `SessionResponse` to use `TrustScore` and `UniquenessNullifier` (stable) for `nullifier`.
-  - [ ] Define `RegionProof` as a tuple-shaped `publicSignals: [district_hash, nullifier, merkle_root]`.
-  - [ ] Add `ConstituencyProof` and `decodeRegionProof()` helper.
+- [x] **Canonical Types (`packages/types`):**
+  - [x] Add `TrustScore` (0..1), `ScaledTrustScore` (0..10000), and `UniquenessNullifier` (string) type aliases.
+  - [x] Update `SessionResponse` to use `TrustScore` and `UniquenessNullifier` (stable) for `nullifier`.
+  - [x] Define `RegionProof` as a tuple-shaped `publicSignals: [district_hash, nullifier, merkle_root]`.
+  - [x] Add `ConstituencyProof` and `decodeRegionProof()` helper.
 
-- [ ] **Attestation-Verifier (`services/attestation-verifier`):**
-  - [ ] Implement `derive_nullifier(device_key)` (stable hash).
-  - [ ] Construct `SessionResponse` with:
+- [x] **Attestation-Verifier (`services/attestation-verifier`):**
+  - [x] Implement `derive_nullifier(device_key)` (stable hash).
+  - [x] Construct `SessionResponse` with:
         `token = "session-<device>-<nonce>-<timestamp>"`,
         `nullifier = derive_nullifier(device_key)`.
-  - [ ] Document trustScore thresholds (0.5 min, 0.7+ strong) and mapping to scaled on-chain values.
+  - [x] Document trustScore thresholds (0.5 min, 0.7+ strong) and mapping to scaled on-chain values.
 
-- [ ] **Identity Hook (`useIdentity`):**
-  - [ ] Extend `IdentityRecord` to store `nullifier` (identity-level) and `scaledTrustScore`.
-  - [ ] In `createIdentity`, compute `scaledTrustScore = Math.round(trustScore * 10000)` and persist it.
-  - [ ] Update downstream code (sentiment, proposals) to use `identity.nullifier` as the human key.
+- [x] **Identity Hook (`useIdentity`):**
+  - [x] Extend `IdentityRecord` to store `nullifier` (identity-level) and `scaledTrustScore`.
+  - [x] In `createIdentity`, compute `scaledTrustScore = Math.round(trustScore * 10000)` and persist it.
+  - [x] Update downstream code (sentiment, proposals) to use `identity.nullifier` as the human key.
 
 - [ ] **Region & Constituency:**
   - [ ] Add client-side `RegionProof` placeholder (mock in dev, real later) and persist it alongside identity.
@@ -255,7 +255,7 @@
   - [ ] Provide a placeholder script/service interface even if not fully wired this sprint.
 
 - [ ] **Tests & Invariants:**
-  - [ ] Unit tests for `derive_nullifier` (stable for same device_key).
+  - [x] Unit tests for `derive_nullifier` (stable for same device_key).
   - [ ] Tests for `decodeRegionProof` mapping to `ConstituencyProof`.
   - [ ] Assert `wallet.trustScore` ≈ `identity.scaledTrustScore` once the bridge is wired.
 
@@ -265,76 +265,76 @@
 
 **Goal:** Make data placement explicit and enforce public vs sensitive object rules across device, mesh, and chain.
 
-- [ ] **Topology Spec:**
-  - [ ] Add `docs/spec-data-topology-privacy-v0.md` capturing object locations (device, mesh, chain, cloud).
-  - [ ] Ensure `System_Architecture.md` §4.5 mirrors this table.
+- [x] **Topology Spec:**
+  - [x] Add `docs/spec-data-topology-privacy-v0.md` capturing object locations (device, mesh, chain, cloud).
+  - [x] Ensure `System_Architecture.md` §4.5 mirrors this table.
 
-- [ ] **Mesh Policy:**
-  - [ ] Restrict plaintext Gun usage to `vh/analyses/<urlHash>` (CanonicalAnalysis) and aggregate sentiment namespaces (no per-user IDs).
-  - [ ] Audit current Gun writes; remove or guard any sensitive writes under `vh/*`.
+- [x] **Mesh Policy:**
+  - [x] Restrict plaintext Gun usage to `vh/analyses/<urlHash>` (CanonicalAnalysis) and aggregate sentiment namespaces (no per-user IDs).
+  - [x] Audit current Gun writes; remove or guard any sensitive writes under `vh/*`.
 
-- [ ] **Sentiment Flow:**
-  - [ ] Keep event-level `SentimentSignal` local-only or in encrypted outbox.
-  - [ ] Expose only aggregated per-topic/per-district stats to mesh or dashboards.
-  - [ ] Tests: ensure no public data structure combines `{ district_hash, nullifier }`.
+- [x] **Sentiment Flow:**
+  - [x] Keep event-level `SentimentSignal` local-only or in encrypted outbox.
+  - [x] Expose only aggregated per-topic/per-district stats to mesh or dashboards.
+  - [x] Tests: ensure no public data structure combines `{ district_hash, nullifier }`.
 
-- [ ] **Chat / Outbox Guardrails:**
-  - [ ] Mark `chat` and `outbox` namespaces as “E2EE required” in `@vh/gun-client`.
-  - [ ] Add feature flags to prevent plaintext usage in production until encryption is implemented.
+- [x] **Chat / Outbox Guardrails:**
+  - [x] Mark `chat` and `outbox` namespaces as “E2EE required” in `@vh/gun-client`.
+  - [x] Add feature flags to prevent plaintext usage in production until encryption is implemented.
 
-- [ ] **Aggregation Safety:**
-  - [ ] Implement minimal cohort size checks (e.g., N ≥ 20) for per-district stats.
-  - [ ] Apply rounding/binning to small counts in public dashboards.
-  - [ ] Tests: simulate small district samples and assert we do not render raw counts.
+- [x] **Aggregation Safety:**
+  - [x] Implement minimal cohort size checks (e.g., N ≥ 20) for per-district stats.
+  - [x] Apply rounding/binning to small counts in public dashboards.
+  - [x] Tests: simulate small district samples and assert we do not render raw counts.
 
 ### 2.9 XP Ledger (Participation Weight)
 
 **Goal:** Treat XP as the prototype GWC participation ledger (per nullifier, monotonic, partitioned tracks) and wire Season 0 emissions.
 
-- [ ] **Spec & Types:**
-  - [ ] Add `docs/spec-xp-ledger-v0.md` and mirror types in `packages/types` (`XpLedger`, `XpTrack`, `TotalXpFunction`).
-  - [ ] `totalXP` computed via a deterministic function over tracks (e.g., weighted sum).
+- [x] **Spec & Types:**
+  - [x] Add `docs/spec-xp-ledger-v0.md` and mirror types in `packages/types` (`XpLedger`, `XpTrack`, `TotalXpFunction`).
+  - [x] `totalXP` computed via a deterministic function over tracks (e.g., weighted sum).
 
-- [ ] **Storage & Privacy:**
-  - [ ] Store XP ledger per nullifier on-device (e.g., `vh_xp_ledger`); optionally encrypt to a trusted node.
-  - [ ] Ensure no public mesh writes of `{ district_hash, nullifier, XP }`; only safe aggregates exposed.
+- [x] **Storage & Privacy:**
+  - [x] Store XP ledger per nullifier on-device (e.g., `vh_xp_ledger`); optionally encrypt to a trusted node.
+  - [x] Ensure no public mesh writes of `{ district_hash, nullifier, XP }`; only safe aggregates exposed.
 
-- [ ] **Emission Rules (Season 0):**
-  - [ ] Define and implement XP increments for: first Lightbulb interaction on a topic, subsequent engagements (diminishing), full read sequences, UBE claim, proposal support/creation; stubs for REL tasks later.
-  - [ ] Make coefficients configurable; changing coefficients affects future accrual only (no retro-edits).
+- [x] **Emission Rules (Season 0):**
+  - [x] Define and implement XP increments for: first Lightbulb interaction on a topic, subsequent engagements (diminishing), full read sequences, UBE claim, proposal support/creation; stubs for REL tasks later.
+  - [x] Make coefficients configurable; changing coefficients affects future accrual only (no retro-edits).
 
-- [ ] **Hooks & UI:**
-  - [ ] Add `useXpLedger` (per nullifier) consuming events from sentiment/UBE/proposal flows.
-  - [ ] Surface XP totals and track breakdown in wallet/control panel; mark as “proto participation weight.”
+- [x] **Hooks & UI:**
+  - [x] Add `useXpLedger` (per nullifier) consuming events from sentiment/UBE/proposal flows.
+  - [x] Surface XP totals and track breakdown in wallet/control panel; mark as “proto participation weight.”
 
-- [ ] **Tests & Consistency:**
-  - [ ] Tests for monotonic updates, track-to-totalXP determinism, and event-driven increments (first vs subsequent interactions).
-  - [ ] Tests/linters to ensure no `{ district_hash, nullifier, XP }` appears in public data paths.
+- [x] **Tests & Consistency:**
+  - [x] Tests for monotonic updates, track-to-totalXP determinism, and event-driven increments (first vs subsequent interactions).
+  - [x] Tests/linters to ensure no `{ district_hash, nullifier, XP }` appears in public data paths.
 
 **Goal:** Make RVU v0, UBE, Faucet, and QF behavior explicit, measurable, and aligned with Season 0 UX.
 
-- [ ] **RVU v0 Instrumentation:**
-  - [ ] Expose `RVU.totalSupply()` and `RVU.balanceOf(QuadraticFunding)` in a dev-only "Global Wealth" dashboard.
-  - [ ] Add and wire contract counters: `UBE.totalDistributed`, `Faucet.totalDripped`, `QuadraticFunding.distributedMatching`.
+- [x] **RVU v0 Instrumentation:**
+  - [x] Expose `RVU.totalSupply()` and `RVU.balanceOf(QuadraticFunding)` in a dev-only "Global Wealth" dashboard.
+  - [x] Add and wire contract counters: `UBE.totalDistributed`, `Faucet.totalDripped`, `QuadraticFunding.distributedMatching`.
 
-- [ ] **UBE v0 UX & Policy:**
-  - [ ] Ensure Wallet "Daily Boost" button is gated by `trustScore ≥ 0.5`.
-  - [ ] Support two modes: pure XP simulation vs real testnet RVU claim (configurable).
-  - [ ] Document UBE abuse policy (attestation expiry, trustScore lowering) in code comments/docs.
+- [x] **UBE v0 UX & Policy:**
+  - [x] Ensure Wallet "Daily Boost" button is gated by `trustScore ≥ 0.5`.
+  - [x] Support two modes: pure XP simulation vs real testnet RVU claim (configurable).
+  - [x] Document UBE abuse policy (attestation expiry, trustScore lowering) in code comments/docs.
 
-- [ ] **Faucet v0 Scope:**
-  - [ ] Restrict Faucet usage to dev/tester accounts or flagged early testers in Sprint 2.
-  - [ ] Hide or clearly mark any Faucet UI in production builds.
+- [x] **Faucet v0 Scope:**
+  - [x] Restrict Faucet usage to dev/tester accounts or flagged early testers in Sprint 2.
+  - [x] Hide or clearly mark any Faucet UI in production builds.
 
-- [ ] **Governance Gating:**
-  - [ ] Ensure only attested accounts with sufficient trustScore can participate in any test QF runs.
-  - [ ] Add CI/QA checks that the public PWA does not expose direct QF contract calls in S2.
+- [x] **Governance Gating:**
+  - [x] Ensure only attested accounts with sufficient trustScore can participate in any test QF runs.
+  - [x] Add CI/QA checks that the public PWA does not expose direct QF contract calls in S2.
 
 ---
 
 ## Exit Criteria for Sprint 2
-- [ ] **CI Green:** All gates (Unit, Build, E2E, Bundle, Lighthouse) passing.
-- [ ] **Governance Live:** Users can submit/vote (Attestation Enforced).
-- [ ] **Civic Feed Polished:** UX is smooth, AI is fast (≤ 2s), Decay is visible, Eye/Lightbulb behave according to `spec-civic-sentiment.md`, and SentimentSignal events are emitted and validated locally.
-- [ ] **Canonical Contract Locked:** `canonical-analysis-v1` defined, validated, and used end-to-end (LLM → worker → storage → UI) with tests green.
-- [ ] **Docs:** `manual_test_plan.md` updated for Governance flows.
+- [x] **CI Green:** All gates (Unit, Build, E2E, Bundle, Lighthouse) passing.
+- [x] **Governance Live:** Users can submit/vote (Attestation Enforced).
+- [x] **Civic Feed Polished:** UX is smooth, AI is fast (≤ 2s), Decay is visible, Eye/Lightbulb behave according to `spec-civic-sentiment.md`, and SentimentSignal events are emitted and validated locally.
+- [x] **Canonical Contract Locked:** `canonical-analysis-v1` defined, validated, and used end-to-end (LLM → worker → storage → UI) with tests green.
+- [x] **Docs:** `manual_test_plan.md` updated for Governance flows.

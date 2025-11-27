@@ -1,26 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('provider', () => {
-beforeEach(() => {
-  vi.resetModules();
-  vi.unstubAllGlobals();
-});
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllGlobals();
+  });
 
-it('falls back to node crypto when global crypto missing', async () => {
-  vi.stubGlobal('crypto', undefined as any);
-  const { getWebCrypto } = await import('./provider');
-  const provider = await getWebCrypto();
-  expect(provider.subtle).toBeDefined();
-});
+  it('falls back to node crypto when global crypto missing', async () => {
+    vi.stubGlobal('crypto', undefined as any);
+    const { getWebCrypto } = await import('./provider');
+    const provider = await getWebCrypto();
+    expect(provider.subtle).toBeDefined();
+  });
 
   it('uses browser crypto when available and caches', async () => {
     const subtle = {} as SubtleCrypto;
     const getRandomValues = vi.fn((arr: any) => arr);
     const mock = { subtle, getRandomValues };
-  vi.stubGlobal('crypto', mock as any);
-  const { getWebCrypto } = await import('./provider');
-  const first = await getWebCrypto();
-  const second = await getWebCrypto();
+    vi.stubGlobal('crypto', mock as any);
+    const { getWebCrypto } = await import('./provider');
+    const first = await getWebCrypto();
+    const second = await getWebCrypto();
     expect(first).toBe(second);
     expect(getRandomValues).not.toBeNull();
   });
@@ -45,5 +45,18 @@ it('falls back to node crypto when global crypto missing', async () => {
     const first = await getWebCrypto();
     const second = await getWebCrypto();
     expect(second).toBe(first);
+  });
+  it('throws when no crypto is available', async () => {
+    vi.stubGlobal('crypto', undefined as any);
+    // Safely mock process to avoid breaking Vitest runner
+    const originalProcess = globalThis.process;
+    vi.stubGlobal('process', { ...originalProcess, versions: undefined });
+
+    try {
+      const { getWebCrypto } = await import('./provider');
+      await expect(getWebCrypto()).rejects.toThrow('WebCrypto is not available');
+    } finally {
+      vi.stubGlobal('process', originalProcess);
+    }
   });
 });

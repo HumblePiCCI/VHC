@@ -5,6 +5,7 @@ import { createStorageAdapter } from './storage/adapter';
 import type { StorageAdapter, StorageRecord } from './storage/types';
 import { HydrationBarrier, createHydrationBarrier } from './sync/barrier';
 import type { Namespace, VennClientConfig } from './types';
+import { TopologyGuard } from './topology';
 
 interface ChainAck {
   err?: string;
@@ -49,7 +50,9 @@ function normalizePeers(peers?: string[]): string[] {
 function createNamespace<T>(
   chain: ChainLike<T>,
   barrier: HydrationBarrier,
-  sessionReadyRef: () => boolean
+  sessionReadyRef: () => boolean,
+  guard: TopologyGuard,
+  path: string
 ): Namespace<T> {
   return {
     async read(): Promise<T | null> {
@@ -67,6 +70,7 @@ function createNamespace<T>(
       if (!sessionReadyRef()) {
         throw new Error('Session not ready');
       }
+      guard.validateWrite(path, value);
       await waitForRemote(chain, barrier);
       await new Promise<void>((resolve, reject) => {
         let settled = false;
@@ -119,6 +123,7 @@ export function createClient(config: VennClientConfig = {}): VennClient {
   const hydrationBarrier = createHydrationBarrier();
   const peers = normalizePeers(config.peers);
   const storage = config.storage ?? createStorageAdapter(hydrationBarrier);
+  const guard = config.topologyGuard ?? new TopologyGuard();
   const gun = Gun({ peers }) as IGunInstance;
   let sessionReady = false;
 
@@ -172,9 +177,9 @@ export function createClient(config: VennClientConfig = {}): VennClient {
       sessionReady = true;
     },
     linkDevice,
-    user: createNamespace(userChain, hydrationBarrier, () => sessionReady || config.requireSession === false),
-    chat: createNamespace(chatChain, hydrationBarrier, () => sessionReady || config.requireSession === false),
-    outbox: createNamespace(outboxChain, hydrationBarrier, () => sessionReady || config.requireSession === false),
+    user: createNamespace(userChain, hydrationBarrier, () => sessionReady || config.requireSession === false, guard, 'vh/user/'),
+    chat: createNamespace(chatChain, hydrationBarrier, () => sessionReady || config.requireSession === false, guard, 'vh/chat/'),
+    outbox: createNamespace(outboxChain, hydrationBarrier, () => sessionReady || config.requireSession === false, guard, 'vh/outbox/'),
     async shutdown(): Promise<void> {
       hydrationBarrier.markReady();
       (gun as IGunInstance & { off?: () => void }).off?.();
