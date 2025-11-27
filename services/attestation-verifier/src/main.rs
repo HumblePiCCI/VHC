@@ -4,6 +4,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use warp::{http::StatusCode, Filter, Rejection, Reply};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,11 +61,12 @@ async fn handle_verify(
         Platform::Ios => verify_apple(&payload, mock_mode),
         Platform::Android => verify_google(&payload, mock_mode),
     };
+    let nullifier = derive_nullifier(&payload.device_key);
 
     let response = SessionResponse {
         token: format!("session-{}", current_timestamp()),
         trust_score,
-        nullifier: format!("nullifier-{}-{}", payload.device_key, payload.nonce),
+        nullifier,
     };
 
     Ok(warp::reply::with_status(
@@ -157,6 +159,16 @@ fn current_timestamp() -> u64 {
         .as_secs()
 }
 
+fn derive_nullifier(device_key: &str) -> String {
+    // Stable hash of device_key + salt (env override to allow per-env variation)
+    let salt = env::var("NULLIFIER_SALT").unwrap_or_else(|_| "vh-nullifier-salt".to_string());
+    let mut hasher = Sha256::new();
+    hasher.update(salt.as_bytes());
+    hasher.update(device_key.as_bytes());
+    let hash = hasher.finalize();
+    format!("nullifier-{:x}", hash)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,6 +200,7 @@ mod tests {
         assert_eq!(res.status(), StatusCode::OK);
         let parsed: SessionResponse = serde_json::from_slice(res.body()).unwrap();
         assert!(parsed.trust_score >= 0.8);
+        assert!(parsed.nullifier.starts_with("nullifier-"));
     }
 
     #[tokio::test]
@@ -243,5 +256,15 @@ mod tests {
             .await;
 
         assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn derive_nullifier_is_stable() {
+        let n1 = derive_nullifier("device-key-123");
+        let n2 = derive_nullifier("device-key-123");
+        let n3 = derive_nullifier("device-key-abc");
+        assert_eq!(n1, n2);
+        assert_ne!(n1, n3);
+        assert!(n1.starts_with("nullifier-"));
     }
 }

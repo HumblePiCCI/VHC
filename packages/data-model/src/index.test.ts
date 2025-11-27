@@ -6,6 +6,8 @@ describe('data-model index exports', () => {
     expect(index.ProfileSchema).toBeDefined();
     expect(index.MessageSchema).toBeDefined();
     expect(index.AnalysisSchema).toBeDefined();
-    expect(index.SignalSchema).toBeDefined();
+    expect(index.AggregateSentimentSchema).toBeDefined();
+    expect(index.CanonicalAnalysisSchema).toBeDefined();
+    expect(index.XpLedgerSchema).toBeDefined();
   });
 });

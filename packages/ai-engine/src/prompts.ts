@@ -221,6 +221,11 @@ export function generateAnalysisPrompt(options: {
     .join('\n\n');
 }
 
+// Alias used by worker pipeline: canonical entry point for building the prompt
+export function buildPrompt(articleText: string): string {
+  return generateAnalysisPrompt({ articleText });
+}
+
 export function generateFrameReframePrompt(articleText: string): string {
   const format = `
 {

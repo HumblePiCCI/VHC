@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { AnalysisSchema, CanonicalAnalysisSchema, CivicDecaySchema, MessageSchema, ProfileSchema } from './schemas';
+import {
+  AnalysisSchema,
+  CanonicalAnalysisSchema,
+  AggregateSentimentSchema,
+  CivicDecaySchema,
+  MessageSchema,
+  ProfileSchema
+} from './schemas';
 
 describe('data-model schemas', () => {
   it('accepts a valid profile', () => {
@@ -67,28 +74,34 @@ describe('data-model schemas', () => {
     ).toThrow();
   });
 
-  it('rejects signal missing required fields', () => {
-    expect(() =>
-      SignalSchema.parse({
-        topic_id: '',
-        analysis_id: '',
-        bias_vector: {},
-        weight: 'bad'
-      } as any)
-    ).toThrow();
+  it('validates aggregate sentiment', () => {
+    const valid = AggregateSentimentSchema.parse({
+      topic_id: 'abc',
+      analysis_id: 'def',
+      point_stats: {
+        'point-1': { agree: 10, disagree: 2 }
+      },
+      bias_vector: { 'point-1': 1 },
+      weight: 1.5,
+      engagementScore: 0.8
+    });
+    expect(valid.weight).toBe(1.5);
   });
 
   it('validates canonical analysis requires urlHash and url', () => {
     const valid = CanonicalAnalysisSchema.parse({
+      schemaVersion: 'canonical-analysis-v1',
       url: 'https://example.com',
-      urlHash: 'abc123',
-      summary: 'summary',
+      urlHash: 'abc',
+      summary: 'test',
+      bias_claim_quote: ['quote'],
+      justify_bias_claim: ['justification'],
       biases: ['bias'],
       counterpoints: ['counter'],
-      sentimentScore: 0.1,
-      timestamp: Date.now()
+      sentimentScore: 0.5,
+      timestamp: 123
     });
-    expect(valid.urlHash).toBe('abc123');
+    expect(valid.urlHash).toBe('abc');
 
     expect(() =>
       CanonicalAnalysisSchema.parse({

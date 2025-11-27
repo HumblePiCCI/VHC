@@ -24,18 +24,27 @@ export const AnalysisSchema = z.object({
   timestamp: z.number().int().nonnegative()
 });
 
-export const SignalSchema = z.object({
+export const AggregateSentimentSchema = z.object({
   topic_id: z.string().min(1),
   analysis_id: z.string().min(1),
-  bias_vector: z.record(z.union([z.literal(1), z.literal(-1), z.literal(0)])),
-  weight: z.number(),
+  point_stats: z.record(
+    z.object({
+      agree: z.number().int().nonnegative(),
+      disagree: z.number().int().nonnegative()
+    })
+  ),
+  bias_vector: z.record(z.union([z.literal(1), z.literal(0), z.literal(-1)])).optional(),
+  weight: z.number().nonnegative(),
   engagementScore: z.number().nonnegative()
 });
 
 export const CanonicalAnalysisSchema = z.object({
+  schemaVersion: z.literal('canonical-analysis-v1'),
   url: z.string().url(),
   urlHash: z.string().min(1),
   summary: z.string().min(1),
+  bias_claim_quote: z.array(z.string().min(1)),
+  justify_bias_claim: z.array(z.string().min(1)),
   biases: z.array(z.string().min(1)),
   counterpoints: z.array(z.string().min(1)),
   perspectives: z.array(
@@ -44,9 +53,23 @@ export const CanonicalAnalysisSchema = z.object({
       frame: z.string(),
       reframe: z.string()
     })
-  ).optional(), // Optional for backward compatibility with existing data
+  ).optional(),
   sentimentScore: z.number().min(-1).max(1),
+  confidence: z.number().min(0).max(1).optional(),
   timestamp: z.number().int().nonnegative()
+});
+
+export const XpTrackSchema = z.object({
+  id: z.string().min(1),
+  score: z.number().nonnegative(),
+  lastUpdated: z.number().int().nonnegative()
+});
+
+export const XpLedgerSchema = z.object({
+  nullifier: z.string().min(1),
+  tracks: z.record(XpTrackSchema),
+  totalXP: z.number().nonnegative(),
+  lastUpdated: z.number().int().nonnegative()
 });
 
 export const CivicDecaySchema = z.object({

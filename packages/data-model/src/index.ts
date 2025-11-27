@@ -2,4 +2,7 @@ export * from './schemas';
 export type Profile = import('zod').infer<typeof import('./schemas').ProfileSchema>;
 export type Message = import('zod').infer<typeof import('./schemas').MessageSchema>;
 export type Analysis = import('zod').infer<typeof import('./schemas').AnalysisSchema>;
-export type Signal = import('zod').infer<typeof import('./schemas').SignalSchema>;
+export type AggregateSentiment = import('zod').infer<typeof import('./schemas').AggregateSentimentSchema>;
+export type CanonicalAnalysis = import('zod').infer<typeof import('./schemas').CanonicalAnalysisSchema>;
+export type XpLedger = import('zod').infer<typeof import('./schemas').XpLedgerSchema>;
+export type XpTrack = import('zod').infer<typeof import('./schemas').XpTrackSchema>;

@@ -16,6 +16,7 @@ export interface IdentityRecord {
   session: {
     token: string;
     trustScore: number;
+    scaledTrustScore: number;
     nullifier: string;
   };
   linkedDevices?: string[];
@@ -60,11 +61,18 @@ export function useIdentity() {
         throw new Error('Security Error: Low Trust Device');
       }
 
+      const scaledTrustScore = clampScaledTrustScore(Math.round(session.trustScore * 10000));
+
       const record: IdentityRecord = {
         id: randomToken(),
         createdAt: Date.now(),
         attestation,
-        session
+        session: {
+          token: session.token,
+          trustScore: session.trustScore,
+          scaledTrustScore,
+          nullifier: session.nullifier
+        }
       };
       persistIdentity(record);
       setIdentity(record);
@@ -151,4 +159,11 @@ function buildAttestation(): AttestationPayload {
     deviceKey: randomToken(),
     nonce: randomToken()
   };
+}
+
+function clampScaledTrustScore(value: number): number {
+  if (Number.isNaN(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 10000) return 10000;
+  return value;
 }

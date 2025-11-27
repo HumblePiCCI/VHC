@@ -1,81 +1,66 @@
-import type { MLCEngine, InitProgressReport } from '@mlc-ai/web-llm';
-import { generateAnalysisPrompt, AnalysisResult } from './prompts';
-import { hashUrl } from './analysis';
-import { cacheAnalysisResult, cacheModelMeta, getCachedAnalysisResult } from './cache';
+import { EngineRouter } from './engines';
+import { parseAnalysisResponse } from './schema';
+import { validateAnalysisAgainstSource } from './validation';
+import { buildPrompt } from './prompts';
 
-let engine: MLCEngine | null = null;
+// Mock engine for now, will be replaced by real implementation
+const mockEngine = {
+  name: 'mock-engine',
+  kind: 'local' as const,
+  generate: async () => JSON.stringify({
+    final_refined: {
+      summary: 'Mock summary',
+      bias_claim_quote: ['quote'],
+      justify_bias_claim: ['justification'],
+      biases: ['bias'],
+      counterpoints: ['counter'],
+      sentimentScore: 0.5,
+      confidence: 0.9
+    }
+  })
+};
 
-async function ensureEngine(): Promise<MLCEngine> {
-  if (engine) return engine;
-  const { MLCEngine } = await import('@mlc-ai/web-llm');
-  engine = new MLCEngine();
-  engine.setInitProgressCallback((report: InitProgressReport) => {
-    self.postMessage({ type: 'PROGRESS', payload: report } as WorkerResponse);
-  });
-  return engine;
-}
+const router = new EngineRouter(mockEngine, undefined, 'local-only');
 
 export type WorkerMessage =
-    | { type: "LOAD_MODEL"; payload: { modelId: string } }
-    | { type: "GENERATE_ANALYSIS"; payload: { articleText: string; modelId?: string } };
+  | { type: "ANALYZE"; payload: { articleText: string; urlHash: string } };
 
 export type WorkerResponse =
-    | { type: "PROGRESS"; payload: InitProgressReport }
-    | { type: "MODEL_LOADED" }
-    | { type: "ANALYSIS_COMPLETE"; payload: AnalysisResult }
-    | { type: "ERROR"; payload: string };
+  | { type: "SUCCESS"; payload: { analysis: any; engine: string; warnings: any[] } }
+  | { type: "ERROR"; payload: { message: string } };
 
-self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
-  const { type, payload } = e.data;
+self.onmessage = async (e: MessageEvent) => {
+  const { id, type, payload } = e.data;
 
-  try {
-    if (type === 'LOAD_MODEL') {
-      const { modelId } = payload;
-      const loadedEngine = await ensureEngine();
-      await loadedEngine.reload(modelId);
-      await cacheModelMeta(modelId, { loadedAt: Date.now() });
-      self.postMessage({ type: 'MODEL_LOADED' } as WorkerResponse);
-    } else if (type === 'GENERATE_ANALYSIS') {
-      const loadedEngine = await ensureEngine();
+  if (type === 'ANALYZE') {
+    try {
       const { articleText } = payload;
+      const prompt = buildPrompt(articleText);
 
-      const articleHash = hashUrl(articleText);
-      const cached = await getCachedAnalysisResult<AnalysisResult>(articleHash);
-      if (cached) {
-        self.postMessage({ type: 'ANALYSIS_COMPLETE', payload: cached } as WorkerResponse);
-        return;
-      }
+      // 1. Generate
+      const { text, engine } = await router.generate(prompt);
 
-      const prompt = generateAnalysisPrompt({ articleText });
+      // 2. Parse
+      const analysis = parseAnalysisResponse(text);
 
-      const completion = await loadedEngine.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
+      // 3. Validate
+      const warnings = validateAnalysisAgainstSource(articleText, analysis as any);
+
+      self.postMessage({
+        id,
+        type: 'SUCCESS',
+        payload: {
+          analysis,
+          engine,
+          warnings
+        }
       });
-
-      const rawContent = completion.choices[0]?.message?.content || '';
-
-      const firstOpen = rawContent.indexOf('{');
-      const lastClose = rawContent.lastIndexOf('}');
-
-      if (firstOpen === -1 || lastClose === -1 || lastClose < firstOpen) {
-        throw new Error('No valid JSON object found in response');
-      }
-
-      const jsonString = rawContent.substring(firstOpen, lastClose + 1);
-
-      let result: AnalysisResult;
-      try {
-        result = JSON.parse(jsonString) as AnalysisResult;
-      } catch (parseError) {
-        throw new Error(`Failed to parse JSON: ${(parseError as Error).message}`);
-      }
-
-      await cacheAnalysisResult(articleHash, result);
-      self.postMessage({ type: 'ANALYSIS_COMPLETE', payload: result } as WorkerResponse);
+    } catch (err) {
+      self.postMessage({
+        id,
+        type: 'ERROR',
+        payload: { message: (err as Error).message }
+      });
     }
-  } catch (error) {
-    self.postMessage({ type: 'ERROR', payload: (error as Error).message } as WorkerResponse);
   }
 };

@@ -3,9 +3,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { describe, expect, it } from 'vitest';
-import AnalysisView from './AnalysisView';
 import type { FeedItem } from '../hooks/useFeedStore';
-import { useCivicState } from '../hooks/useCivicState';
+import AnalysisView from './AnalysisView';
+import { useSentimentState } from '../hooks/useSentimentState';
 
 const sample: FeedItem = {
   id: 'analysis-1',
@@ -22,11 +22,21 @@ const sample: FeedItem = {
 };
 
 describe('AnalysisView', () => {
-  it('renders perspectives and updates scores', () => {
-    useCivicState.setState({ scores: {} });
+  it('renders perspectives and updates 3-state sentiment', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {},
+      lightbulb: {},
+      eye: {},
+      signals: []
+    });
     render(<AnalysisView item={sample} />);
-    const upvote = screen.getByLabelText('Upvote');
-    fireEvent.click(upvote);
-    expect(screen.getByLabelText('Engagement score')).toHaveTextContent('0.2');
+    const agree = screen.getByLabelText('Agree');
+    fireEvent.click(agree);
+    expect(screen.getByLabelText('Engagement score')).toHaveTextContent('💡');
+    expect(useSentimentState.getState().getAgreement(sample.id, sample.perspectives[0].id)).toBe(1);
+
+    fireEvent.click(agree);
+    expect(useSentimentState.getState().getAgreement(sample.id, sample.perspectives[0].id)).toBe(0);
   });
 });
