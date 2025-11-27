@@ -17,7 +17,7 @@ This spec is the single contract for identity, trustScore, and constituency acro
 
 - `AttestationPayload` (hardware attestation input).
 - `VerificationResult` → `trustScore: number` in `[0,1]`.
-- `derive_nullifier(device_key: string) -> string` (deterministic, collision-resistant enough for scale).
+- `derive_nullifier(device_key: string) -> string` (deterministic, collision-resistant enough for scale; v0 reference: `sha256(device_key)`).
 - `SessionResponse`:
   - `token` = per-session string.
   - `trustScore` = float `[0,1]`.

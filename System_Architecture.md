@@ -222,6 +222,9 @@ Civic Decay is applied per-user-per-topic. Reads (expanding an analysis) advance
   "device_id": "DEVICE_PUBKEY_HASH",
   "timestamp": 1699982735,
   "trustScore": 0.95,
+  "scaledTrustScore": 9500,
+  "nullifier": "nullifier-abc123...",
+  "session_token": "session-device-nonce-timestamp",
   "client_integrity": { "app_attestation": "Apple_AppAttest_v1" },
   "proof": {
     "uniqueness_nullifier": "nullifier-abc123...",
