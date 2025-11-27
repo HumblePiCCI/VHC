@@ -55,7 +55,9 @@
 
 ### 2.2 UBE Drip (Universal Basic Equity)
 - [x] **Contract:** Implement `UBE.sol` (Drip logic based on verified identity).
+- [x] **Params (Season 0):** `minTrustScore = 5000 (0.5)`, `claimInterval = 1 day`, `dripAmount ~25 RVU`; no region gating and no lifetime cap in v0 (bounded by attestation expiry).
 - [x] **Auditability:** Ensure all claim events are indexed for off-chain verification.
+- [x] **Metrics:** Add aggregate counters (e.g., `totalDistributed`) for observability.
 - [x] **Integration:** Connect PWA to `UBE` contract to claim daily drip.
 - [x] **Coverage:** 100% test coverage for new `UBE` contract.
 
@@ -63,6 +65,7 @@
 - [x] **Contract:** Implement `QuadraticFunding.sol` (Pool matching logic).
 - [x] **Vote:** Implement `castVote` function (Attestation-gated).
 - [x] **Coverage:** 100% test coverage for `QuadraticFunding` contract.
+- [x] **Season 0 Scope:** Contract hardened and deployed, but public governance UI remains off-chain; on-chain QF rounds run only with dev/test accounts in S1/S2.
 
 **DoD:** Contracts deployed to Testnet, verified on Explorer, and PWA can claim UBE drip. All new contracts meet 100% coverage.
 

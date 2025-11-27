@@ -1,6 +1,6 @@
 # BIO-EC OS: Source of Truth
 
-**Codename:** TRINITY (GWC x LUMA x VENN)
+**Codename:** TRINITY (VENN/HERMES x LUMA x GWC)
 **Version:** 0.2.0 (Sprint 2 Baseline)
 **Status:** APPROVED FOR EXECUTION
 
@@ -119,6 +119,24 @@ Invariants: same human → same nullifier across all layers; scaled trustScore =
     2.  **Privacy:** Price vectors encrypted via Pedersen Commitments.
     3.  **Calc:** Smart Contract calculates the **Median** homomorphically.
     4.  **Security:** No single node's specific feed is ever decrypted.
+
+#### 4.2.1 RVU v0: Proto-GWU
+
+Season 0 runs RVU as a standard ERC-20 with `MINTER_ROLE` / `BURNER_ROLE` and no on-chain index logic. It is an inflationary proto-asset with tightly controlled minters, used to harden economic plumbing before activating the full global wealth index.
+
+**Sources (v0):**
+* Bootstrap mint (testnet deploy script).
+* UBE drip (per-human, per-interval).
+* Faucet drip (dev/onboarding; not part of long-term dignity loop).
+
+**Sinks/locks (v0):**
+* QuadraticFunding holds contributions + matching until settlement.
+* No automatic burns; `burn()` exists but is unused in Season 0.
+
+Instrumentation focuses on:
+* `RVU.totalSupply()`.
+* `RVU.balanceOf(QuadraticFunding)`.
+* Aggregate distribution counters (e.g., `UBE.totalDistributed`, `Faucet.totalDripped`, `QuadraticFunding.distributedMatching`) to monitor inflation and governance flow. See `docs/spec-rvu-economics-v0.md` for the canonical Season 0 economic contract.
 
 ### 4.3 VENN: The Canonical Bias Engine
 
@@ -344,6 +362,25 @@ URLs are normalized upstream; the canonical schema enforces `url` as a valid URL
 See `docs/canonical-analysis-v1.md` for the precise wire-format contract and validation rules.
 
 -----
+
+### 6.4 UBE v0 (Universal Basic Equity)
+
+* **Trust scale:** 0–10000 (`TRUST_SCORE_SCALE`); `minTrustScore = 5000` (0.5).
+* **Cadence:** `claimInterval = 1 day`; `dripAmount` ~25 RVU (Season 0 default).
+* **Eligibility:** Identity exists, `trustScore ≥ minTrustScore`, `expiresAt > now`, cooldown satisfied.
+* **Scope:** Per-human (per nullifier), not region-based in v0; no lifetime cap, bounded by attestation expiry/policy.
+* **UX:** Surfaced as “Daily Boost” to XP; may mint RVU on testnet or simulate XP-only while contracts harden.
+* **Abuse controls:** Attestation expiry, lowering trustScore, modest payout (floor, not upside).
+
+### 6.5 Faucet v0
+
+Mirrors UBE’s trust- and time-gated pattern for dev/onboarding/early tester bonuses. Separate `dripAmount`, cooldown, and `minTrustScore`; mints RVU via `rvu.mint(msg.sender, dripAmount)`. Not part of the long-term dignity loop.
+
+### 6.6 Quadratic Funding v0
+
+Implements attested participant registration, project registration, quadratic aggregation, matching pool logic, and withdrawals. In Season 0 the contract is exercised by curators/testers with dev accounts; the public governance UI runs off-chain (seeded proposals, local-only votes/voice credits) and does not expose on-chain QF rounds yet.
+
+See `docs/spec-rvu-economics-v0.md` for detailed Season 0 economic semantics.
 
 ## 7. Risk Register
 

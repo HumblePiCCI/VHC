@@ -176,6 +176,7 @@ RVU exists on‑chain, but:
   - Faucet (dev/onboarding),  
   - Quadratic Funding test rounds.  
 - It is not yet surfaced as “money” to the broad user base.
+- Season 0 RVU is an inflationary proto-asset (no index logic) minted via bootstrap, UBE, and Faucet; GWU mechanics come later.
 
 ### 4.2 Future: Global Wealth Unit (GWU) and REL
 
@@ -226,7 +227,8 @@ Under the hood, the contracts are concrete:
   - Attested participants (trust threshold),  
   - Projects registered by admin/curators,  
   - Voting in RVU with quadratic aggregation,  
-  - Matching pool and withdrawals.
+  - Matching pool and withdrawals.  
+  - Season 0: on-chain rounds are curated/internal; public proposal UI uses local-only voting to test UX before wiring real RVU.
 
 - **MedianOracle**  
   - Commit–reveal median price oracle, ready to feed into future GWU index logic, not yet wired into RVU directly.

@@ -13,6 +13,7 @@
 - [x] AI-driven development guardrails codified (LOC caps, module boundaries, 200% coverage).
 - [x] Vite + React + Node 20 + pnpm confirmed as the canonical toolchain.
 - [x] Identity, trustScore, and constituency contracts are documented in `/docs/spec-identity-trust-constituency.md` and referenced from `System_Architecture.md`.
+- [x] Season 0 RVU/UBE/Faucet/QF economics are documented in `/docs/spec-rvu-economics-v0.md` and referenced from `System_Architecture.md`.
 
 ---
 

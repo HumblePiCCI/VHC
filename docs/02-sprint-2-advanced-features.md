@@ -24,11 +24,13 @@
 - [x] **Contract:** Enhance `QuadraticFunding.sol` with full pooling and distribution logic.
 - [x] **Gating:** Voting and Matching MUST be gated by valid **Attestation** (`trust_score` check).
 - [x] **Tests:** Add specific test cases for non-attested attempts (must revert).
+- [ ] **Season 0 Scope:** Frontend governance in VENN remains off-chain for general users (seeded proposals, local vote tracking). QuadraticFunding.sol is exercised only by curated dev/test accounts for internal QF rounds; no on-chain QF interactions are exposed in the public UX in Sprint 2.
 
 ### 1.2 Proposal System
 - [x] **Schema:** Define `Proposal` schema in `data-model` with validation (Zod).
 - [x] **Flow:** Create "Submit Proposal" flow (requires minimum RVU stake + Attestation).
 - [x] **E2E:** Verify "Submit -> Vote -> Match" flow in Offline Mock Mode.
+- [ ] **QF Wiring (Season 0):** Maintain an off-chain mapping from curated Proposal → on-chain `projectId` (if any). Do not send RVU from regular users via the app; `castVote()` is invoked by internal tools only in S2.
 
 ---
 
@@ -222,6 +224,27 @@
   - [ ] Unit tests for `derive_nullifier` (stable for same device_key).
   - [ ] Tests for `decodeRegionProof` mapping to `ConstituencyProof`.
   - [ ] Assert `wallet.trustScore` ≈ `identity.scaledTrustScore` once the bridge is wired.
+
+## Phase 2.6 Season 0 Economics & Metrics (RVU / UBE / Faucet / QF)
+
+**Goal:** Make RVU v0, UBE, Faucet, and QF behavior explicit, measurable, and aligned with Season 0 UX.
+
+- [ ] **RVU v0 Instrumentation:**
+  - [ ] Expose `RVU.totalSupply()` and `RVU.balanceOf(QuadraticFunding)` in a dev-only "Global Wealth" dashboard.
+  - [ ] Add and wire contract counters: `UBE.totalDistributed`, `Faucet.totalDripped`, `QuadraticFunding.distributedMatching`.
+
+- [ ] **UBE v0 UX & Policy:**
+  - [ ] Ensure Wallet "Daily Boost" button is gated by `trustScore ≥ 0.5`.
+  - [ ] Support two modes: pure XP simulation vs real testnet RVU claim (configurable).
+  - [ ] Document UBE abuse policy (attestation expiry, trustScore lowering) in code comments/docs.
+
+- [ ] **Faucet v0 Scope:**
+  - [ ] Restrict Faucet usage to dev/tester accounts or flagged early testers in Sprint 2.
+  - [ ] Hide or clearly mark any Faucet UI in production builds.
+
+- [ ] **Governance Gating:**
+  - [ ] Ensure only attested accounts with sufficient trustScore can participate in any test QF runs.
+  - [ ] Add CI/QA checks that the public PWA does not expose direct QF contract calls in S2.
 
 ---
 

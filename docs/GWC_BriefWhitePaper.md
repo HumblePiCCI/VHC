@@ -42,6 +42,8 @@ Permissionless ArbVaults: Automated vaults dampen volatility within defined band
 
 Bounded Open Market Operations (OMO): If the price falls significantly below the index (P<NAV), the protocol utilizes the Public Purse reserves to buy back and burn RVU, supporting the floor.
 
+Season 0 Implementation: In the initial deployment, RVU runs in a simplified "v0" mode—an inflationary ERC-20 with tightly controlled minters (bootstrap, UBE, Faucet) and no enforced index logic on-chain. The full GWU index mechanics (CPIA, ArbVaults, OMO) and RVU-Real benchmark come online in later seasons once civic and governance rails are battle-tested.
+
 2.3 The Legal Shield: BMR Compliance
 
 To ensure durability against regulatory capture, the RVU-Real-v1 index is registered under the EU Benchmarks Regulation (BMR) .
