@@ -6,3 +6,4 @@ export type AggregateSentiment = import('zod').infer<typeof import('./schemas').
 export type CanonicalAnalysis = import('zod').infer<typeof import('./schemas').CanonicalAnalysisSchema>;
 export type XpLedger = import('zod').infer<typeof import('./schemas').XpLedgerSchema>;
 export type XpTrack = import('zod').infer<typeof import('./schemas').XpTrackSchema>;
+export * from './curated-projects';

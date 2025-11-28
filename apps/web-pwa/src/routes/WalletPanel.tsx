@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { Button } from '@vh/ui';
 import { useWallet } from '../hooks/useWallet';
+import { useIdentity } from '../hooks/useIdentity';
+import { useXpLedger } from '../hooks/useXpLedger';
 
 function shortAddress(address: string | null) {
   if (!address) return 'Wallet not connected';
@@ -35,12 +37,18 @@ export const WalletPanel: React.FC = () => {
     claiming: claimingUBE,
     error: walletError
   } = useWallet();
+  const { identity } = useIdentity();
+  const { tracks, totalXP } = useXpLedger();
 
   const nextClaimLabel = useMemo(() => formatNextClaimLabel(claimStatus), [claimStatus]);
+  // Prefer local identity trust score, fallback to wallet/chain trust score
   const trustLabel = useMemo(() => {
+    if (identity?.session?.scaledTrustScore != null) {
+      return (identity.session.scaledTrustScore / 100).toFixed(1);
+    }
     if (!claimStatus) return '-';
     return (claimStatus.trustScore / 100).toFixed(1);
-  }, [claimStatus]);
+  }, [identity, claimStatus]);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -68,18 +76,41 @@ export const WalletPanel: React.FC = () => {
         </div>
         <div className="rounded border border-slate-100 bg-slate-50 px-3 py-2">
           <p className="text-xs uppercase tracking-wide text-slate-500">Trust Score</p>
-          <p className="text-lg font-semibold text-slate-900">
+          <p className="text-lg font-semibold text-slate-900" data-testid="wallet-trust-score">
             {trustLabel === '-' ? '-' : `${trustLabel}%`}
           </p>
         </div>
         <div className="rounded border border-slate-100 bg-slate-50 px-3 py-2">
-          <p className="text-xs uppercase tracking-wide text-slate-500">UBE Status</p>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Daily Boost</p>
           <p className="text-lg font-semibold text-slate-900">{nextClaimLabel}</p>
         </div>
       </div>
+
+      <div className="mt-3 rounded border border-slate-100 bg-slate-50 px-3 py-2">
+        <p className="text-xs uppercase tracking-wide text-slate-500">XP Breakdown</p>
+        <div className="mt-1 grid grid-cols-4 gap-2 text-sm">
+          <div>
+            <p className="text-xs text-slate-500">Civic</p>
+            <p className="font-semibold text-slate-900" data-testid="xp-civic">{tracks.civic}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Social</p>
+            <p className="font-semibold text-slate-900" data-testid="xp-social">{tracks.social}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Project</p>
+            <p className="font-semibold text-slate-900" data-testid="xp-project">{tracks.project}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Total</p>
+            <p className="font-semibold text-slate-900" data-testid="xp-total">{totalXP}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="mt-4 flex items-center gap-3">
         <Button onClick={() => void claimUBE()} disabled={!claimStatus?.eligible || claimingUBE || walletLoading}>
-          {claimingUBE ? 'Claiming…' : 'Claim UBE'}
+          {claimingUBE ? 'Claiming…' : 'Daily Boost'}
         </Button>
         {walletError && <span className="text-xs text-red-700">{walletError}</span>}
       </div>

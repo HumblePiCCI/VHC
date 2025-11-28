@@ -13,6 +13,7 @@
     "@tanstack/react-router": "^1.84.4",
     "@vh/ai-engine": "workspace:*",
     "@vh/contracts": "workspace:*",
+    "@vh/data-model": "workspace:*",
     "@vh/gun-client": "workspace:*",
     "@vh/types": "workspace:*",
     "@vh/ui": "workspace:*",

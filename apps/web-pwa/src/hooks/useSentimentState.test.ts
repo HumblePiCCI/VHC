@@ -24,19 +24,20 @@ describe('useSentimentState', () => {
   });
 
   it('cycles agreement and emits signals', () => {
-    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1 });
+    const proof = { district_hash: 'd', nullifier: 'n', merkle_root: 'm' };
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
     let agreement = useSentimentState.getState().getAgreement(TOPIC, POINT);
     expect(agreement).toBe(1);
     expect(useSentimentState.getState().signals.at(-1)?.agreement).toBe(1);
 
     // same desired toggles back to neutral
-    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1 });
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
     agreement = useSentimentState.getState().getAgreement(TOPIC, POINT);
     expect(agreement).toBe(0);
     expect(useSentimentState.getState().signals.at(-1)?.agreement).toBe(0);
 
     // switch to disagree
-    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: -1 });
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
     agreement = useSentimentState.getState().getAgreement(TOPIC, POINT);
     expect(agreement).toBe(-1);
     const signal = useSentimentState.getState().signals.at(-1);

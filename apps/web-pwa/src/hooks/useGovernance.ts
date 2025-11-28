@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CURATED_PROJECTS } from '@vh/data-model';
 import { isE2EMode } from '../store';
 
 export interface Proposal {
@@ -63,6 +64,13 @@ export function useGovernance() {
   const submitVote = async ({ proposalId, amount, direction }: VoteInput) => {
     if (!amount || amount <= 0) {
       throw new Error('Amount required');
+    }
+    const curated = CURATED_PROJECTS[proposalId];
+    if (curated) {
+      const title = proposals.find((p) => p.id === proposalId)?.title ?? curated.title ?? proposalId;
+      console.info(
+        `[Season 0] Vote recorded locally for "${title}" (On-chain ID: ${curated.onChainId}). No RVU transaction sent.`
+      );
     }
     setProposals((prev) =>
       prev.map((p) => {

@@ -15,6 +15,14 @@ vi.mock('../hooks/useWallet', () => ({
   useWallet: (...args: unknown[]) => mockUseWallet(...args)
 }));
 
+vi.mock('../hooks/useIdentity', () => ({
+  useIdentity: () => ({ identity: null, status: 'anonymous' })
+}));
+
+vi.mock('../hooks/useXpLedger', () => ({
+  useXpLedger: () => ({ tracks: { civic: 0, social: 0, project: 0 }, totalXP: 0 })
+}));
+
 function setupWalletState(state: Partial<ReturnType<typeof mockUseWallet>>) {
   mockUseWallet.mockReturnValue({
     account: null,
@@ -67,9 +75,10 @@ describe('WalletPanel', () => {
     fireEvent.click(refreshButton);
     expect(refresh).toHaveBeenCalled();
 
-    const claimButton = screen.getAllByText('Claim UBE')[0];
+    const boostElements = screen.getAllByText('Daily Boost');
+    const claimButton = boostElements.find((el) => el.tagName === 'BUTTON');
     expect(claimButton).not.toBeDisabled();
-    fireEvent.click(claimButton);
+    fireEvent.click(claimButton!);
     expect(claimUBE).toHaveBeenCalled();
   });
 
@@ -83,7 +92,9 @@ describe('WalletPanel', () => {
     render(<WalletPanel />);
 
     expect(screen.getByText(/in 1h/)).toBeInTheDocument();
-    expect(screen.getByText('Claim UBE')).toBeDisabled();
+    const boostButtons = screen.getAllByText('Daily Boost');
+    const claimBtn = boostButtons.find((el) => el.tagName === 'BUTTON');
+    expect(claimBtn).toBeDisabled();
   });
 
   it('shows loading state and surfaces errors', () => {

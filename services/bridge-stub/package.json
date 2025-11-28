@@ -1,0 +1,13 @@
+{
+  "name": "@vh/bridge-stub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run --config ./vitest.config.ts"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.9",
+    "typescript": "^5.4.5"
+  }
+}

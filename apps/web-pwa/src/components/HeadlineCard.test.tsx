@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { describe, expect, it } from 'vitest';
 import HeadlineCard from './HeadlineCard';
@@ -21,11 +21,22 @@ const sample: FeedItem = {
 };
 
 describe('HeadlineCard', () => {
-  it('renders metrics and expands on click', () => {
+  it('renders metrics and expands on click', async () => {
     render(<HeadlineCard item={sample} />);
     expect(screen.getByText(/Sample Headline/)).toBeInTheDocument();
-    expect(screen.getByText(/👁️/)).toBeInTheDocument();
+    const readCount = screen.getByTestId('read-count');
+    expect(readCount).toHaveTextContent('👁️ 4.0');
     fireEvent.click(screen.getByText(/Sample Headline/));
-    expect(screen.getByText(/Frame view/)).toBeInTheDocument();
+
+    // Shows loading state initially
+    expect(screen.getByTestId('analysis-loading')).toBeInTheDocument();
+
+    // Wait for content to appear after loading delay (300ms)
+    await waitFor(() => {
+      expect(screen.getByText(/Frame view/)).toBeInTheDocument();
+    }, { timeout: 500 });
+
+    // Read count should increment on first expansion
+    expect(screen.getByTestId('read-count')).toHaveTextContent('👁️ 5.0');
   });
 });

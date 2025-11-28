@@ -56,7 +56,7 @@ const RootShell = ({ children }: { children: React.ReactNode }) => {
 
 const HomeComponent = () => {
   const { profile, createIdentity, identityStatus, client, error } = useAppStore();
-  const { identity, startLinkSession, completeLinkSession } = useIdentity();
+  const { identity, status: identityRecordStatus, createIdentity: createIdentityRecord, startLinkSession, completeLinkSession } = useIdentity();
   const [username, setUsername] = useState('');
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
@@ -158,7 +158,10 @@ const HomeComponent = () => {
             onSubmit={(e) => {
               e.preventDefault();
               const chosen = username.trim() || 'vh-user';
-              void createIdentity(chosen);
+              void (async () => {
+                await createIdentityRecord();
+                await createIdentity(chosen);
+              })();
             }}
           >
             <input
@@ -166,15 +169,15 @@ const HomeComponent = () => {
               placeholder="Choose a username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              disabled={identityStatus === 'creating'}
+              disabled={identityStatus === 'creating' || identityRecordStatus === 'creating'}
             />
             <Button
               type="submit"
               onClick={() => { }}
-              disabled={identityStatus === 'creating'}
+              disabled={identityStatus === 'creating' || identityRecordStatus === 'creating'}
               data-testid="create-identity-btn"
             >
-              {identityStatus === 'creating' ? 'Creating…' : 'Join'}
+              {identityStatus === 'creating' || identityRecordStatus === 'creating' ? 'Creating…' : 'Join'}
             </Button>
           </form>
           {error && <span className="text-xs text-red-700">{error}</span>}
@@ -183,11 +186,31 @@ const HomeComponent = () => {
 
       {profile && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 text-sm text-slate-600">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Connected to mesh</span>
+            {identity?.session?.trustScore != null && identity.session.trustScore >= 0.7 && (
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700" data-testid="identity-badge">
+                Verified
+              </span>
+            )}
+            {identity?.session?.trustScore != null && identity.session.trustScore >= 0.5 && identity.session.trustScore < 0.7 && (
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700" data-testid="identity-badge">
+                Attested
+              </span>
+            )}
+            {identity?.session?.trustScore != null && identity.session.trustScore < 0.5 && (
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600" data-testid="identity-badge">
+                Limited
+              </span>
+            )}
             <span className="text-slate-500" data-testid="welcome-msg">
               Welcome, {profile.username}
             </span>
+            {identity?.session?.trustScore != null && (
+              <span className="text-slate-500" data-testid="trust-score">
+                Trust Score: {(identity.session.scaledTrustScore / 100).toFixed(1)}%
+              </span>
+            )}
             <span className="text-slate-500" data-testid="linked-count">
               Linked devices: {(identity?.linkedDevices ?? []).length}
             </span>

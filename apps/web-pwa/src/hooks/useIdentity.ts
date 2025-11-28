@@ -4,6 +4,7 @@ import { createSession } from '@vh/gun-client';
 
 const IDENTITY_KEY = 'vh_identity';
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
+const DEV_MODE = (import.meta as any).env?.DEV === true || (import.meta as any).env?.MODE === 'development';
 const ATTESTATION_URL =
   (import.meta as any).env?.VITE_ATTESTATION_URL ?? 'http://localhost:3000/verify';
 
@@ -53,9 +54,27 @@ export function useIdentity() {
     try {
       setStatus('creating');
       const attestation = buildAttestation();
-      const session = E2E_MODE
-        ? { token: 'mock-session', trustScore: 1, nullifier: 'mock-nullifier' }
-        : await createSession(attestation, ATTESTATION_URL);
+
+      let session: { token: string; trustScore: number; nullifier: string };
+
+      if (E2E_MODE) {
+        session = { token: 'mock-session', trustScore: 1, nullifier: 'mock-nullifier' };
+      } else {
+        try {
+          session = await createSession(attestation, ATTESTATION_URL);
+        } catch (verifierErr) {
+          if (DEV_MODE) {
+            console.warn('[vh:identity] Attestation verifier unavailable, using dev fallback');
+            session = {
+              token: `dev-session-${randomToken()}`,
+              trustScore: 0.95,
+              nullifier: `dev-nullifier-${randomToken()}`
+            };
+          } else {
+            throw verifierErr;
+          }
+        }
+      }
 
       if (session.trustScore < 0.5) {
         throw new Error('Security Error: Low Trust Device');

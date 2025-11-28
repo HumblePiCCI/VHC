@@ -23,6 +23,7 @@ export default defineConfig({
       '@vh/types': path.resolve(__dirname, '../../packages/types/src'),
       '@vh/ai-engine': path.resolve(__dirname, '../../packages/ai-engine/src'),
       '@vh/crypto': path.resolve(__dirname, '../../packages/crypto/src'),
+      '@vh/data-model': path.resolve(__dirname, '../../packages/data-model/src'),
       '@vh/contracts': path.resolve(__dirname, '../../packages/contracts/typechain-types')
     }
   }

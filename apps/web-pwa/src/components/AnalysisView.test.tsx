@@ -2,10 +2,20 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { FeedItem } from '../hooks/useFeedStore';
 import AnalysisView from './AnalysisView';
 import { useSentimentState } from '../hooks/useSentimentState';
+
+vi.mock('../hooks/useRegion', () => ({
+  useRegion: () => ({
+    proof: {
+      district_hash: 'test-district',
+      nullifier: 'test-nullifier',
+      merkle_root: 'test-root'
+    }
+  })
+}));
 
 const sample: FeedItem = {
   id: 'analysis-1',

@@ -89,3 +89,8 @@ export const SentimentSignalSchema = z.object({
 });
 
 export { z };
+
+export function decodeRegionProof(tuple: RegionProofTuple): ConstituencyProof {
+  const [district_hash, nullifier, merkle_root] = tuple;
+  return { district_hash, nullifier, merkle_root };
+}

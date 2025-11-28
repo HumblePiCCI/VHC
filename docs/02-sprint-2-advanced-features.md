@@ -30,7 +30,7 @@
 - [x] **Schema:** Define `Proposal` schema in `data-model` with validation (Zod).
 - [x] **Flow:** Create "Submit Proposal" flow (requires minimum RVU stake + Attestation).
 - [x] **E2E:** Verify "Submit -> Vote -> Match" flow in Offline Mock Mode.
-- [ ] **QF Wiring (Season 0):** Maintain an off-chain mapping from curated Proposal → on-chain `projectId` (if any). Do not send RVU from regular users via the app; `castVote()` is invoked by internal tools only in S2.
+- [x] **QF Wiring (Season 0):** Maintain an off-chain mapping from curated Proposal → on-chain `projectId` (if any). Do not send RVU from regular users via the app; `castVote()` is invoked by internal tools only in S2.
 
 ---
 
@@ -242,22 +242,22 @@
   - [x] In `createIdentity`, compute `scaledTrustScore = Math.round(trustScore * 10000)` and persist it.
   - [x] Update downstream code (sentiment, proposals) to use `identity.nullifier` as the human key.
 
-- [ ] **Region & Constituency:**
-  - [ ] Add client-side `RegionProof` placeholder (mock in dev, real later) and persist it alongside identity.
-  - [ ] Use `decodeRegionProof()` wherever a `ConstituencyProof` is required (SentimentSignal, proposal creation).
-  - [ ] Enforce that emitting a `SentimentSignal` requires a `RegionProof` (or explicit dev stub).
+- [x] **Region & Constituency:**
+  - [x] Add client-side `RegionProof` placeholder (mock in dev, real later) and persist it alongside identity.
+  - [x] Use `decodeRegionProof()` wherever a `ConstituencyProof` is required (SentimentSignal, proposal creation).
+  - [x] Enforce that emitting a `SentimentSignal` requires a `RegionProof` (or explicit dev stub).
 
-- [ ] **On-Chain Bridge Design (stub):**
-  - [ ] Document a minimal "attestor bridge" flow:
+- [x] **On-Chain Bridge Design (stub):**
+  - [x] Document a minimal "attestor bridge" flow:
         `SessionResponse (trustScore, nullifier)` + `wallet address` →
         `scaledTrustScore`, `bytes32Nullifier` →
         `UBE.registerIdentity`, `Faucet.recordAttestation`, `QF.recordParticipant`.
-  - [ ] Provide a placeholder script/service interface even if not fully wired this sprint.
+  - [x] Provide a placeholder script/service interface even if not fully wired this sprint.
 
-- [ ] **Tests & Invariants:**
+- [x] **Tests & Invariants:**
   - [x] Unit tests for `derive_nullifier` (stable for same device_key).
-  - [ ] Tests for `decodeRegionProof` mapping to `ConstituencyProof`.
-  - [ ] Assert `wallet.trustScore` ≈ `identity.scaledTrustScore` once the bridge is wired.
+  - [x] Tests for `decodeRegionProof` mapping to `ConstituencyProof`.
+  - [x] Assert `wallet.trustScore` ≈ `identity.scaledTrustScore` once the bridge is wired.
 
 ## Phase 2.7 Season 0 Economics & Metrics (RVU / UBE / Faucet / QF)
 

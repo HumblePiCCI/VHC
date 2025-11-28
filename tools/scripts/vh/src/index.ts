@@ -156,7 +156,7 @@ function registerBootstrapCommands(program: Command) {
     .description('Run the web PWA in dev mode (assumes stack is up)')
     .action(async () => {
       try {
-        await execa('pnpm', ['--filter', 'apps/web-pwa', 'dev'], {
+        await execa('pnpm', ['--filter', '@vh/web-pwa', 'dev'], {
           cwd: REPO_ROOT,
           stdio: 'inherit'
         });

@@ -59,6 +59,10 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
   eye: loadMap(EYE_KEY),
   signals: [],
   setAgreement({ topicId, pointId, analysisId, desired, constituency_proof }) {
+    if (!constituency_proof) {
+      console.warn('[vh:sentiment] Missing constituency proof; SentimentSignal not emitted');
+      return;
+    }
     const key = `${topicId}:${pointId}`;
     set((state) => {
       const currentAgreement = state.agreements[key] ?? 0;
@@ -76,11 +80,7 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
         point_id: pointId,
         agreement: nextAgreement,
         weight: nextWeight,
-        constituency_proof: constituency_proof ?? {
-          district_hash: 'mock-district',
-          nullifier: 'mock-nullifier',
-          merkle_root: 'mock-root'
-        },
+        constituency_proof,
         emitted_at: Date.now()
       };
 
@@ -98,7 +98,7 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
   },
   recordRead(topicId) {
     const current = get().eye[topicId] ?? 0;
-    const next = decayStep(current);
+    const next = current === 0 ? 1 : decayStep(current);
     const eye = { ...get().eye, [topicId]: next };
     persistMap(EYE_KEY, eye);
     set({ eye });

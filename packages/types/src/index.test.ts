@@ -58,7 +58,7 @@ describe('types schemas', () => {
     expect(() =>
       RegionProofSchema.parse({
         proof: 'base64-proof',
-        publicSignals: ['district-hash', 'nullifier'],
+        publicSignals: ['district-hash', 'nullifier', 'root'],
         timestamp: Date.now()
       })
     ).not.toThrow();
@@ -72,5 +72,12 @@ describe('types schemas', () => {
         timestamp: -10
       })
     ).toThrow();
+  });
+
+  it('decodes region proof tuple', async () => {
+    const { decodeRegionProof } = await import('./index');
+    const tuple: [string, string, string] = ['d-hash', 'n-1', 'root'];
+    const decoded = decodeRegionProof(tuple);
+    expect(decoded).toEqual({ district_hash: 'd-hash', nullifier: 'n-1', merkle_root: 'root' });
   });
 });
