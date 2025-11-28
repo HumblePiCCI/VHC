@@ -221,7 +221,7 @@ Invariants:
 	•	Eye (Read Interest):
 	•	Per-user-per-topic eye_weight updated on read/expand.
 	•	Aggregate Eye:
-	•	Deterministic function of all eye_weight values (sum or average).
+	•	Deterministic function of all eye_weight values (sum).
 	•	Optional secondary metric: count of users with eye_weight > 0.
 	•	Lightbulb (Engagement):
 	•	Per-user-per-topic lightbulb_weight updated on each stance change / engagement.

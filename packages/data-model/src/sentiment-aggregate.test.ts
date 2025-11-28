@@ -79,4 +79,21 @@ describe('Sentiment aggregation', () => {
     // Weight accumulates per user across their last stances per cell
     expect(aggregate.weight).toBeCloseTo(1.0 + 1.3 + 1.5, 5);
   });
+
+  it('sums large engagement across many users while keeping per-user ≤2', () => {
+    const signals: SentimentSignal[] = Array.from({ length: 50 }).map((_, i) => ({
+      topic_id: 't2',
+      analysis_id: 'a2',
+      point_id: 'p-main',
+      agreement: i % 2 === 0 ? 1 : -1,
+      weight: 2, // each user at or below the cap
+      constituency_proof: { district_hash: 'd2', nullifier: `u${i}`, merkle_root: 'm' },
+      emitted_at: Date.now()
+    }));
+
+    const aggregate = aggregateSignals(signals);
+    expect(Math.max(...signals.map((s) => s.weight))).toBeLessThanOrEqual(2);
+    expect(aggregate.point_stats['p-main'].agree + aggregate.point_stats['p-main'].disagree).toBe(50);
+    expect(aggregate.weight).toBe(100); // 50 users * weight 2 each
+  });
 });

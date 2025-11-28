@@ -135,16 +135,14 @@
 
 - [x] **3-State Sentiment UI:**
   - [x] Replace float-based `useCivicState` with `useSentimentState` (`agreement ∈ {-1,0,1}` per `(topic_id, point_id)`).
-  - [x] Update `AnalysisView` / `PerspectiveRow` to use 3-state toggles:
-        0 → +1, +1 → 0, 0 → -1, -1 → 0.
-  - [x] Update component tests to assert 3-state behavior and persistence.
+  - [x] Update `AnalysisView` / `PerspectiveRow` to use per-cell +/- toggles with implicit neutral (same stance again clears; switching +↔- replaces).
+  - [x] Update component tests to assert per-cell behavior and persistence.
   - [x] Per-cell aggregates use committed votes only: `agreement = +1` increments `agree`, `agreement = -1` increments `disagree`, `agreement = 0` is not counted.
 
 - [x] **Eye & Lightbulb Wiring:**
   - [x] Implement `useReadTracker` / `useReadState` to store per-topic `eye_weight ∈ [0,2]`, applying `calculateDecay` on each expand/read.
-  - [x] Aggregate Eye metrics for display from per-user `eye_weight` (e.g., sum / average and unique readers).
-  - [x] Implement `useEngagementState` (per-topic `lightbulb_weight ∈ [0,2]`),
-        calling `calculateDecay` only on engagement interactions (stance changes, later feedback), not on reads.
+  - [x] Aggregate Eye metrics for display from per-user `eye_weight` (sum of unique readers (where no individual reader's `eye_weight` is greater than 2 (decay falloff))).
+  - [x] Implement `useEngagementState` (per-topic `lightbulb_weight ∈ [0,2]`), deriving Lightbulb from active stances: first active stance sets weight to `1.0`, additional active stances apply decay toward `2.0`; clearing stances decrements (all neutral → `0`); never exceeds `2` per user.
   - [x] Render per-user Lightbulb from `useEngagementState` in `HeadlineCard`
         (global aggregate will later come from `AggregateSentiment`).
 

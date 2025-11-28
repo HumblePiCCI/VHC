@@ -22,12 +22,14 @@ test.describe('Golden Path E2E', () => {
     await expect(page.getByText('Loading Mesh…')).toBeHidden({ timeout: 15_000 });
     await ensureIdentity(page, 'UserA');
 
+    await page.getByRole('link', { name: 'User' }).click();
     const claimButton = page.getByRole('button', { name: /(Daily Boost|Claim UBE)/i });
     await claimButton.click();
     await expect(claimButton).toBeDisabled({ timeout: 5_000 });
     await expect(page.getByText(/RVU Balance/i).locator('xpath=../p[contains(@class,"text-lg")]')).toContainText('RVU', {
       timeout: 5_000
     });
+    await page.getByRole('link', { name: 'VENN' }).click();
 
     // User A: generate analysis for URL X
     const feedInput = page.getByTestId('analysis-url-input');

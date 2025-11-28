@@ -37,6 +37,7 @@ describe('useSentimentState', () => {
     agreement = useSentimentState.getState().getAgreement(TOPIC, POINT);
     expect(agreement).toBe(0);
     expect(useSentimentState.getState().signals.at(-1)?.agreement).toBe(0);
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(0);
 
     // switch to disagree
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
@@ -55,5 +56,31 @@ describe('useSentimentState', () => {
     expect(second).toBeGreaterThan(first);
     expect(second).toBeLessThanOrEqual(2);
     expect(useSentimentState.getState().getEyeWeight(TOPIC)).toBe(second);
+  });
+
+  it('resets lightbulb when all cells return to neutral', () => {
+    const proof = { district_hash: 'd', nullifier: 'n', merkle_root: 'm' };
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(1);
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
+    expect(useSentimentState.getState().getAgreement(TOPIC, POINT)).toBe(0);
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(0);
+  });
+
+  it('recomputes lightbulb based on active cell count with decay', () => {
+    const proof = { district_hash: 'd', nullifier: 'n', merkle_root: 'm' };
+    // First cell -> weight 1
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1, 5);
+    // Second cell -> decay step to 1.3
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p2', analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.3, 5);
+    // Third cell -> next decay step ~1.51
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p3', analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeGreaterThan(1.49);
+    // Remove one cell -> back to previous step (~1.3)
+    useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p2', analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
+    expect(useSentimentState.getState().getAgreement(TOPIC, 'p2')).toBe(0);
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.3, 2);
   });
 });

@@ -99,8 +99,9 @@ In **Season 0**, the app is deliberately framed as a **news & participation app 
      - Or stay neutral (0).  
    - It’s a tri‑state toggle (no spamming multiple votes).  
    - Under the hood:
-     - The first interaction with an article counts heavily,  
-     - Subsequent interactions follow a **diminishing‑returns curve**,  
+     - Each cell has its own +/-; clicking the same stance again clears it,  
+     - The first active stance on a topic sets Lightbulb to `1.0`; additional active stances decay toward `2.0`,  
+     - Removing stances steps the engagement back (all neutral → `0`),  
      - Per‑user, per‑article engagement is capped, so no one can dominate metrics.
 
 5. **See their voice in a constituent dashboard**  

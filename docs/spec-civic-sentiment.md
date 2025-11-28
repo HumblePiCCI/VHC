@@ -38,7 +38,7 @@ interface SentimentSignal {
 }
 ```
 
-`weight` is the user’s engagement Lightbulb for this topic (from table interactions), not their read score; Eye is derived separately from per-topic read events. `constituency_proof` is derived from a RegionProof as defined in `spec-identity-trust-constituency.md`.
+`weight` is the user’s engagement Lightbulb for this topic (from table interactions), not their read score; Eye is derived separately from per-topic read events. Per cell the UI uses `+` / `-` toggles with neutral implicit; clicking the same stance again clears it. `constituency_proof` is derived from a RegionProof as defined in `spec-identity-trust-constituency.md`.
 
 Invariants:
 
@@ -73,7 +73,7 @@ interface AggregateSentiment {
   bias_vector: Record<string, 1 | 0 | -1>;
 
   // Global engagement signal (function of all user weights)
-  weight: number;          // Aggregate Lightbulb (sum or average of weights)
+  weight: number;          // Aggregate Lightbulb (sum)
   engagementScore: number; // Optional metric (entropy/variance) to show spread
 }
 ```
@@ -82,7 +82,7 @@ Computation guidelines:
 
 - `point_stats` are unweighted counts of final `agreement = +1` (agree) and `agreement = -1` (disagree); neutral (`0`) is not counted.
 - `bias_vector` is derived from `point_stats` (e.g., sign of `agree - disagree`) or stored distribution.
-- Aggregate Lightbulb should be deterministic (e.g., sum of weights or averaged per unique user) and documented in the consuming service.
+- Aggregate Lightbulb should be deterministic (e.g., sum of weights or averaged per unique user) and documented in the consuming service; each user’s contribution is capped at `2`.
 
 ## 4. Civic Decay
 
@@ -108,7 +108,7 @@ Invariants:
 - Idempotent per interaction: one qualifying interaction = one decay step.
 - Only this function may update `weight`.
 - For Eye: each read (expanding an analysis) applies one decay step to `eye_weight(topic, user)`.
-- For Lightbulb: each engagement interaction (stance change, feedback) applies one decay step to `lightbulb_weight(topic, user)` and drives `SentimentSignal.weight`.
+- For Lightbulb: each engagement interaction (stance change, feedback) applies one decay step to `lightbulb_weight(topic, user)` and drives `SentimentSignal.weight`. Lightbulb is derived from the number of active stances on the topic: first active stance sets weight to `1.0`, each additional active stance applies the decay step toward `2.0`; clearing stances decrements accordingly (all neutral → `0`).
 
 ## 5. Lifecycle & Storage
 
@@ -132,7 +132,7 @@ Invariants:
 
 - For each `(topic_id, user)` track a per-topic read score `eye_weight ∈ [0, 2]`.
 - On each full read/expand of the analysis, apply `calculateDecay`/`applyDecay` to update `eye_weight`.
-- Aggregated Eye for a topic is a deterministic function of all `eye_weight` values (e.g., sum or average). An optional secondary metric is the count of users with `eye_weight > 0`.
+- Aggregated Eye for a topic is a deterministic function of all `eye_weight` values (sum). An optional secondary metric is the count of users with `eye_weight > 0`.
 - Eye reflects reading interest, including repeat visits; it does not use `SentimentSignal` and does not affect Lightbulb `weight`.
 
 ## 8. Privacy & Topology

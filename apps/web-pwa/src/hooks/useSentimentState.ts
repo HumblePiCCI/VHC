@@ -53,6 +53,19 @@ function decayStep(current: number): number {
   return clampWeight(current + 0.3 * (2.0 - current));
 }
 
+function topicActiveCount(agreements: Record<string, number>, topicId: string): number {
+  const prefix = `${topicId}:`;
+  return Object.keys(agreements).filter((key) => key.startsWith(prefix) && agreements[key] !== 0).length;
+}
+
+function weightForActiveCount(count: number): number {
+  let weight = 0;
+  for (let i = 0; i < count; i += 1) {
+    weight = i === 0 ? 1 : decayStep(weight);
+  }
+  return weight;
+}
+
 export const useSentimentState = create<SentimentStore>((set, get) => ({
   agreements: loadMap(AGREEMENTS_KEY) as Record<string, Agreement>,
   lightbulb: loadMap(LIGHTBULB_KEY),
@@ -70,8 +83,8 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
 
       const nextAgreements = { ...state.agreements, [key]: nextAgreement };
 
-      const currentWeight = state.lightbulb[topicId] ?? 0;
-      const nextWeight = currentWeight === 0 ? 1 : decayStep(currentWeight);
+      const activeCount = topicActiveCount(nextAgreements, topicId);
+      const nextWeight = weightForActiveCount(activeCount);
       const nextLightbulb = { ...state.lightbulb, [topicId]: nextWeight };
 
       const signal: SentimentSignal = {

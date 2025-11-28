@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
+import { Link, createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Button } from '@vh/ui';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
@@ -36,7 +36,12 @@ const RootShell = ({ children }: { children: React.ReactNode }) => {
             <h1 className="text-3xl font-semibold text-slate-900">Hello Trinity</h1>
             <p className="text-slate-600">Local-first nervous system online.</p>
           </div>
-          <div className="text-right text-sm text-slate-500">
+          <div className="flex items-center gap-4 text-sm text-slate-500">
+            <nav className="flex items-center gap-3 text-sm font-medium">
+              <Link to="/" className="[&.active]:text-teal-700 hover:text-teal-600">VENN</Link>
+              <Link to="/hermes" className="[&.active]:text-teal-700 hover:text-teal-600">HERMES</Link>
+              <Link to="/dashboard" className="[&.active]:text-teal-700 hover:text-teal-600" aria-label="User dashboard">User</Link>
+            </nav>
             <p>Peers: {peersCount}</p>
           </div>
         </header>
@@ -272,9 +277,6 @@ const HomeComponent = () => {
             </div>
           )}
 
-          <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading wallet…</div>}>
-            <WalletPanel />
-          </Suspense>
           <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading analyses…</div>}>
             <AnalysisFeed />
           </Suspense>
@@ -335,7 +337,34 @@ const HomeComponent = () => {
   );
 };
 
-const rootRoute = createRootRoute({ component: RootComponent });
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeComponent });
+const DashboardComponent = () => (
+  <section className="space-y-4">
+    <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading wallet…</div>}>
+      <WalletPanel />
+    </Suspense>
+  </section>
+);
 
-export const routeTree = rootRoute.addChildren([indexRoute]);
+const rootRoute = createRootRoute({
+  component: RootComponent,
+  notFoundComponent: () => <div className="text-slate-700">Not Found</div>
+});
+
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeComponent });
+const hermesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/hermes',
+  component: () => (
+    <section className="rounded-lg border border-slate-200 bg-white p-6 text-slate-800 shadow-sm">
+      <h2 className="text-xl font-semibold text-slate-900">HERMES</h2>
+      <p className="mt-2 text-sm text-slate-600">Coming in Sprint 3: constituent messaging, routing, and bridge workflows.</p>
+    </section>
+  )
+});
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dashboard',
+  component: DashboardComponent
+});
+
+export const routeTree = rootRoute.addChildren([indexRoute, hermesRoute, dashboardRoute]);

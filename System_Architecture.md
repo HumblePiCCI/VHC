@@ -174,16 +174,16 @@ For each canonical article (topic):
 
 * **Eye (👁 Read Interest):**
   * For each `topic_id` and user, track a per-topic read score `eye_weight ∈ [0, 2]` updated via Civic Decay on each full read/expand.
-  * The Eye metric displayed for a topic is an aggregate over all users’ `eye_weight` (e.g., sum or average) and may optionally show raw unique reader counts (`eye_weight > 0`).
+  * The Eye metric displayed for a topic is an aggregate over all users’ `eye_weight` (sum) and may optionally show raw unique reader counts (`eye_weight > 0`).
   * Repeated reads contribute with diminishing returns and can never exceed 2 units of read interest.
 * **Lightbulb (💡 Engagement Weight):**
   * Per-user-per-topic engagement weight `weight ∈ [0, 2]`, driven by engagement interactions (table stances, feedback) and independent from Eye read score; repeated reads alone do not change Lightbulb.
-  * Updated via Civic Decay on each meaningful interaction:
-    * Formula: `E_new = E_current + 0.3 * (2.0 - E_current)`.
-    * Monotonic, asymptotically approaches 2.0, never exceeds it.
-  * Aggregate Lightbulb per topic is a function of all user weights (e.g., sum or average) stored in `AggregateSentiment`.
+  * Derived from the count of active stances on that topic: first active stance sets weight to `1.0`, each additional active stance applies the Civic Decay step toward `2.0`; clearing stances decrements (all neutral → `0`).
+  * Civic Decay step: `E_new = E_current + 0.3 * (2.0 - E_current)`.
+  * Aggregate Lightbulb per topic is a function of all user weights (sum) stored in `AggregateSentiment`; each user’s contribution is capped at `2`.
 * **Per-point Sentiment:**
   * For each `(topic_id, point_id)` (bias or counterpoint), each user has `agreement ∈ {-1, 0, +1}` representing Disagree / Neutral / Agree.
+  * UI semantics: each cell has separate `+` / `-` toggles; neutral is implicit. Clicking the same stance again clears it; switching `+`→`-` (or vice-versa) replaces the prior stance.
   * For aggregation, only committed votes are counted (`+1` or `-1`); neutral (`0`) is tracked per user but does not contribute to per-cell ratios.
   * Changes in `agreement` plus the user’s current Lightbulb `weight` are emitted as `SentimentSignal` events.
 
@@ -383,7 +383,7 @@ interface AggregateSentiment {
   // Optional convenience: derived dominant stance per point based on point_stats
   bias_vector: Record<string, 1 | 0 | -1>;
 
-  // Global engagement signal (function of all user Lightbulb weights, e.g. sum or average)
+  // Global engagement signal (function of all user Lightbulb weights, e.g. sum)
   weight: number;          // Aggregate Lightbulb
   engagementScore: number; // Additional metric if needed (e.g. entropy, variance)
 }
