@@ -1,4 +1,5 @@
 import type { StorageAdapter } from './storage/types';
+import type { TopologyGuard } from './topology';
 
 export interface VennClientConfig {
   peers?: string[];
