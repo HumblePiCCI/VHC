@@ -17,7 +17,9 @@ export interface VoteInput {
   proposalId: string;
   amount: number;
   direction: 'for' | 'against';
+  voterId?: string | null;
 }
+export type VoteResult = 'recorded' | 'updated' | 'switched';
 
 const seedProposals: Proposal[] = [
   {
@@ -42,11 +44,15 @@ const seedProposals: Proposal[] = [
   }
 ];
 
-export function useGovernance() {
+export function useGovernance(voterId?: string | null) {
   const e2e = isE2EMode();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastAction, setLastAction] = useState<string | null>(null);
+  const [votesByProposal, setVotesByProposal] = useState<
+    Record<string, Record<string, { amount: number; direction: 'for' | 'against' }>>
+  >({});
 
   useEffect(() => {
     setLoading(true);
@@ -61,10 +67,22 @@ export function useGovernance() {
     [proposals]
   );
 
-  const submitVote = async ({ proposalId, amount, direction }: VoteInput) => {
+  const votedDirections = useMemo(() => {
+    if (!voterId) return {};
+    return Object.entries(votesByProposal).reduce<Record<string, 'for' | 'against'>>((acc, [pid, votes]) => {
+      const vote = votes[voterId];
+      if (vote) acc[pid] = vote.direction;
+      return acc;
+    }, {});
+  }, [votesByProposal, voterId]);
+
+  const submitVote = async ({ proposalId, amount, direction }: VoteInput): Promise<VoteResult | void> => {
     if (!amount || amount <= 0) {
-      throw new Error('Amount required');
+      return;
     }
+    const voterKey = voterId ?? '__anon__';
+    const prevVote = votesByProposal[proposalId]?.[voterKey];
+
     const curated = CURATED_PROJECTS[proposalId];
     if (curated) {
       const title = proposals.find((p) => p.id === proposalId)?.title ?? curated.title ?? proposalId;
@@ -72,14 +90,35 @@ export function useGovernance() {
         `[Season 0] Vote recorded locally for "${title}" (On-chain ID: ${curated.onChainId}). No RVU transaction sent.`
       );
     }
+
     setProposals((prev) =>
       prev.map((p) => {
         if (p.id !== proposalId) return p;
-        return direction === 'for'
-          ? { ...p, votesFor: p.votesFor + amount }
-          : { ...p, votesAgainst: p.votesAgainst + amount };
+        let votesFor = p.votesFor;
+        let votesAgainst = p.votesAgainst;
+        if (prevVote) {
+          if (prevVote.direction === 'for') votesFor -= prevVote.amount;
+          else votesAgainst -= prevVote.amount;
+        }
+        if (direction === 'for') votesFor += amount;
+        else votesAgainst += amount;
+        return { ...p, votesFor, votesAgainst };
       })
     );
+    const title = proposals.find((p) => p.id === proposalId)?.title ?? proposalId;
+    setLastAction(`Vote recorded for "${title}" (${direction}, ${amount} RVU)`);
+    setVotesByProposal((prev) => {
+      const next = { ...prev };
+      next[proposalId] = { ...(next[proposalId] ?? {}), [voterKey]: { amount, direction } };
+      return next;
+    });
+    if (prevVote) {
+      if (prevVote.direction !== direction) {
+        return 'switched';
+      }
+      return 'updated';
+    }
+    return 'recorded';
   };
 
   return {
@@ -87,7 +126,9 @@ export function useGovernance() {
     loading,
     error,
     totalVotes,
-    submitVote
+    submitVote,
+    lastAction,
+    votedDirections
   };
 }
 

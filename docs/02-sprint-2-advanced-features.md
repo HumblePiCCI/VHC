@@ -31,6 +31,7 @@
 - [x] **Flow:** Create "Submit Proposal" flow (requires minimum RVU stake + Attestation).
 - [x] **E2E:** Verify "Submit -> Vote -> Match" flow in Offline Mock Mode.
 - [x] **QF Wiring (Season 0):** Maintain an off-chain mapping from curated Proposal → on-chain `projectId` (if any). Do not send RVU from regular users via the app; `castVote()` is invoked by internal tools only in S2.
+- [x] **Governance UI (Season 0):** Proposal list shows per-user vote status, prevents double-counting in the mock, and surfaces inline confirmation for recorded/updated/switched votes.
 
 ---
 

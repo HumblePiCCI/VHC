@@ -59,7 +59,7 @@ const RootShell = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-const HomeComponent = () => {
+const DashboardContent = () => {
   const { profile, createIdentity, identityStatus, client, error } = useAppStore();
   const { identity, status: identityRecordStatus, createIdentity: createIdentityRecord, startLinkSession, completeLinkSession } = useIdentity();
   const [username, setUsername] = useState('');
@@ -337,11 +337,21 @@ const HomeComponent = () => {
   );
 };
 
+const HomeComponent = () => (
+  <section className="space-y-4">
+    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+      <p className="text-sm font-semibold text-slate-900">Headlines</p>
+      <FeedList />
+    </div>
+  </section>
+);
+
 const DashboardComponent = () => (
   <section className="space-y-4">
     <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading wallet…</div>}>
       <WalletPanel />
     </Suspense>
+    <DashboardContent />
   </section>
 );
 
