@@ -35,3 +35,11 @@ This document summarizes the non-negotiable guardrails for the TRINITY Bio-Econo
 - **Bundle Budget**:
     - **Initial Load**: Critical-path bundles must be < **1 MiB gzip**.
     - **Lazy AI/WASM Assets**: Allowed up to **10 MiB gzip** if **lazy-loaded** and **cached by the Service Worker** to avoid re-downloads. Initial route render must not block on these assets.
+
+## 3. Local Dev Networking Guardrails
+- **Gun peers must be reachable without SSH gymnastics**:
+  - Default `VITE_GUN_PEERS` points to the Tailscale-accessible relay (`http://100.75.18.26:7777/gun`) with a localhost fallback.
+  - Avoid relying on ad-hoc SSH tunnels for routine dev; configure peers via env instead.
+- **Verifier fallbacks must be fast**:
+  - `VITE_ATTESTATION_TIMEOUT_MS` defaults to a short timeout (2s) in dev; on timeout, the mock verifier is used.
+  - Long “Creating…” spinners are not acceptable; timeouts must be configurable and short in non-prod.

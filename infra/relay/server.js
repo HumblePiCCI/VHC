@@ -1,16 +1,34 @@
-/* Simple Gun relay for local/dev usage */
+/* Minimal Gun relay for local/dev usage */
 const http = require('http');
-const Gun = require('gun/gun');
-// Ensure Gun.text.random exists before loading the ws adapter
-if (!Gun.text) {
-  Gun.text = {};
-}
-if (!Gun.text.random) {
-  Gun.text.random = (len = 6) => Math.random().toString(36).slice(2, 2 + len);
-}
+const Gun = require('gun');
+
+// Provide required internal utilities that the WS adapter depends on.
+// These were deprecated in Gun but ws.js still uses Gun.text.random and Gun.obj.* helpers.
+// Without these shims, the WS adapter crashes on connection/disconnect.
+Gun.text = Gun.text || {};
+Gun.text.random =
+  Gun.text.random ||
+  ((len = 6) => {
+    let s = '';
+    const c = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXZabcdefghijklmnopqrstuvwxyz';
+    while (len-- > 0) s += c.charAt(Math.floor(Math.random() * c.length));
+    return s;
+  });
+
+Gun.obj = Gun.obj || {};
+Gun.obj.map =
+  Gun.obj.map ||
+  function map(obj, cb, ctx) {
+    if (!obj) return obj;
+    Object.keys(obj).forEach((k) => cb.call(ctx, obj[k], k));
+    return obj;
+  };
+Gun.obj.del = Gun.obj.del || ((obj, key) => {
+  if (obj) delete obj[key];
+  return obj;
+});
+
 require('gun/lib/ws');
-require('gun/lib/store');
-require('gun/lib/rfs');
 
 const port = process.env.GUN_PORT || 7777;
 
@@ -19,12 +37,13 @@ const server = http.createServer((req, res) => {
   res.end('vh relay alive\n');
 });
 
-// Disable axe to keep CPU usage predictable; enable radisk for persistence.
+// Minimal, stable Gun relay (no custom hooks)
 Gun({
   web: server,
   radisk: true,
   file: 'data',
   axe: false,
+  peers: [] // explicit empty list to keep ws adapter happy
 });
 
 server.listen(port, '0.0.0.0', () => {

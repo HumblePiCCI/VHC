@@ -46,6 +46,27 @@ export function isE2EMode(): boolean {
   return (import.meta as any).env?.VITE_E2E_MODE === 'true';
 }
 
+function resolveGunPeers(): string[] {
+  const raw = (import.meta as any).env?.VITE_GUN_PEERS;
+  if (raw && typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((p) => (p.endsWith('/gun') ? p : `${p.replace(/\/+$/, '')}/gun`));
+      }
+    } catch {
+      const parts = raw
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .map((p) => (p.endsWith('/gun') ? p : `${p.replace(/\/+$/, '')}/gun`));
+      if (parts.length > 0) return parts;
+    }
+  }
+  // Default to Tailscale-accessible relay; fallback to localhost if needed.
+  return ['http://100.75.18.26:7777/gun', 'http://localhost:9780/gun'];
+}
+
 function createMockClient(): VennClient {
   const MESH_STORAGE_KEY = '__VH_MESH_STORE__';
   const readMesh = () => {
@@ -136,9 +157,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       const client = createClient({
-        peers: ['http://localhost:9780/gun'],
+        peers: resolveGunPeers(),
         requireSession: true
       });
+      console.info('[vh:web-pwa] using Gun peers', client.config.peers);
       await client.hydrationBarrier.prepare();
       const profile = loadProfile();
       set({

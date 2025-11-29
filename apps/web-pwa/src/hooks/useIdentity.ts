@@ -7,6 +7,7 @@ const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 const DEV_MODE = (import.meta as any).env?.DEV === true || (import.meta as any).env?.MODE === 'development';
 const ATTESTATION_URL =
   (import.meta as any).env?.VITE_ATTESTATION_URL ?? 'http://localhost:3000/verify';
+const VERIFIER_TIMEOUT_MS = Number((import.meta as any).env?.VITE_ATTESTATION_TIMEOUT_MS) || 2000;
 
 export type IdentityStatus = 'anonymous' | 'creating' | 'ready' | 'error';
 
@@ -61,7 +62,11 @@ export function useIdentity() {
         session = { token: 'mock-session', trustScore: 1, nullifier: 'mock-nullifier' };
       } else {
         try {
-          session = await createSession(attestation, ATTESTATION_URL);
+          const verifierPromise = createSession(attestation, ATTESTATION_URL);
+          const timeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Verifier timeout')), VERIFIER_TIMEOUT_MS)
+          );
+          session = await Promise.race([verifierPromise, timeout]);
         } catch (verifierErr) {
           if (DEV_MODE) {
             console.warn('[vh:identity] Attestation verifier unavailable, using dev fallback');
