@@ -14,7 +14,7 @@ TRINITY is a **Parallel Institution**: A self-sovereign Operating System for Ide
 
 1.  **LUMA (The Immune System):** Biological reality (Hardware TEE + Biometrics) to filter Sybils.
 2.  **GWC (The Circulatory System):** Resource-backed wealth (ZK-Rollup + Oracles) to distribute value.
-3.  **VENN (The Nervous System):** Local-first intent sensing (P2P Mesh + Edge AI) to act on information.
+3.  **VENN-HERMES (The Nervous System):** Local-first intent sensing (P2P Mesh + Edge AI) to act on information.
 
 **Engineering Prime Directives:**
 
