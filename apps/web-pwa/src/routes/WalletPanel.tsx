@@ -76,7 +76,7 @@ export const WalletPanel: React.FC = () => {
   }, [identity, claimStatus]);
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 dark:border-slate-700">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-slate-900">Wallet</p>
@@ -95,7 +95,7 @@ export const WalletPanel: React.FC = () => {
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <div className="rounded border border-slate-100 bg-slate-50 px-3 py-2">
+        <div className="rounded-xl border border-slate-100 bg-card-muted px-3 py-2 dark:border-slate-700/70">
           <p className="text-xs uppercase tracking-wide text-slate-500">RVU Balance</p>
           <p className="text-lg font-semibold text-slate-900">
             {formattedBalance ?? '-'}
@@ -105,19 +105,19 @@ export const WalletPanel: React.FC = () => {
             RVU
           </p>
         </div>
-        <div className="rounded border border-slate-100 bg-slate-50 px-3 py-2">
+        <div className="rounded-xl border border-slate-100 bg-card-muted px-3 py-2 dark:border-slate-700/70">
           <p className="text-xs uppercase tracking-wide text-slate-500">Trust Score</p>
           <p className="text-lg font-semibold text-slate-900" data-testid="wallet-trust-score">
             {trustLabel === '-' ? '-' : `${trustLabel}%`}
           </p>
         </div>
-        <div className="rounded border border-slate-100 bg-slate-50 px-3 py-2">
+        <div className="rounded-xl border border-slate-100 bg-card-muted px-3 py-2 dark:border-slate-700/70">
           <p className="text-xs uppercase tracking-wide text-slate-500">Daily Boost</p>
           <p className="text-lg font-semibold text-slate-900">{nextClaimLabel}</p>
         </div>
       </div>
 
-      <div className="mt-3 rounded border border-slate-100 bg-slate-50 px-3 py-2">
+      <div className="mt-3 rounded-xl border border-slate-100 bg-card-muted px-3 py-2 dark:border-slate-700/70">
         <p className="text-xs uppercase tracking-wide text-slate-500">XP Breakdown</p>
         <div className="mt-1 grid grid-cols-4 gap-2 text-sm">
           <div>
@@ -141,6 +141,7 @@ export const WalletPanel: React.FC = () => {
 
       <div className="mt-4 flex items-center gap-3">
         <Button
+          data-testid="claim-ube-btn"
           onClick={() => {
             if (!claimStatus?.eligible && !eligibleLocal) return;
             void (async () => {

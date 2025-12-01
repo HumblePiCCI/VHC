@@ -10,16 +10,16 @@ interface ProposalCardProps {
 
 export const ProposalCard: React.FC<ProposalCardProps> = ({ proposal, onVote, votedDirection }) => {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 dark:border-slate-700">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <h3 className="text-lg font-semibold text-slate-900">{proposal.title}</h3>
-          <p className="text-sm text-slate-700">{proposal.summary}</p>
-          <p className="text-xs text-slate-500">Author: {proposal.author}</p>
-          <p className="text-xs text-slate-500">Request: {proposal.fundingRequest} RVU</p>
-          <p className="text-xs text-slate-500">Recipient: {proposal.recipient}</p>
+          <h3 className="text-lg font-semibold tracking-[0.01em] text-slate-900">{proposal.title}</h3>
+          <p className="text-sm text-slate-700 dark:text-slate-300">{proposal.summary}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Author: {proposal.author}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Request: {proposal.fundingRequest} RVU</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Recipient: {proposal.recipient}</p>
         </div>
-        <div className="text-sm text-slate-700 space-y-1 text-right">
+        <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1 text-right">
           <p>For: {proposal.votesFor}</p>
           <p>Against: {proposal.votesAgainst}</p>
           {votedDirection && (

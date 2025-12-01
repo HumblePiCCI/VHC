@@ -179,18 +179,18 @@ export const AnalysisFeed: React.FC = () => {
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+    <div className="rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 dark:border-slate-700 space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-900">Canonical Analysis</p>
-          <p className="text-xs text-slate-600">Local-only WebLLM · First-to-File</p>
+          <p className="text-sm font-semibold tracking-[0.08em] text-slate-900 uppercase">Canonical Analysis</p>
+          <p className="text-xs text-slate-600 dark:text-slate-300">Local-first · WebLLM · First-to-File</p>
         </div>
-        {message && <span className="text-xs text-slate-700">{message}</span>}
+        {message && <span className="text-xs text-slate-700 dark:text-slate-200">{message}</span>}
       </div>
 
       <form className="flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
         <input
-          className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none dark:border-slate-700 dark:bg-card"
           placeholder="Paste URL to analyze"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -204,7 +204,7 @@ export const AnalysisFeed: React.FC = () => {
       <div className="grid gap-3">
         {sortedFeed.length === 0 && <p className="text-sm text-slate-600">No analyses yet.</p>}
         {sortedFeed.map((item) => (
-          <div key={item.urlHash} className="rounded border border-slate-100 bg-slate-50 p-3 space-y-1">
+          <div key={item.urlHash} className="rounded-xl border border-slate-100 bg-card-muted p-3 space-y-1 dark:border-slate-700/70">
             <p className="text-xs uppercase tracking-wide text-slate-500">{new Date(item.timestamp).toLocaleString()}</p>
             <p className="text-sm font-semibold text-slate-900">{item.url}</p>
             <p className="text-sm text-slate-700">{item.summary}</p>

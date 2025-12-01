@@ -49,9 +49,9 @@ export const VoteControl: React.FC<VoteControlProps> = ({ onSubmit, disabled, vo
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 space-y-3">
+    <div className="rounded-2xl border border-slate-200/80 bg-card p-4 space-y-3 shadow-sm shadow-slate-900/5 dark:border-slate-700">
       <div className="flex items-center gap-3">
-        <label className="text-sm text-slate-700">Vote Amount (RVU)</label>
+        <label className="text-sm text-slate-700 dark:text-slate-200">Vote Amount (RVU)</label>
         <input
           type="number"
           min={1}
@@ -60,7 +60,7 @@ export const VoteControl: React.FC<VoteControlProps> = ({ onSubmit, disabled, vo
             const val = Number(e.target.value);
             setAmount(Number.isNaN(val) || val <= 0 ? 1 : val);
           }}
-          className="w-24 rounded border border-slate-300 px-2 py-1 text-sm"
+          className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-sm dark:border-slate-600 dark:bg-card"
           data-testid="vote-amount"
           disabled={disabled}
         />
@@ -80,7 +80,11 @@ export const VoteControl: React.FC<VoteControlProps> = ({ onSubmit, disabled, vo
       <div className="flex items-center gap-3 text-sm text-slate-700 relative pb-10">
         <button
           type="button"
-          className={`rounded px-3 py-1 ${direction === 'for' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-800'}`}
+          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+            direction === 'for'
+              ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-900/30'
+              : 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100'
+          }`}
           onClick={() => setDirection('for')}
           data-testid="vote-for"
           disabled={disabled}
@@ -94,14 +98,18 @@ export const VoteControl: React.FC<VoteControlProps> = ({ onSubmit, disabled, vo
         )}
         <button
           type="button"
-          className={`rounded px-3 py-1 ${direction === 'against' ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-800'}`}
+          className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+            direction === 'against'
+              ? 'bg-red-600 text-white shadow-sm shadow-red-900/30'
+              : 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100'
+          }`}
           onClick={() => setDirection('against')}
           data-testid="vote-against"
           disabled={disabled}
         >
           Against
         </button>
-        <span className="ml-auto text-xs text-slate-500" data-testid="voice-credits">
+        <span className="ml-auto text-xs text-slate-500 dark:text-slate-300" data-testid="voice-credits">
           Voice Credits: {voiceCredits}
         </span>
         {(success || votedDirection || lastDirection) && (
@@ -124,7 +132,7 @@ export const VoteControl: React.FC<VoteControlProps> = ({ onSubmit, disabled, vo
       <div className="flex justify-end items-center">
         <button
           type="button"
-          className={`rounded px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 transition transform ${
+          className={`rounded-full px-5 py-2 text-sm font-semibold text-white disabled:opacity-50 transition transform ${
             lastResult === 'updated' && votedDirection === direction
               ? 'bg-amber-500'
               : 'bg-indigo-600'

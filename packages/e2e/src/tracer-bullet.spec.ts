@@ -9,11 +9,16 @@ test.describe('The Tracer Bullet: E2E Integration', () => {
 
         // 1. Load App
         await page.goto('/');
-        await expect(page.getByText('Loading Mesh...')).toBeHidden({ timeout: 10000 });
-        await expect(page.getByText('Hello Trinity')).toBeVisible({ timeout: 10000 });
+        await page.getByRole('link', { name: 'User' }).click();
+        await page.waitForURL('**/dashboard');
+        await expect(page.getByText('Loading Mesh…')).toBeHidden({ timeout: 10000 });
+        const createIdentityBtn = page.getByTestId('create-identity-btn');
+        const welcomeMsg = page.getByTestId('welcome-msg');
+        if (!(await createIdentityBtn.isVisible())) {
+            await expect(welcomeMsg).toBeVisible({ timeout: 10000 });
+        }
 
         // 2. Create Identity (Mock)
-        const createIdentityBtn = page.getByTestId('create-identity-btn');
         if (await createIdentityBtn.isVisible()) {
             await page.fill('input[placeholder="Choose a username"]', 'TrinityTester');
             await createIdentityBtn.click();

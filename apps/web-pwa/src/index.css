@@ -3,5 +3,69 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
+  --card-bg: #ffffff;
+  --card-muted-bg: #f8fafc;
+  --surface-light: #f8fafc;
+  --surface-dark: #0f172a;
+}
+
+.dark:root {
+  color-scheme: dark;
+  --card-bg: #1e293b;
+  --card-muted-bg: #0f172a;
+  --surface-light: #0f172a;
+  --surface-dark: #0b1220;
+}
+
+[data-theme='venn'] {
+  --card-muted-bg: #f0fdf4;
+}
+
+.dark [data-theme='venn'] {
+  --card-bg: #0c1612;
+  --card-muted-bg: #060b09;
+}
+
+[data-theme='hermes'] {
+  --card-muted-bg: #fef2f2;
+}
+
+.dark [data-theme='hermes'] {
+  --card-bg: #2b0f12;
+  --card-muted-bg: #1a090c;
+}
+
+[data-theme='agora'] {
+  --card-muted-bg: #f1f5f9;
+}
+
+.dark [data-theme='agora'] {
+  --card-bg: #111827;
+  --card-muted-bg: #0b1220;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0.01em;
+  background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.04), transparent 25%),
+    radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.04), transparent 20%),
+    var(--surface-light);
+  color: #0f172a;
+}
+
+.dark body {
+  background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.05), transparent 22%),
+    radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.05), transparent 18%),
+    var(--surface-dark);
+  color: #e2e8f0;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+a {
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }

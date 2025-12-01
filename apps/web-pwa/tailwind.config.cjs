@@ -1,0 +1,24 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: 'class',
+  content: [
+    './index.html',
+    './src/**/*.{ts,tsx}',
+    '../../packages/ui/src/**/*.{ts,tsx}'
+  ],
+  theme: {
+    extend: {
+      colors: {
+        card: {
+          DEFAULT: 'var(--card-bg)',
+          muted: 'var(--card-muted-bg)'
+        },
+        surface: {
+          light: 'var(--surface-light)',
+          dark: 'var(--surface-dark)'
+        }
+      }
+    }
+  },
+  plugins: []
+};

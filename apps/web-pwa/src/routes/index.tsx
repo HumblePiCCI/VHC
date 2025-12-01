@@ -1,4 +1,4 @@
-import { Link, createRootRoute, createRoute, Outlet } from '@tanstack/react-router';
+import { Link, createRootRoute, createRoute, Outlet, useRouterState } from '@tanstack/react-router';
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Button } from '@vh/ui';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
@@ -6,6 +6,8 @@ import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
 import FeedList from '../components/FeedList';
 import ProposalList from '../components/ProposalList';
+import { PageWrapper } from '../components/PageWrapper';
+import ThemeToggle from '../components/ThemeToggle';
 
 const WalletPanel = lazy(() => import('./WalletPanel').then((mod) => ({ default: mod.WalletPanel })));
 const AnalysisFeed = lazy(() => import('./AnalysisFeed').then((mod) => ({ default: mod.AnalysisFeed })));
@@ -20,43 +22,58 @@ const RootComponent = () => (
 
 const RootShell = ({ children }: { children: React.ReactNode }) => {
   const { client, initializing, init } = useAppStore();
+  const { location } = useRouterState();
 
   useEffect(() => {
     void init();
   }, [init]);
 
+  const variant: 'venn' | 'hermes' | 'agora' = (() => {
+    if (location.pathname.startsWith('/hermes')) return 'hermes';
+    if (location.pathname.startsWith('/governance')) return 'agora';
+    return 'venn';
+  })();
+
   const peersCount = client?.config.peers.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
-      <div className="mx-auto max-w-4xl px-6 py-12 space-y-8">
-        <header className="flex items-center justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.2em] text-slate-500">TRINITY · VENN/HERMES</p>
-            <h1 className="text-3xl font-semibold text-slate-900">Hello Trinity</h1>
-            <p className="text-slate-600">Local-first nervous system online.</p>
+    <PageWrapper variant={variant}>
+      <div className="mx-auto max-w-4xl px-6 py-6 space-y-8">
+        <header className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-slate-200 pb-3 dark:border-slate-800">
+          <div className="text-left">
+            <p className="text-[11px] leading-tight text-slate-500 dark:text-slate-400">Peers: {peersCount}</p>
           </div>
-          <div className="flex items-center gap-4 text-sm text-slate-500">
-            <nav className="flex items-center gap-3 text-sm font-medium">
-              <Link to="/" className="[&.active]:text-teal-700 hover:text-teal-600">VENN</Link>
-              <Link to="/hermes" className="[&.active]:text-teal-700 hover:text-teal-600">HERMES</Link>
-              <Link to="/governance" className="[&.active]:text-teal-700 hover:text-teal-600">AGORA</Link>
-              <Link to="/dashboard" className="[&.active]:text-teal-700 hover:text-teal-600" aria-label="User dashboard">User</Link>
-            </nav>
-            <p>Peers: {peersCount}</p>
+          <nav className="flex items-center gap-4 text-[44px] font-light tracking-[0.2em] leading-[1.05] text-slate-900 dark:text-slate-50 uppercase">
+            <Link to="/" className="hover:text-teal-700 dark:hover:text-emerald-300 [&.active]:text-teal-700 dark:[&.active]:text-emerald-300">VENN</Link>
+            <span className="text-slate-400 dark:text-slate-600">/</span>
+            <Link to="/hermes" className="hover:text-teal-700 dark:hover:text-emerald-300 [&.active]:text-teal-700 dark:[&.active]:text-emerald-300">HERMES</Link>
+            <span className="text-slate-400 dark:text-slate-600">/</span>
+            <Link to="/governance" className="hover:text-teal-700 dark:hover:text-emerald-300 [&.active]:text-teal-700 dark:[&.active]:text-emerald-300">AGORA</Link>
+          </nav>
+          <div className="flex items-center justify-end gap-2 text-sm text-slate-500 dark:text-slate-300">
+            <ThemeToggle />
+            <Link
+              to="/dashboard"
+              aria-label="User dashboard"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </Link>
           </div>
         </header>
         <main className="space-y-6">
           {initializing && !client ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-sm text-slate-700">Loading Mesh…</p>
+            <div className="rounded-lg border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700">
+              <p className="text-sm text-slate-700 dark:text-slate-200">Loading Mesh…</p>
             </div>
           ) : (
             children
           )}
         </main>
       </div>
-    </div>
+    </PageWrapper>
   );
 };
 
@@ -246,11 +263,11 @@ const DashboardContent = () => {
           </div>
 
           {linkModalOpen && (
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-lg">
+            <div className="rounded-lg border border-slate-200 bg-card p-4 shadow-lg dark:border-slate-700">
               <p className="font-semibold text-slate-900">Link Device</p>
               <p className="text-sm text-slate-700">Share this link code with the device you want to link.</p>
               {generatedCode && (
-                <div className="mt-2 rounded border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-sm font-mono text-slate-800" data-testid="link-code">
+                <div className="mt-2 rounded border border-dashed border-slate-300 bg-card-muted px-3 py-2 text-sm font-mono text-slate-800" data-testid="link-code">
                   {generatedCode}
                 </div>
               )}
@@ -278,10 +295,10 @@ const DashboardContent = () => {
             </div>
           )}
 
-          <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading analyses…</div>}>
+          <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-card p-4 text-sm text-slate-700 dark:border-slate-700">Loading analyses…</div>}>
             <AnalysisFeed />
           </Suspense>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700">
             <div className="flex items-center justify-between text-sm text-slate-600">
               <span data-testid="current-status">Status: {status}</span>
               <span data-testid="current-progress">Progress: {progress}%</span>
@@ -312,13 +329,13 @@ const DashboardContent = () => {
           </div>
 
           {history.length > 0 && (
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="font-semibold text-slate-900">Recent Analyses</p>
-              <ul className="mt-2 space-y-2 text-sm text-slate-700">
+            <div className="rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 dark:border-slate-700">
+              <p className="font-semibold tracking-[0.04em] text-slate-900">Recent Analyses</p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
                 {history.map((entry, idx) => (
-                  <li key={idx} className="rounded border border-slate-100 bg-slate-50 p-2">
-                    <p className="font-medium text-slate-900">{entry.summary}</p>
-                    <p className="text-slate-600">Biases: {entry.biases.join(' · ')}</p>
+                  <li key={idx} className="rounded-xl border border-slate-100 bg-card-muted p-2 dark:border-slate-700/70">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{entry.summary}</p>
+                    <p className="text-slate-600 dark:text-slate-300">Biases: {entry.biases.join(' · ')}</p>
                   </li>
                 ))}
               </ul>
@@ -332,8 +349,8 @@ const DashboardContent = () => {
 
 const HomeComponent = () => (
   <section className="space-y-4">
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-      <p className="text-sm font-semibold text-slate-900">Headlines</p>
+    <div className="rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 space-y-3 dark:border-slate-700">
+      <p className="text-sm font-semibold tracking-[0.08em] text-slate-900 uppercase">Headlines</p>
       <FeedList />
     </div>
   </section>
@@ -341,7 +358,7 @@ const HomeComponent = () => (
 
 const DashboardComponent = () => (
   <section className="space-y-4">
-    <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading wallet…</div>}>
+    <Suspense fallback={<div className="rounded-2xl border border-slate-200/80 bg-card p-5 text-sm text-slate-700 shadow-sm shadow-slate-900/5 dark:border-slate-700">Loading wallet…</div>}>
       <WalletPanel />
     </Suspense>
     <DashboardContent />
@@ -350,11 +367,11 @@ const DashboardComponent = () => (
 
 const GovernanceComponent = () => (
   <section className="space-y-4">
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="text-xl font-semibold text-slate-900">Governance</h2>
-      <p className="text-sm text-slate-600">Season 0: local-only voting with per-user status.</p>
+    <div className="rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 dark:border-slate-700">
+      <h2 className="text-xl font-semibold tracking-[0.04em] text-slate-900">Governance</h2>
+      <p className="text-sm text-slate-600 dark:text-slate-300">Season 0: local-only voting with per-user status.</p>
     </div>
-    <Suspense fallback={<div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">Loading proposals…</div>}>
+    <Suspense fallback={<div className="rounded-2xl border border-slate-200/80 bg-card p-5 text-sm text-slate-700 shadow-sm shadow-slate-900/5 dark:border-slate-700">Loading proposals…</div>}>
       <ProposalList />
     </Suspense>
   </section>
@@ -370,9 +387,9 @@ const hermesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/hermes',
   component: () => (
-    <section className="rounded-lg border border-slate-200 bg-white p-6 text-slate-800 shadow-sm">
-      <h2 className="text-xl font-semibold text-slate-900">HERMES</h2>
-      <p className="mt-2 text-sm text-slate-600">Coming in Sprint 3: constituent messaging, routing, and bridge workflows.</p>
+    <section className="rounded-2xl border border-slate-200/80 bg-card p-6 text-slate-800 shadow-sm shadow-slate-900/5 dark:border-slate-700">
+      <h2 className="text-xl font-semibold tracking-[0.04em] text-slate-900">HERMES</h2>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Coming in Sprint 3: constituent messaging, routing, and bridge workflows.</p>
     </section>
   )
 });

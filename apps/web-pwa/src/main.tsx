@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { routeTree } from './routes';
 import './index.css';
+import { ThemeProvider } from './components/ThemeProvider';
 
 console.info('[vh:web-pwa] main.tsx executing, mounting router...');
 
@@ -19,7 +20,9 @@ const root = document.getElementById('root');
 if (root) {
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <RouterProvider router={router} />
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
     </React.StrictMode>
   );
 }

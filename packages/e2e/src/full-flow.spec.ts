@@ -3,8 +3,13 @@ import { test, expect, type Page } from '@playwright/test';
 const ANALYSIS_URL = 'https://venn.example/full-flow';
 
 async function ensureIdentity(page: Page, username: string) {
-  await expect(page.getByText('Hello Trinity')).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('link', { name: 'User' }).click();
+  await page.waitForURL('**/dashboard');
   const joinBtn = page.getByTestId('create-identity-btn');
+  const welcomeMsg = page.getByTestId('welcome-msg');
+  if (!(await joinBtn.isVisible())) {
+    await expect(welcomeMsg).toBeVisible({ timeout: 15_000 });
+  }
   if (await joinBtn.isVisible()) {
     await page.fill('input[placeholder="Choose a username"]', username);
     await joinBtn.click();
@@ -24,14 +29,17 @@ test.describe('Golden Path E2E', () => {
 
     await page.getByRole('link', { name: 'User' }).click();
     const claimButton = page.getByRole('button', { name: /(Daily Boost|Claim UBE)/i });
+    const claimButtonById = page.getByTestId('claim-ube-btn');
     await claimButton.click();
-    await expect(claimButton).toBeDisabled({ timeout: 5_000 });
+    await expect(claimButtonById).toBeDisabled({ timeout: 5_000 });
+    await expect(claimButtonById).toHaveText(/Daily Boost|Come back tomorrow/i, { timeout: 5_000 });
     await expect(page.getByText(/RVU Balance/i).locator('xpath=../p[contains(@class,"text-lg")]')).toContainText('RVU', {
       timeout: 5_000
     });
-    await page.getByRole('link', { name: 'VENN' }).click();
+    await page.getByRole('link', { name: 'User' }).click();
 
     // User A: generate analysis for URL X
+    await page.waitForURL('**/dashboard');
     const feedInput = page.getByTestId('analysis-url-input');
     await feedInput.fill(ANALYSIS_URL);
     await feedInput.locator('xpath=ancestor::form').getByRole('button', { name: 'Analyze' }).click();
