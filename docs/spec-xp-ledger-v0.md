@@ -34,17 +34,28 @@ Where `γ` (concavity) and `α` (pool fraction) are policy variables. Changing c
 
 ## 3. Emission (Season 0 Candidates)
 
-- Civic:
+**Canonical Emission Policy:** See `docs/03-sprint-3-the-agora.md` §3.4 for the definitive Season 0 emission rules for Messaging, Forum, and Project XP. The section below provides a high-level summary.
+
+**Summary by Track:**
+
+- **Civic (`civicXP`):**
   - First Lightbulb interaction on a topic (+x civicXP).
   - Subsequent engagements (diminishing increments).
   - Full read sequences / Eye interactions (+z civicXP).
-- Project/Governance:
-  - Proposal support vote (+u projectXP).
-  - Authored proposals crossing support thresholds (+v projectXP).
-- Social (later):
-  - High-signal messaging/HERMES contributions (+w socialXP).
-- Economic:
-  - UBE claim (“Daily Boost”) (+civicXP or +projectXP, configurable).
+  - Forum thread creation (+2), substantive comments (+1), quality bonuses (+1/+2 on score thresholds).
+  - Daily cap: +15/day.
+- **Social (`socialXP`):**
+  - First contact bonus (+2 per new DM contact).
+  - Sustained conversation bonus (+1 per qualifying 48h window).
+  - Daily cap: +5/day.
+- **Project (`projectXP`):**
+  - Project/Proposal thread creation (+2).
+  - Milestone updates (+1 per update).
+  - Quality-confirmed collaborator contributions (+1 per qualifying comment).
+  - Outcome bonus (+5 for funded/selected projects, curator-driven).
+  - Weekly cap: +20/week.
+- **Economic:**
+  - UBE claim ("Daily Boost") (+civicXP or +projectXP, configurable).
 
 Exact coefficients are configurable; the ledger tracks the resulting monotonic totals.
 
@@ -62,8 +73,11 @@ Exact coefficients are configurable; the ledger tracks the resulting monotonic t
 
 - `useIdentity`: provides `nullifier` as the XP key.
 - `useXpLedger` (Season 0): maintains `XpLedger` locally; applies emission rules on qualified events.
+- `useChatStore` / `useForumStore`: emit XP events to `useXpLedger` on qualifying actions (see `docs/03-sprint-3-the-agora.md` §3.4.6 for wiring details).
 - Dashboards: may show totalXP and track breakdowns per user (local), and safe aggregates (district averages) when cohort rules are met.
 - Future GWC: can read XP (or recompute from event history) to seed participation weights for RVU/GWU distributions.
+
+**Cross-Reference:** The canonical Season 0 emission policy for HERMES Messaging, HERMES Forum, and Project XP is defined in `docs/03-sprint-3-the-agora.md` §3.4. That section specifies exact amounts, caps, windows, and quality thresholds.
 
 ## 6. Test Invariants
 

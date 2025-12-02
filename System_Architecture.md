@@ -149,11 +149,11 @@ XP is a per-nullifier, non-transferable, monotonic ledger that prototypes the fu
   * `totalXP = f(civicXP, socialXP, projectXP)` (e.g., weighted sum),
   * `lastUpdated` (timestamp).
 * **Distribution model (future):** `share_i = totalXP_i^γ / Σ totalXP_j^γ` (γ tunable; α pool fraction tunable when issuing RVU/GWU).
-* **Emission (Season 0 candidates):** first Lightbulb interaction on a topic, subsequent engagements (diminishing), full read sequences, UBE claims (“Daily Boost”), proposal support/creation, REL tasks later.
+* **Emission (Season 0 candidates):** first Lightbulb interaction on a topic, subsequent engagements (diminishing), full read sequences, UBE claims ("Daily Boost"), proposal support/creation, REL tasks later.
 * **Invariants:** per-nullifier, non-transferable, monotonic (no negative XP), tracks are stable even if emission coefficients change over time.
 * **Privacy:** XP ledger is sensitive (per-nullifier); stored on-device, optionally encrypted to a trusted node; only safe aggregates (e.g., district averages with cohort thresholds) may leave the device. Never publish `{district_hash, nullifier, XP}` together.
 
-See `docs/spec-xp-ledger-v0.md` for the canonical Season 0 XP ledger contract.
+See `docs/spec-xp-ledger-v0.md` for the canonical Season 0 XP ledger contract. For HERMES Messaging/Forum/Project emission rules (amounts, caps, windows), see `docs/03-sprint-3-the-agora.md` §3.4.
 
 ### 4.3 VENN: The Canonical Bias Engine
 

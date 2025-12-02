@@ -1,9 +1,9 @@
-LUMA: The Protocol for Sovereign, Unlinkable Identity
+# LUMA: The Protocol for Sovereign, Unlinkable Identity
 
 White Paper v1.0
 Based on Protocol Specification v3.0
 
-Abstract
+## Abstract
 
 The digital world faces a dual crisis: the erosion of trust caused by AI-driven sybil attacks, and the erosion of liberty caused by surveillance capitalism and state-level data harvesting. LUMA (Local, Unlinkable, Minimal‑Attribution) is a decentralized identity protocol designed to solve both. It establishes two cryptographic truths—Singular Humanness and Local Residency—without creating a central repository of biometric data. By leveraging Visual-Inertial Odometry, Zero-Knowledge Proofs, and Intent-Based Decryption, LUMA offers a "Proof of Human" standard that is mathematically private, physically secure, and resilient against adversarial coercion.
 
@@ -32,8 +32,6 @@ Proof that a user resides within a service area (e.g., a city or jurisdiction) w
 2.3 Consent-Gated Sovereignty
 
 The link between a user's legal identity (KYC) and their anonymous DDNA is sealed in a cryptographic escrow. In LUMA v3.0, this seal cannot be broken by the platform, the government, or the escrow holders alone. It requires Intent-Based Decryption: the user must biometrically authorize the specific warrant or recovery request on their own trusted device to release the decryption key.
-
-In integrated stacks like TRINITY, LUMA’s uniqueness index is exposed as a per-human, pseudonymous nullifier; this key becomes the canonical handle for civic signals and on-chain rewards (UBE/QF) while preserving unlinkability to legal identity.
 
 2.4 Asymmetric Defense
 
