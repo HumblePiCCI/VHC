@@ -15,11 +15,16 @@ export const ContactQR: React.FC = () => {
     <div className="rounded-xl border border-slate-200 bg-card p-3 shadow-sm dark:border-slate-700">
       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Share your identity key</p>
       <div className="mt-3 flex items-center gap-3">
-        <div className="h-36 w-36 overflow-hidden rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700">
+        <div
+          className="h-36 w-36 overflow-hidden rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-700"
+          data-testid="contact-qr"
+        >
           <QRCode value={key} size={128} />
         </div>
         <div className="flex-1 space-y-2">
-          <p className="text-xs text-slate-600 break-all">{key}</p>
+          <p className="text-xs text-slate-600 break-all" data-testid="identity-key">
+            {key}
+          </p>
           <Button size="sm" onClick={() => void handleCopy()}>
             Copy
           </Button>

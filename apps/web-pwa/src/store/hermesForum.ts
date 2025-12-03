@@ -290,7 +290,18 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
 }
 
 export function createMockForumStore() {
-  return create<ForumState>((set, get) => ({
+  const mesh = (() => {
+    const w = globalThis as any;
+    if (typeof w.__vhMeshWrite === 'function' && typeof w.__vhMeshList === 'function') {
+      return {
+        write: (path: string, value: any) => w.__vhMeshWrite(path, value),
+        list: (prefix: string) => w.__vhMeshList(prefix) as any[]
+      };
+    }
+    return null;
+  })();
+
+  const store = create<ForumState>((set, get) => ({
     threads: new Map(),
     comments: new Map(),
     userVotes: new Map(),
@@ -311,6 +322,7 @@ export function createMockForumStore() {
       };
       const nextThreads = new Map(get().threads).set(thread.id, thread);
       set((state) => ({ ...state, threads: nextThreads }));
+      mesh?.write(`vh/forum/threads/${thread.id}`, thread);
       return thread;
     },
     async createComment(threadId, content, type, parentId, targetId) {
@@ -329,6 +341,7 @@ export function createMockForumStore() {
         downvotes: 0
       };
       set((state) => addComment(state, comment));
+      mesh?.write(`vh/forum/threads/${threadId}/comments/${comment.id}`, comment);
       return comment;
     },
     async vote(targetId, direction) {
@@ -346,6 +359,31 @@ export function createMockForumStore() {
       return get().comments.get(threadId) ?? [];
     }
   }));
+
+  if (mesh) {
+    Promise.resolve(mesh.list('vh/forum/threads/')).then((items) => {
+      const threads = new Map<string, HermesThread>();
+      const comments = new Map<string, HermesComment[]>();
+      (items ?? []).forEach((entry: any) => {
+        const value = entry.value ?? entry;
+        if (value?.schemaVersion === 'hermes-thread-v0') {
+          threads.set(value.id, value as HermesThread);
+        } else if (value?.schemaVersion === 'hermes-comment-v0' && entry.path) {
+          const threadId = entry.path.split('/')[3] ?? value.threadId;
+          const list = comments.get(threadId) ?? [];
+          list.push(value as HermesComment);
+          comments.set(threadId, list);
+        }
+      });
+      store.setState((state) => ({
+        ...state,
+        threads,
+        comments
+      }));
+    });
+  }
+
+  return store;
 }
 
 const isE2E = (import.meta as any).env?.VITE_E2E_MODE === 'true';

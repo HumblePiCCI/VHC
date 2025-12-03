@@ -12,7 +12,11 @@ export const TrustGate: React.FC<Props> = ({ children, fallback }) => {
   if (trustScore < 0.5) {
     return (
       <>
-        {fallback ?? <p className="text-xs text-amber-600">Verify identity to participate.</p>}
+        {fallback ?? (
+          <p className="text-xs text-amber-600" data-testid="trust-gate-msg">
+            Verify identity to participate.
+          </p>
+        )}
       </>
     );
   }

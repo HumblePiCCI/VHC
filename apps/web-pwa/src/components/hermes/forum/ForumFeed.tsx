@@ -28,6 +28,16 @@ export const ForumFeed: React.FC = () => {
             {mode.toUpperCase()}
           </button>
         ))}
+        <button
+          className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          data-testid="new-thread-btn"
+          onClick={() => {
+            const el = document.querySelector<HTMLInputElement>('[data-testid=\"thread-title\"]');
+            el?.focus();
+          }}
+        >
+          New Thread
+        </button>
       </div>
       {(resolved ?? []).map((thread) => (
         <ThreadCard

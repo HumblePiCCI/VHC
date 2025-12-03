@@ -34,9 +34,15 @@ export const CommentComposer: React.FC<Props> = ({ threadId, parentId, targetId,
         rows={3}
         placeholder={type === 'counterpoint' ? 'Add a counterpoint…' : 'Add a reply…'}
         value={content}
+        data-testid="comment-composer"
         onChange={(e) => setContent(e.target.value)}
       />
-      <Button size="sm" onClick={() => void handleSubmit()} disabled={!content.trim() || busy}>
+      <Button
+        size="sm"
+        onClick={() => void handleSubmit()}
+        disabled={!content.trim() || busy}
+        data-testid="submit-comment-btn"
+      >
         {busy ? 'Posting…' : 'Post'}
       </Button>
     </div>

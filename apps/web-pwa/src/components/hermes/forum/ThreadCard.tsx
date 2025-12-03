@@ -12,7 +12,10 @@ interface Props {
 export const ThreadCard: React.FC<Props> = ({ thread, onVote, userVote }) => {
   const score = thread.upvotes - thread.downvotes;
   return (
-    <div className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700">
+    <div
+      className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700"
+      data-testid={`thread-${thread.id}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <Link

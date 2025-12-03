@@ -119,30 +119,52 @@ test.describe('Multi-User: Shared Mesh Sync', () => {
 });
 
 test.describe('Multi-User: Forum Integration', () => {
-  
-  test.skip('Alice creates thread, Bob sees it after refresh', async ({ alice, bob, sharedMesh }) => {
-    // This test requires the forum store to be wired to the shared mesh
-    // Currently skipped until we add data-testid attributes to forum components
-    
+
+  test('Alice creates thread visible to Bob', async ({ alice, bob }) => {
     await setupUser(alice.page, 'Alice');
     await setupUser(bob.page, 'Bob');
-    
-    // Alice navigates to forum
+
     await alice.page.goto('/hermes/forum');
-    await alice.page.waitForLoadState('networkidle');
-    
-    // Alice creates a thread (requires data-testid on form fields)
-    // await alice.page.fill('[data-testid="thread-title-input"]', 'Test Discussion');
-    // await alice.page.fill('[data-testid="thread-content-input"]', 'This is a test.');
-    // await alice.page.getByTestId('create-thread-btn').click();
-    
-    // Bob navigates to forum
+    await alice.page.getByTestId('new-thread-btn').click();
+    await alice.page.getByTestId('thread-title').fill('Test Thread from Alice');
+    await alice.page.getByTestId('thread-content').fill('This is a test post for Sprint 3 E2E verification.');
+    await alice.page.getByTestId('submit-thread-btn').click();
+    await expect(alice.page.getByText('Test Thread from Alice')).toBeVisible();
+
     await bob.page.goto('/hermes/forum');
-    await bob.page.waitForLoadState('networkidle');
-    
-    // Bob should see Alice's thread
-    // await expect(bob.page.getByText('Test Discussion')).toBeVisible({ timeout: 5_000 });
+    await expect(bob.page.getByText('Test Thread from Alice')).toBeVisible({ timeout: 10_000 });
   });
-  
+
+  test('Trust gate blocks untrusted user from posting', async ({ alice }) => {
+    await setupUser(alice.page, 'LowTrust');
+    await alice.page.evaluate(() => {
+      const raw = localStorage.getItem('vh_identity');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      parsed.session.trustScore = 0.1;
+      parsed.session.scaledTrustScore = 1000;
+      localStorage.setItem('vh_identity', JSON.stringify(parsed));
+    });
+    await alice.page.goto('/hermes/forum');
+    await alice.page.getByTestId('new-thread-btn').click();
+    await expect(alice.page.getByTestId('trust-gate-msg')).toBeVisible();
+  });
 });
 
+test.describe('Multi-User: Messaging', () => {
+  test('Alice and Bob exchange messages', async ({ alice, bob }) => {
+    await setupUser(alice.page, 'Alice');
+    await setupUser(bob.page, 'Bob');
+
+    await alice.page.goto('/hermes/messages');
+    const aliceKey = await alice.page.getByTestId('identity-key').textContent();
+
+    await bob.page.goto('/hermes/messages');
+    await bob.page.getByTestId('contact-key-input').fill(aliceKey ?? '');
+    await bob.page.getByTestId('start-chat-btn').click();
+    await bob.page.getByTestId('message-composer').fill('Hello Alice!');
+    await bob.page.getByTestId('send-message-btn').click();
+
+    await expect(bob.page.getByText('Hello Alice!')).toBeVisible();
+  });
+});

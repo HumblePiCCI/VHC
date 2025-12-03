@@ -35,6 +35,7 @@ export const NewThreadForm: React.FC<Props> = ({ sourceAnalysisId, defaultTitle 
           className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-teal-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50"
           placeholder="Title"
           value={title}
+          data-testid="thread-title"
           onChange={(e) => setTitle(e.target.value)}
         />
         <textarea
@@ -42,6 +43,7 @@ export const NewThreadForm: React.FC<Props> = ({ sourceAnalysisId, defaultTitle 
           rows={4}
           placeholder="Content (Markdown)"
           value={content}
+          data-testid="thread-content"
           onChange={(e) => setContent(e.target.value)}
         />
         <input
@@ -50,7 +52,12 @@ export const NewThreadForm: React.FC<Props> = ({ sourceAnalysisId, defaultTitle 
           value={tags}
           onChange={(e) => setTags(e.target.value)}
         />
-        <Button size="sm" onClick={() => void handleSubmit()} disabled={busy || !title.trim() || !content.trim()}>
+        <Button
+          size="sm"
+          onClick={() => void handleSubmit()}
+          disabled={busy || !title.trim() || !content.trim()}
+          data-testid="submit-thread-btn"
+        >
           {busy ? 'Posting…' : 'Post thread'}
         </Button>
       </div>

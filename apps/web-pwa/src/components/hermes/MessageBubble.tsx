@@ -38,7 +38,7 @@ export const MessageBubble: React.FC<Props> = ({ message, isMine, status }) => {
   }, [message, identity]);
 
   return (
-    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} text-sm`}>
+    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} text-sm`} data-testid={`message-${message.id}`}>
       <div
         className={`max-w-[80%] rounded-2xl px-3 py-2 shadow-sm ${
           isMine ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50'

@@ -24,6 +24,7 @@ export const ChannelList: React.FC<Props> = ({ channels, messages, activeChannel
                 ? 'border-teal-300 bg-teal-50 dark:border-emerald-500/60 dark:bg-emerald-900/30'
                 : 'border-slate-200 hover:border-teal-200 dark:border-slate-700 dark:hover:border-emerald-600/60'
             }`}
+            data-testid={`channel-${channel.id}`}
             onClick={() => onSelect(channel.id)}
           >
             <div className="flex items-center justify-between">

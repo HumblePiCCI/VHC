@@ -53,11 +53,12 @@ export const CommentNode: React.FC<Props> = ({ comment, depth = 0 }) => {
             )}
           </div>
           <TrustGate
-            fallback={<span className="text-[11px] text-slate-500">Verify to vote</span>}
+            fallback={<span className="text-[11px] text-slate-500" data-testid="trust-gate-msg">Verify to vote</span>}
           >
             <div className="flex flex-col items-center gap-1 text-xs">
               <button
                 className={`rounded border px-1 ${userVotes.get(comment.id) === 'up' ? 'border-teal-500 text-teal-700' : 'border-slate-200'}`}
+                data-testid={`vote-up-${comment.id}`}
                 onClick={() => vote(comment.id, userVotes.get(comment.id) === 'up' ? null : 'up')}
               >
                 ▲
@@ -65,6 +66,7 @@ export const CommentNode: React.FC<Props> = ({ comment, depth = 0 }) => {
               <span>{score}</span>
               <button
                 className={`rounded border px-1 ${userVotes.get(comment.id) === 'down' ? 'border-teal-500 text-teal-700' : 'border-slate-200'}`}
+                data-testid={`vote-down-${comment.id}`}
                 onClick={() => vote(comment.id, userVotes.get(comment.id) === 'down' ? null : 'down')}
               >
                 ▼

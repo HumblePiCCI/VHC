@@ -29,9 +29,15 @@ export const Composer: React.FC<Props> = ({ onSend, disabled }) => {
         placeholder="Type a message…"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        data-testid="message-composer"
         disabled={disabled || busy}
       />
-      <Button size="sm" disabled={!text.trim() || disabled || busy} onClick={() => void handleSend()}>
+      <Button
+        size="sm"
+        disabled={!text.trim() || disabled || busy}
+        onClick={() => void handleSend()}
+        data-testid="send-message-btn"
+      >
         {busy ? 'Sending…' : 'Send'}
       </Button>
     </div>

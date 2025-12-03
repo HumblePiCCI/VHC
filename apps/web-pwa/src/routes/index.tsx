@@ -13,6 +13,7 @@ import { NewThreadForm } from '../components/hermes/forum/NewThreadForm';
 import { ContactQR } from '../components/hermes/ContactQR';
 import { ScanContact } from '../components/hermes/ScanContact';
 import { DashboardPage } from './dashboardContent';
+import { TrustGate } from '../components/hermes/forum/TrustGate';
 
 const RootComponent = () => (
   <RootShell>
@@ -159,7 +160,9 @@ const HermesForumPage: React.FC = () => {
   const search = location.search as { sourceAnalysisId?: string; title?: string };
   return (
     <div className="space-y-4">
-      <NewThreadForm sourceAnalysisId={search?.sourceAnalysisId} defaultTitle={search?.title} />
+      <TrustGate fallback={<p className="text-xs text-amber-600" data-testid="trust-gate-msg">Verify identity to participate.</p>}>
+        <NewThreadForm sourceAnalysisId={search?.sourceAnalysisId} defaultTitle={search?.title} />
+      </TrustGate>
       <ForumFeed />
     </div>
   );

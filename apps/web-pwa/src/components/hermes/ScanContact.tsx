@@ -68,9 +68,15 @@ export const ScanContact: React.FC = () => {
           className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-teal-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50"
           placeholder="Paste identity key"
           value={manual}
+          data-testid="contact-key-input"
           onChange={(e) => setManual(e.target.value)}
         />
-        <Button size="sm" onClick={() => void navigateToChannel(manual)} disabled={!manual.trim()}>
+        <Button
+          size="sm"
+          onClick={() => void navigateToChannel(manual)}
+          disabled={!manual.trim()}
+          data-testid="start-chat-btn"
+        >
           Start chat
         </Button>
       </div>
