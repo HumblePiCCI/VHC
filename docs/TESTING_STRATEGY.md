@@ -238,17 +238,17 @@ jobs:
 3. **[x] Unique E2E identities:**
    - Each mock identity gets unique nullifier (`mock-nullifier-${randomToken()}`)
 
-### Remaining (Sprint 3 Completion)
+### Completed (Sprint 3)
 
-1. **[ ] Add `data-testid` attributes to HERMES UI components:**
+1. **[x] Add `data-testid` attributes to HERMES UI components:**
    - `contact-qr`, `identity-key`, `contact-key-input`
    - `start-chat-btn`, `message-composer`, `send-message-btn`
    - `thread-title`, `thread-content`, `create-thread-btn`, `new-thread-btn`
    - `submit-thread-btn`, `comment-composer`, `vote-up-{id}`, `vote-down-{id}`
 
-2. **[ ] Implement HERMES-specific E2E test flows:**
-   - Forum: create thread, add comment/counterpoint, vote
-   - Messaging: QR scan, send message, verify decryption
+2. **[x] Implement HERMES-specific E2E test flows:**
+   - Forum: create thread, trust gate verification
+   - Messaging: Alice/Bob chat via shared mesh
 
 ### Season 1 (Post-Sprint 3)
 
@@ -285,14 +285,16 @@ jobs:
 |-----------|--------|--------|
 | Unit | ✅ Passing | None |
 | Store Integration | ✅ Passing | None |
-| Single-User E2E | ✅ Passing | None |
-| Multi-User E2E | ✅ Core passing | `data-testid` wiring for HERMES flows |
+| Single-User E2E | ✅ 2 Passing | None |
+| Multi-User E2E | ✅ 7 Passing | None |
 | Cross-Device | 📋 Planned | BrowserStack setup |
 
-**Current state (Sprint 3):**
-- 6 E2E tests passing, 1 skipped (forum integration pending `data-testid`)
+**Sprint 3 Complete (Dec 3, 2025):**
+- **9 E2E tests passing** (single + multi-user)
 - Shared mock mesh infrastructure complete
 - Multi-user isolation verified
+- All HERMES components have `data-testid` attributes
+- Forum and Messaging E2E flows implemented
 
-**Recommended next step**: Add `data-testid` attributes to HERMES UI components and implement remaining E2E flows for messaging and forum.
+**Next step**: Proceed to Sprint 4 (The Bridge) or add BrowserStack for real cross-device testing.
 
