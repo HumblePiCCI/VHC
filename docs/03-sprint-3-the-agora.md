@@ -20,7 +20,7 @@
 
 ### 1.3 Gun Isolation & Topology
 - [ ] **Gun Isolation:** All access to Gun goes through `@vh/gun-client`. No direct `gun` imports in `apps/*` or other packages. The Hydration Barrier (`waitForRemote`) must be respected for all read/write operations.
-- [ ] **TopologyGuard Update:** Extend TopologyGuard allowed prefixes to include:
+- [x] **TopologyGuard Update:** Extend TopologyGuard allowed prefixes to include:
     - `~*/hermes/inbox/**`
     - `~*/hermes/outbox/**`
     - `~*/hermes/chats/**`
@@ -66,24 +66,24 @@
 ### 2.2 Transport Layer (`packages/gun-client`) & Messaging Store (`apps/web-pwa`)
 
 #### 2.2.1 Gun Adapters (`packages/gun-client`)
-- [ ] **Gun adapters:** Expose helpers using identity keys (nullifiers):
+- [x] **Gun adapters:** Expose helpers using identity keys (nullifiers):
     - `getHermesInboxChain(identityKey: string) -> ChainWithGet<Message>`
     - `getHermesOutboxChain(identityKey: string) -> ChainWithGet<Message>`
     - `getHermesChatChain(identityKey: string, channelId: string) -> ChainWithGet<Message>`
-- [ ] **Namespace Topology:** Implement paths per `spec-hermes-messaging-v0.md` §3.1:
+- [x] **Namespace Topology:** Implement paths per `spec-hermes-messaging-v0.md` §3.1:
     - `~<recipient_identityKey>/hermes/inbox` — Sender writes encrypted message reference here.
     - `~<sender_identityKey>/hermes/outbox` — Sender writes copy for multi-device sync.
     - `~<user_identityKey>/hermes/chats/<channelId>` — Local view of the conversation.
-- [ ] **Hydration Barrier:** All helpers must respect `waitForRemote` before writes.
+- [x] **Hydration Barrier:** All helpers must respect `waitForRemote` before writes.
 
 #### 2.2.2 Encryption Wrappers (`packages/gun-client/src/hermesCrypto.ts`)
-- [ ] **Implement encryption helpers:**
+- [x] **Implement encryption helpers:**
     - `deriveSharedSecret(recipientDevicePub: string, senderDevicePair: SEA.Pair): Promise<string>`
     - `encryptMessagePayload(plaintext: HermesPayload, secret: string): Promise<string>`
     - `decryptMessagePayload(ciphertext: string, secret: string): Promise<HermesPayload>`
-- [ ] **HermesPayload:** `{ text?: string; attachmentUrl?: string; attachmentType?: 'image' | 'file' }`
-- [ ] **Implementation:** Use `SEA.secret`, `SEA.encrypt`, `SEA.decrypt` exactly as described in `spec-hermes-messaging-v0.md` §3.2.
-- [ ] **Privacy:** Do not leak plaintext into Gun; encrypted payload only.
+- [x] **HermesPayload:** `{ text?: string; attachmentUrl?: string; attachmentType?: 'image' | 'file' }`
+- [x] **Implementation:** Use `SEA.secret`, `SEA.encrypt`, `SEA.decrypt` exactly as described in `spec-hermes-messaging-v0.md` §3.2.
+- [x] **Privacy:** Do not leak plaintext into Gun; encrypted payload only.
 
 #### 2.2.3 Messaging Store (`apps/web-pwa/src/store/hermesMessaging.ts`)
 - [ ] **Implement `useChatStore` (Zustand)** that only depends on:
@@ -153,7 +153,7 @@
     - `content`: ≤ 10,000 characters.
 - [x] **Validation:** Use Zod schemas, exported via `packages/types`.
 
-- [ ] **Storage Topology:** Implement Gun storage paths per `spec-hermes-forum-v0.md` §5:
+- [x] **Storage Topology:** Implement Gun storage paths per `spec-hermes-forum-v0.md` §5:
     - Threads: `vh/forum/threads/<threadId>`
     - Comments: `vh/forum/threads/<threadId>/comments/<commentId>`
     - Indexes:
