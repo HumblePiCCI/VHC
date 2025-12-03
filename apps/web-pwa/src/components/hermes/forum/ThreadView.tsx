@@ -4,6 +4,7 @@ import { CommentNode } from './CommentNode';
 import { CommentComposer } from './CommentComposer';
 import { TrustGate } from './TrustGate';
 import { CounterpointPanel } from './CounterpointPanel';
+import { renderMarkdown } from '../../../utils/markdown';
 
 interface Props {
   threadId: string;
@@ -31,7 +32,10 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
     <div className="space-y-4">
       <div className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700">
         <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{thread.title}</p>
-        <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{thread.content}</p>
+        <div
+          className="prose prose-sm mt-2 max-w-none dark:prose-invert"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(thread.content) }}
+        />
         <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
           <span>By {thread.author.slice(0, 10)}…</span>
           <span>{new Date(thread.timestamp).toLocaleString()}</span>

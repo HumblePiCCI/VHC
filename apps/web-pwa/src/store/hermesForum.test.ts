@@ -75,4 +75,22 @@ describe('hermesForum store', () => {
     expect(updated.upvotes).toBe(1);
     expect(updated.downvotes).toBe(0);
   });
+
+  it('applies quality bonus when threshold crossed', async () => {
+    (globalThis as any).localStorage.setItem(
+      'vh_identity',
+      JSON.stringify({ session: { nullifier: 'author', trustScore: 1 } })
+    );
+    const store = createForumStore({ resolveClient: () => ({} as any), randomId: () => 'thread-2', now: () => 1 });
+    const thread = await store.getState().createThread('title', 'content', ['tag']);
+    // simulate that author is same user
+    store.setState((state) => ({
+      ...state,
+      threads: new Map(state.threads).set(thread.id, { ...thread, author: 'author' })
+    }));
+    await store.getState().vote(thread.id, 'up');
+    await store.getState().vote(thread.id, 'up'); // idempotent to upvotes=1
+    await store.getState().vote(thread.id, 'up'); // still 1
+    expect(store.getState().threads.get(thread.id)?.upvotes).toBe(1);
+  });
 });

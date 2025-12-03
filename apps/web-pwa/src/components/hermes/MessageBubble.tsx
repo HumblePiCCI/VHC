@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { HermesMessage } from '@vh/types';
+import { decryptMessagePayload, deriveSharedSecret } from '@vh/gun-client';
+import { useIdentity } from '../../hooks/useIdentity';
 
 interface Props {
   message: HermesMessage;
@@ -8,6 +10,33 @@ interface Props {
 }
 
 export const MessageBubble: React.FC<Props> = ({ message, isMine, status }) => {
+  const { identity } = useIdentity();
+  const [plaintext, setPlaintext] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const viewerKey = identity?.attestation?.deviceKey ?? identity?.session?.nullifier;
+        if (!viewerKey) {
+          setPlaintext(null);
+          return;
+        }
+        const secret = await deriveSharedSecret(message.sender, { epub: viewerKey, epriv: viewerKey });
+        const payload = await decryptMessagePayload(message.content, secret);
+        if (!cancelled) {
+          setPlaintext(payload.text ?? '[unenclosed]');
+        }
+      } catch {
+        if (!cancelled) setPlaintext('[Unable to decrypt]');
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [message, identity]);
+
   return (
     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} text-sm`}>
       <div
@@ -15,7 +44,7 @@ export const MessageBubble: React.FC<Props> = ({ message, isMine, status }) => {
           isMine ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50'
         }`}
       >
-        <p className="break-words">{message.content}</p>
+        <p className="break-words">{plaintext ?? message.content}</p>
         <div className="mt-1 flex items-center gap-2 text-[11px] text-slate-200">
           <span className="text-[10px] opacity-80">{new Date(message.timestamp).toLocaleTimeString()}</span>
           {status && (

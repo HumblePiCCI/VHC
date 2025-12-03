@@ -7,6 +7,7 @@ import {
   type VennClient
 } from '@vh/gun-client';
 import { useAppStore } from './index';
+import { useXpLedger } from './xpLedger';
 
 const IDENTITY_STORAGE_KEY = 'vh_identity';
 const TRUST_THRESHOLD = 0.5;
@@ -150,6 +151,12 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
         });
       });
       set((state) => addThread(state, withScore));
+      const tagsLower = tags.map((t) => t.toLowerCase());
+      if (tagsLower.some((t) => t.includes('project') || t.includes('proposal'))) {
+        useXpLedger.getState().applyProjectXP({ type: 'project_thread_created', threadId: thread.id });
+      } else {
+        useXpLedger.getState().applyForumXP({ type: 'thread_created', threadId: thread.id, tags });
+      }
       return withScore;
     },
     async createComment(threadId, content, type, parentId, targetId) {
@@ -180,6 +187,10 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
           });
       });
       set((state) => addComment(state, comment));
+      const isSubstantive = content.length >= 280;
+      useXpLedger
+        .getState()
+        .applyForumXP({ type: 'comment_created', commentId: comment.id, threadId, isOwnThread: false, isSubstantive });
       return comment;
     },
     async vote(targetId, direction) {
@@ -209,6 +220,15 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
             resolve();
           });
         });
+        const prevScore = thread.upvotes - thread.downvotes;
+        const nextScore = updatedThread.upvotes - updatedThread.downvotes;
+        if (thread.author === identity.session.nullifier) {
+          [3, 10].forEach((threshold) => {
+            if (prevScore < threshold && nextScore >= threshold) {
+              useXpLedger.getState().applyForumXP({ type: 'quality_bonus', contentId: targetId, threshold: threshold as 3 | 10 });
+            }
+          });
+        }
         return;
       }
 
@@ -239,6 +259,15 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
             resolve();
           });
       });
+      const prevScore = comment.upvotes - comment.downvotes;
+      const nextScore = updatedComment.upvotes - updatedComment.downvotes;
+      if (comment.author === identity.session.nullifier) {
+        [3, 10].forEach((threshold) => {
+          if (prevScore < threshold && nextScore >= threshold) {
+            useXpLedger.getState().applyForumXP({ type: 'quality_bonus', contentId: targetId, threshold: threshold as 3 | 10 });
+          }
+        });
+      }
     },
     async loadThreads(sort) {
       const now = deps.now();

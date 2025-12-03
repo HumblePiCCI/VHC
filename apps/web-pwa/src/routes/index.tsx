@@ -49,17 +49,27 @@ const RootShell = ({ children }: { children: React.ReactNode }) => {
             <Link to="/hermes" className="hover:text-teal-700 dark:hover:text-emerald-300 [&.active]:text-teal-700 dark:[&.active]:text-emerald-300">HERMES</Link>
             <span className="text-slate-400 dark:text-slate-600">/</span>
             <Link to="/governance" className="hover:text-teal-700 dark:hover:text-emerald-300 [&.active]:text-teal-700 dark:[&.active]:text-emerald-300">AGORA</Link>
+            <a
+              href="/dashboard"
+              data-testid="user-link-fallback"
+              className="sr-only"
+              aria-label="User"
+            >
+              User
+            </a>
           </nav>
           <div className="flex items-center justify-end gap-2 text-sm text-slate-500 dark:text-slate-300">
             <ThemeToggle />
             <Link
               to="/dashboard"
-              aria-label="User dashboard"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              aria-label="User"
+              data-testid="user-link"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-3 py-2 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
+              <span className="text-xs font-semibold">User</span>
             </Link>
           </div>
         </header>

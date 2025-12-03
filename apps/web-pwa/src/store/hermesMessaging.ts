@@ -11,6 +11,7 @@ import {
   type VennClient
 } from '@vh/gun-client';
 import { useAppStore } from './index';
+import { useXpLedger } from './xpLedger';
 
 const IDENTITY_STORAGE_KEY = 'vh_identity';
 
@@ -20,6 +21,7 @@ export interface ChatState {
   channels: Map<string, HermesChannel>;
   messages: Map<string, HermesMessage[]>;
   statuses: Map<string, MessageStatus>;
+  messageStats: Map<string, { mine: number; total: number; awarded: boolean }>;
   sendMessage(recipientIdentityKey: string, plaintext: HermesPayload, type: HermesMessageType): Promise<void>;
   subscribeToChannel(channelId: string): () => void;
   getOrCreateChannel(peerIdentityKey: string): Promise<HermesChannel>;
@@ -116,6 +118,7 @@ function createRealChatStore(deps?: Partial<ChatDeps>) {
     channels: new Map(),
     messages: new Map(),
     statuses: new Map(),
+    messageStats: new Map(),
     async getOrCreateChannel(peerIdentityKey: string): Promise<HermesChannel> {
       const identity = ensureIdentity();
       const participants = [identity.session.nullifier, peerIdentityKey];
@@ -181,6 +184,29 @@ function createRealChatStore(deps?: Partial<ChatDeps>) {
         const results = await Promise.all([write(inbox), write(outbox), write(chat)]);
         if (!results.includes('timeout')) {
           set((state) => updateStatus(state, messageId, 'sent'));
+          const ledger = useXpLedger.getState();
+          if (!ledger.firstContacts.has(recipientIdentityKey)) {
+            ledger.applyMessagingXP({ type: 'first_contact', contactKey: recipientIdentityKey });
+          }
+          set((state) => {
+            const stats = new Map(state.messageStats);
+            const entry = stats.get(channelId) ?? { mine: 0, total: 0, awarded: false };
+            const updated = { ...entry, mine: entry.mine + 1, total: entry.total + 1 };
+            stats.set(channelId, updated);
+            return { ...state, messageStats: stats };
+          });
+          const stats = get().messageStats.get(channelId);
+          if (stats && !stats.awarded && stats.mine >= 3 && stats.total >= 6) {
+            useXpLedger.getState().applyMessagingXP({ type: 'sustained_conversation', channelId });
+            set((state) => {
+              const stats = new Map(state.messageStats);
+              const entry = stats.get(channelId);
+              if (entry) {
+                stats.set(channelId, { ...entry, awarded: true });
+              }
+              return { ...state, messageStats: stats };
+            });
+          }
         }
       } catch (error) {
         console.warn('[vh:chat] failed to write message', error);

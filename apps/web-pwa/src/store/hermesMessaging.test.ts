@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRealChatStore } from './hermesMessaging';
+import { useXpLedger } from './xpLedger';
 
 const inboxWrites: any[] = [];
 const outboxWrites: any[] = [];
@@ -100,6 +101,7 @@ describe('hermesMessaging store', () => {
       expect(call.value.type).toBe('text');
     });
     expect(store.getState().statuses.get('msg-1')).toBe('sent');
+    expect(useXpLedger.getState().socialXP).toBeGreaterThan(0);
   });
 
   it('deduplicates messages by id when subscribed', async () => {

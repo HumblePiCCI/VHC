@@ -4,6 +4,7 @@ import { Button } from '@vh/ui';
 import { useForumStore } from '../../../store/hermesForum';
 import { TrustGate } from './TrustGate';
 import { CommentComposer } from './CommentComposer';
+import { renderMarkdown } from '../../../utils/markdown';
 
 interface Props {
   comment: HermesComment;
@@ -45,7 +46,10 @@ export const CommentNode: React.FC<Props> = ({ comment, depth = 0 }) => {
                 [collapsed] score {score}
               </button>
             ) : (
-              <p className="text-slate-800 dark:text-slate-100">{comment.content}</p>
+              <div
+                className="prose prose-sm max-w-none text-slate-800 dark:prose-invert dark:text-slate-100"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.content) }}
+              />
             )}
           </div>
           <TrustGate
