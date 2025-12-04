@@ -132,19 +132,21 @@ function restore(): Omit<XpLedgerState, 'applyMessagingXP' | 'applyForumXP' | 'a
       projectWeekly: new Map()
     };
   }
+  const todayId = today();
+  const weekId = weekStart();
   return {
-    socialXP: stored.socialXP,
-    civicXP: stored.civicXP,
-    projectXP: stored.projectXP,
-    dailySocialXP: stored.dailySocialXP,
-    dailyCivicXP: stored.dailyCivicXP,
-    weeklyProjectXP: stored.weeklyProjectXP,
-    firstContacts: new Set(stored.firstContacts),
+    socialXP: stored.socialXP ?? 0,
+    civicXP: stored.civicXP ?? 0,
+    projectXP: stored.projectXP ?? 0,
+    dailySocialXP: stored.dailySocialXP ?? { date: todayId, amount: 0 },
+    dailyCivicXP: stored.dailyCivicXP ?? { date: todayId, amount: 0 },
+    weeklyProjectXP: stored.weeklyProjectXP ?? { weekStart: weekId, amount: 0 },
+    firstContacts: new Set(stored.firstContacts ?? []),
     qualityBonuses: new Map(
-      Object.entries(stored.qualityBonuses).map(([key, values]) => [key, new Set(values ?? [])])
+      Object.entries(stored.qualityBonuses ?? {}).map(([key, values]) => [key, new Set(values ?? [])])
     ),
-    sustainedAwards: new Map(Object.entries(stored.sustainedAwards)),
-    projectWeekly: new Map(Object.entries(stored.projectWeekly).map(([k, v]) => [k, Number(v)]))
+    sustainedAwards: new Map(Object.entries(stored.sustainedAwards ?? {})),
+    projectWeekly: new Map(Object.entries(stored.projectWeekly ?? {}).map(([k, v]) => [k, Number(v)]))
   };
 }
 
