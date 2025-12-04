@@ -5,26 +5,10 @@ import { waitForRemote, type ChainAck, type ChainLike, type ChainWithGet } from 
 import { createStorageAdapter } from './storage/adapter';
 import type { StorageAdapter, StorageRecord } from './storage/types';
 import { HydrationBarrier, createHydrationBarrier } from './sync/barrier';
-import type { Namespace, VennClientConfig } from './types';
+import type { Namespace, VennClient, VennClientConfig } from './types';
 import { TopologyGuard } from './topology';
 
 const DEFAULT_PEERS = ['http://localhost:9780/gun'];
-
-export interface VennClient {
-  config: VennClientConfig & { peers: string[] };
-  hydrationBarrier: HydrationBarrier;
-  storage: StorageAdapter;
-  topologyGuard: TopologyGuard;
-  gun: IGunInstance;
-  user: Namespace<Record<string, unknown>>;
-  chat: Namespace<Record<string, unknown>>;
-  outbox: Namespace<Record<string, unknown>>;
-  mesh: ChainWithGet<Record<string, unknown>>;
-  sessionReady: boolean;
-  markSessionReady(): void;
-  linkDevice(deviceKey: string): Promise<void>;
-  shutdown(): Promise<void>;
-}
 
 function normalizePeers(peers?: string[]): string[] {
   const list = peers !== undefined ? peers : DEFAULT_PEERS;
@@ -162,7 +146,7 @@ export function createClient(config: VennClientConfig = {}): VennClient {
 export { HydrationBarrier } from './sync/barrier';
 export { createStorageAdapter } from './storage/adapter';
 export type { StorageAdapter, StorageRecord } from './storage/types';
-export type { VennClientConfig, Namespace } from './types';
+export type { VennClient, VennClientConfig, Namespace } from './types';
 export { createSession } from './auth';
 export * from './hermesAdapters';
 export * from './hermesCrypto';

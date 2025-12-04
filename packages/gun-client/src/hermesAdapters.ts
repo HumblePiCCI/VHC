@@ -1,6 +1,6 @@
 import type { HermesMessage } from '@vh/types';
 import { createGuardedChain, type ChainWithGet } from './chain';
-import type { VennClient } from './index';
+import type { VennClient } from './types';
 
 function inboxPath(identityKey: string): string {
   return `~${identityKey}/hermes/inbox/`;

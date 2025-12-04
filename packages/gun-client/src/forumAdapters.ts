@@ -1,6 +1,6 @@
 import type { HermesComment, HermesThread } from '@vh/types';
 import { createGuardedChain, type ChainWithGet } from './chain';
-import type { VennClient } from './index';
+import type { VennClient } from './types';
 
 function threadPath(threadId: string): string {
   return `vh/forum/threads/${threadId}/`;
