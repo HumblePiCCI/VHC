@@ -15,5 +15,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/*.test.ts"],
-  "references": [{ "path": "../types" }, { "path": "../crypto" }, { "path": "../crdt" }]
+  "references": [{ "path": "../types" }, { "path": "../crypto" }, { "path": "../crdt" }, { "path": "../data-model" }]
 }

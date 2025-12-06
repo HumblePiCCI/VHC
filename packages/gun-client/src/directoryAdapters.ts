@@ -21,12 +21,13 @@ export async function lookupByNullifier(client: VennClient, nullifier: string): 
 
 export function publishToDirectory(client: VennClient, entry: DirectoryEntry): Promise<void> {
   return new Promise((resolve, reject) => {
-    getDirectoryChain(client, entry.nullifier).put(entry, (ack?: { err?: string }) => {
+    // Gun's put callback type is complex; cast to any for compatibility
+    getDirectoryChain(client, entry.nullifier).put(entry as any, ((ack: { err?: string } | undefined) => {
       if (ack?.err) {
         reject(new Error(ack.err));
       } else {
         resolve();
       }
-    });
+    }) as any);
   });
 }
