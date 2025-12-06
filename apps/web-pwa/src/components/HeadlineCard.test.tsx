@@ -51,7 +51,7 @@ describe('HeadlineCard', () => {
     expect(screen.getByTestId('read-count')).toHaveTextContent('👁️ 5.0');
 
     // Sentiment click should not collapse the card
-    const agreeFrame = screen.getByLabelText('Agree frame');
+    const [agreeFrame] = screen.getAllByLabelText('Agree frame');
     fireEvent.click(agreeFrame);
     expect(screen.getByText(/Frame view/)).toBeInTheDocument();
   });

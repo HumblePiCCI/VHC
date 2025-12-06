@@ -1,0 +1,245 @@
+import { create, type StoreApi } from 'zustand';
+import { computeThreadScore, HermesCommentSchema, HermesThreadSchema } from '@vh/data-model';
+import type { HermesComment, HermesThread } from '@vh/types';
+import { getForumCommentsChain, getForumDateIndexChain, getForumTagIndexChain, getForumThreadChain } from '@vh/gun-client';
+import { useAppStore } from '../index';
+import { useXpLedger } from '../xpLedger';
+import type { ForumState, ForumDeps } from './types';
+import { loadIdentity, loadVotesFromStorage, persistVotes } from './persistence';
+import {
+  ensureIdentity,
+  ensureClient,
+  stripUndefined,
+  serializeThreadForGun,
+  isCommentSeen,
+  markCommentSeen,
+  addThread,
+  addComment,
+  adjustVoteCounts,
+  findCommentThread
+} from './helpers';
+import { hydrateFromGun } from './hydration';
+import { createMockForumStore } from './mockStore';
+
+export type { ForumState } from './types';
+export { stripUndefined } from './helpers';
+export { createMockForumStore } from './mockStore';
+
+export function createForumStore(overrides?: Partial<ForumDeps>) {
+  const defaults: ForumDeps = {
+    resolveClient: () => useAppStore.getState().client,
+    now: () => Date.now(),
+    randomId: () =>
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
+  };
+  const deps = { ...defaults, ...overrides };
+
+  const identity = loadIdentity();
+  const initialVotes = identity?.session?.nullifier ? loadVotesFromStorage(identity.session.nullifier) : new Map();
+
+  let storeRef: StoreApi<ForumState> | null = null;
+  const triggerHydration = () => {
+    if (storeRef) hydrateFromGun(deps.resolveClient, storeRef);
+  };
+
+  const store = create<ForumState>((set, get) => ({
+    threads: new Map(),
+    comments: new Map(),
+    userVotes: initialVotes,
+    async createThread(title, content, tags, sourceAnalysisId) {
+      triggerHydration();
+      const identity = ensureIdentity();
+      const client = ensureClient(deps.resolveClient);
+      const threadData: Record<string, unknown> = {
+        id: deps.randomId(),
+        schemaVersion: 'hermes-thread-v0',
+        title,
+        content,
+        author: identity.session.nullifier,
+        timestamp: deps.now(),
+        tags,
+        upvotes: 0,
+        downvotes: 0,
+        score: 0
+      };
+      if (sourceAnalysisId) threadData.sourceAnalysisId = sourceAnalysisId;
+      const thread: HermesThread = HermesThreadSchema.parse(threadData);
+      const withScore = { ...thread, score: computeThreadScore(thread, deps.now()) };
+      const threadForGun = serializeThreadForGun(withScore);
+      const hasUndefined = Object.entries(threadForGun).some(([, v]) => v === undefined);
+      if (hasUndefined) {
+        console.warn('[vh:forum] Thread has undefined values:', Object.entries(threadForGun).filter(([, v]) => v === undefined));
+      }
+      console.info('[vh:forum] Creating thread:', threadForGun.id);
+      console.debug('[vh:forum] Thread data for Gun:', JSON.stringify(threadForGun, null, 2));
+      await new Promise<void>((resolve, reject) => {
+        getForumThreadChain(client, threadForGun.id as string).put(threadForGun as any, (ack?: { err?: string }) => {
+          console.debug('[vh:forum] Put ack received:', ack);
+          if (ack?.err) {
+            console.error('[vh:forum] Thread write failed:', ack.err);
+            reject(new Error(ack.err));
+            return;
+          }
+          console.info('[vh:forum] Thread written successfully to path: vh/forum/threads/' + threadForGun.id);
+          resolve();
+        });
+      });
+      getForumDateIndexChain(client).get(withScore.id).put({ timestamp: withScore.timestamp });
+      tags.forEach((tag) => getForumTagIndexChain(client, tag.toLowerCase()).get(withScore.id).put(true));
+      set((state) => addThread(state, withScore));
+      const tagsLower = tags.map((t) => t.toLowerCase());
+      if (tagsLower.some((t) => t.includes('project') || t.includes('proposal'))) {
+        useXpLedger.getState().applyProjectXP({ type: 'project_thread_created', threadId: thread.id });
+      } else {
+        useXpLedger.getState().applyForumXP({ type: 'thread_created', threadId: thread.id, tags });
+      }
+      return withScore;
+    },
+    async createComment(threadId, content, type, parentId, targetId) {
+      triggerHydration();
+      const identity = ensureIdentity();
+      const client = ensureClient(deps.resolveClient);
+      const comment: HermesComment = HermesCommentSchema.parse({
+        id: deps.randomId(),
+        schemaVersion: 'hermes-comment-v0',
+        threadId,
+        parentId: parentId ?? null,
+        content,
+        author: identity.session.nullifier,
+        timestamp: deps.now(),
+        type,
+        targetId,
+        upvotes: 0,
+        downvotes: 0
+      });
+      const cleanComment = stripUndefined(comment);
+      console.info('[vh:forum] Creating comment:', cleanComment.id, 'for thread:', threadId);
+      console.debug('[vh:forum] Comment data:', JSON.stringify(cleanComment, null, 2));
+      await new Promise<void>((resolve, reject) => {
+        getForumCommentsChain(client, threadId)
+          .get(cleanComment.id)
+          .put(cleanComment, (ack?: { err?: string }) => {
+            console.debug('[vh:forum] Comment put ack:', ack);
+            if (ack?.err) {
+              console.error('[vh:forum] Comment write failed:', ack.err);
+              reject(new Error(ack.err));
+              return;
+            }
+            console.info('[vh:forum] Comment written successfully to path: vh/forum/threads/' + threadId + '/comments/' + cleanComment.id);
+            resolve();
+          });
+      });
+      set((state) => addComment(state, cleanComment));
+      const isSubstantive = content.length >= 280;
+      useXpLedger.getState().applyForumXP({ type: 'comment_created', commentId: comment.id, threadId, isOwnThread: false, isSubstantive });
+      return cleanComment;
+    },
+    async vote(targetId, direction) {
+      const identity = ensureIdentity();
+      const client = ensureClient(deps.resolveClient);
+      const previous = get().userVotes.get(targetId) ?? null;
+      if (previous === direction) return;
+      const nextVotes = new Map(get().userVotes).set(targetId, direction);
+      if (get().threads.has(targetId)) {
+        const thread = get().threads.get(targetId)!;
+        let updatedThread = adjustVoteCounts(thread, previous, direction);
+        updatedThread = { ...updatedThread, score: computeThreadScore(updatedThread, deps.now()) };
+        set((state) => ({ ...state, threads: new Map(state.threads).set(updatedThread.id, updatedThread), userVotes: nextVotes }));
+        persistVotes(identity.session.nullifier, nextVotes);
+        await new Promise<void>((resolve, reject) => {
+          getForumThreadChain(client, targetId).put(updatedThread, (ack?: { err?: string }) => {
+            if (ack?.err) { reject(new Error(ack.err)); return; }
+            resolve();
+          });
+        });
+        const prevScore = thread.upvotes - thread.downvotes;
+        const nextScore = updatedThread.upvotes - updatedThread.downvotes;
+        if (thread.author === identity.session.nullifier) {
+          [3, 10].forEach((threshold) => {
+            if (prevScore < threshold && nextScore >= threshold) {
+              useXpLedger.getState().applyForumXP({ type: 'quality_bonus', contentId: targetId, threshold: threshold as 3 | 10 });
+            }
+          });
+        }
+        return;
+      }
+      const threadId = findCommentThread(get().comments, targetId);
+      if (!threadId) throw new Error('Target not found');
+      const comments = get().comments.get(threadId) ?? [];
+      const comment = comments.find((c) => c.id === targetId);
+      if (!comment) throw new Error('Target not found');
+      const updatedComment = adjustVoteCounts(comment, previous, direction);
+      const nextComments = new Map(get().comments);
+      nextComments.set(threadId, comments.map((c) => (c.id === targetId ? updatedComment : c)));
+      set((state) => ({ ...state, comments: nextComments, userVotes: nextVotes }));
+      persistVotes(identity.session.nullifier, nextVotes);
+      await new Promise<void>((resolve, reject) => {
+        getForumCommentsChain(client, threadId).get(targetId).put(updatedComment, (ack?: { err?: string }) => {
+          if (ack?.err) { reject(new Error(ack.err)); return; }
+          resolve();
+        });
+      });
+      const prevScore = comment.upvotes - comment.downvotes;
+      const nextScore = updatedComment.upvotes - updatedComment.downvotes;
+      if (comment.author === identity.session.nullifier) {
+        [3, 10].forEach((threshold) => {
+          if (prevScore < threshold && nextScore >= threshold) {
+            useXpLedger.getState().applyForumXP({ type: 'quality_bonus', contentId: targetId, threshold: threshold as 3 | 10 });
+          }
+        });
+      }
+    },
+    async loadThreads(sort) {
+      triggerHydration();
+      const now = deps.now();
+      const threads = Array.from(get().threads.values()).map((t) => ({ ...t, score: computeThreadScore(t, now) }));
+      if (sort === 'hot') return threads.sort((a, b) => b.score - a.score);
+      if (sort === 'new') return threads.sort((a, b) => b.timestamp - a.timestamp);
+      return threads.sort((a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes));
+    },
+    async loadComments(threadId) {
+      triggerHydration();
+      const client = deps.resolveClient();
+      if (client) {
+        const commentsChain = getForumCommentsChain(client, threadId);
+        console.debug('[vh:forum] subscribing to comments for thread:', threadId);
+        commentsChain.map().on((data: unknown, key: string) => {
+          console.debug('[vh:forum] comment callback:', { key, dataType: typeof data, hasData: !!data });
+          if (!data || typeof data !== 'object') {
+            console.debug('[vh:forum] skipping comment: not an object');
+            return;
+          }
+          const obj = data as Record<string, unknown>;
+          if (!obj.id || !obj.schemaVersion || !obj.threadId) {
+            console.debug('[vh:forum] skipping comment: missing required fields', {
+              hasId: !!obj.id, hasSchema: !!obj.schemaVersion, hasThreadId: !!obj.threadId,
+              keys: Object.keys(obj).filter((k) => k !== '_')
+            });
+            return;
+          }
+          if (isCommentSeen(key)) {
+            console.debug('[vh:forum] skipping comment: already seen', key);
+            return;
+          }
+          const { _, ...cleanObj } = obj as Record<string, unknown> & { _?: unknown };
+          const result = HermesCommentSchema.safeParse(cleanObj);
+          if (result.success) {
+            markCommentSeen(key);
+            console.info('[vh:forum] Hydrated comment:', result.data.id);
+            set((s) => addComment(s, result.data));
+          } else {
+            console.debug('[vh:forum] Comment validation failed, will retry:', key, result.error.issues);
+          }
+        });
+      }
+      return (get().comments.get(threadId) ?? []).slice().sort((a, b) => a.timestamp - b.timestamp);
+    }
+  }));
+
+  storeRef = store;
+  hydrateFromGun(deps.resolveClient, store);
+  return store;
+}
+
+const isE2E = (import.meta as any).env?.VITE_E2E_MODE === 'true';
+export const useForumStore = isE2E ? createMockForumStore() : createForumStore();

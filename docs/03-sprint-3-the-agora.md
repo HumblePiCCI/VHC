@@ -2,13 +2,13 @@
 
 **Context:** `System_Architecture.md` v0.2.0 (Sprint 3: The "Agora" - Communication)
 **Goal:** Implement the "Agora" – the civic dialogue layer. This consists of **HERMES Messaging** (secure, private communication) and **HERMES Forum** (threaded civic discourse).
-**Status:** ✅ **MESSAGING COMPLETE** — Manual tests passed (Dec 5, 2025)
+**Status:** 🚧 **FORUM IN PROGRESS** — Comment persistence pending (Dec 6, 2025)
 
 > ✅ **HERMES Messaging — READY FOR PRODUCTION** (Dec 5, 2025)
 >
-> All unit tests (235), E2E tests (10), and manual tests passing.
+> All unit tests (242+), E2E tests (10), and manual tests passing.
 >
-> **Resolved (Phase 1-3):**
+> **Resolved (Phase 1-3 Messaging):**
 > - ✅ Gun path architecture — `vh/hermes/inbox/${devicePub}` + authenticated user paths
 > - ✅ Directory service — nullifier → devicePub lookup
 > - ✅ Gun authentication — `gun.user().auth(devicePair)` on init
@@ -18,10 +18,22 @@
 > - ✅ Channel persistence — localStorage + Gun hydration
 > - ✅ Contact persistence — Per-identity contact storage
 >
-> **Remaining (Phase 4 — Forum):**
-> - Forum hydration/subscriptions
-> - VENN→Forum CTA dedup
-> - Error handling improvements
+> **Resolved (Phase 4 Forum — Thread Creation & Hydration):**
+> - ✅ Vote persistence — localStorage `vh_forum_votes:<nullifier>`
+> - ✅ Thread hydration via `.map().on()` with schema validation
+> - ✅ TTL-based deduplication (mirrors messaging)
+> - ✅ Index writes on thread creation (date + tag indexes)
+> - ✅ `stripUndefined()` helper — Sanitizes objects before Gun write
+> - ✅ `serializeThreadForGun()` / `parseThreadFromGun()` — JSON-stringify `tags` array
+> - ✅ Gun metadata filtering — Strip `_` property, check required fields first
+> - ✅ Lazy hydration — Retry on first user action if client not ready at init
+> - ✅ Per-store hydration tracking — WeakSet prevents test isolation issues
+> - ✅ **Thread persistence verified** — Threads survive page refresh ✅
+> - ✅ **Cross-user sync verified** — Threads appear across browser instances ✅
+>
+> **IN PROGRESS (Phase 4.3 — Comment Persistence):**
+> - ❌ **Comments not persisting** — Need to investigate comment write/hydration flow
+> - See §3.4.9 for investigation plan
 
 ---
 
@@ -889,10 +901,10 @@ function persistVotes(nullifier: string, votes: Map<string, 'up' | 'down' | null
 }
 ```
 
-- [ ] Add `loadVotesFromStorage` and `persistVotes` helpers
-- [ ] Load vote state on store init (block voting until loaded)
-- [ ] Persist immediately on every vote change
-- [ ] Add unit test for vote persistence
+- [x] Add `loadVotesFromStorage` and `persistVotes` helpers
+- [x] Load vote state on store init (block voting until loaded)
+- [x] Persist immediately on every vote change
+- [x] Add unit test for vote persistence
 
 ---
 
@@ -938,13 +950,13 @@ function isDuplicate(id: string): boolean {
 }
 ```
 
-- [ ] Add `hydrateFromGun()` subscribing to `vh/forum/threads` via `.map().on()`
-- [ ] Add schema validation with `safeParse()` before ingestion
-- [ ] Add Gun metadata filtering (`data._` check)
-- [ ] Add TTL-based deduplication (same pattern as messaging)
-- [ ] Call `hydrateFromGun()` in store initialization
-- [ ] Add comment subscriptions per active thread view
-- [ ] Unsubscribe on component unmount
+- [x] Add `hydrateFromGun()` subscribing to `vh/forum/threads` via `.map().on()`
+- [x] Add schema validation with `safeParse()` before ingestion
+- [x] Add Gun metadata filtering (`data._` check)
+- [x] Add TTL-based deduplication (same pattern as messaging)
+- [x] Call `hydrateFromGun()` in store initialization
+- [x] Add comment subscriptions per active thread view
+- [ ] Unsubscribe on component unmount (deferred — not critical)
 
 ---
 
@@ -962,9 +974,9 @@ thread.tags.forEach(tag => {
 });
 ```
 
-- [ ] Write to date index on thread creation
-- [ ] Write to tag indexes on thread creation
-- [ ] Consider seeding hydration from date index for efficiency
+- [x] Write to date index on thread creation
+- [x] Write to tag indexes on thread creation
+- [ ] Consider seeding hydration from date index for efficiency (deferred — not critical)
 
 ---
 
@@ -999,10 +1011,199 @@ thread.tags.forEach(tag => {
 
 | File | Changes |
 |------|---------|
-| `apps/web-pwa/src/store/hermesForum.ts` | Hydration, subscriptions, dedup, vote persistence |
-| `apps/web-pwa/src/store/hermesForum.test.ts` | Tests for persistence and hydration |
-| `packages/gun-client/src/forumAdapters.ts` | Possibly add `.map()` support if needed |
-| `docs/spec-hermes-forum-v0.md` | Updated to v0.2 with sync/persistence sections |
+| `apps/web-pwa/src/store/hermesForum.ts` | ✅ Hydration, subscriptions, dedup, vote persistence |
+| `apps/web-pwa/src/store/hermesForum.test.ts` | ✅ Tests for persistence and hydration |
+| `packages/gun-client/src/forumAdapters.ts` | ✅ Already has `.map()` support |
+| `docs/spec-hermes-forum-v0.md` | ✅ Updated to v0.2 with sync/persistence sections |
+
+---
+
+#### 3.4.7 Gun `undefined` Value Issue — ✅ RESOLVED
+
+> **Status:** ✅ RESOLVED (Dec 5, 2025)
+> **Identified:** Dec 5, 2025 (Claude, Codex, Gemini collaborative investigation)
+
+**Problem:**
+
+When creating a forum thread, Gun throws:
+```
+Invalid data: undefined at vh.forum.threads.<uuid>.author.content.downvotes.id.schemaVersion.score.sourceAnalysisId
+```
+
+**Root Cause Analysis:**
+
+1. **Zod optional fields produce `{ key: undefined }`**: When `sourceAnalysisId` is not provided, `HermesThreadSchema.parse()` may output `{ sourceAnalysisId: undefined }` instead of omitting the key entirely.
+
+2. **Gun cannot handle `undefined` values**: When Gun's `put()` encounters an object with `undefined` values, it attempts to traverse the object graph and throws "Invalid data: undefined".
+
+3. **The error path shows Gun walking object properties as path segments**: The bizarre path (`author.content.downvotes.id...`) indicates Gun is iterating over object keys looking for valid data.
+
+4. **Same issue in `createComment`**: The `targetId` parameter is passed directly to the object literal, so when `undefined`, it creates `{ targetId: undefined }`.
+
+**Why Messaging Works:**
+
+HERMES Messaging avoids this issue because:
+- Message objects are constructed with guaranteed-defined values
+- Optional fields like `deviceId` are always set to actual values (from `devicePair.pub`)
+- No optional fields are passed through without explicit assignment
+
+**Proposed Fix:**
+
+Add a `stripUndefined` utility and apply to all Gun writes:
+
+```typescript
+// Add to hermesForum.ts (or a shared utility)
+function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as T;
+}
+
+// In createThread:
+const cleanThread = stripUndefined(withScore);
+getForumThreadChain(client, cleanThread.id).put(cleanThread as HermesThread, ...);
+
+// In createComment:
+const cleanComment = stripUndefined(comment);
+getForumCommentsChain(client, threadId).get(comment.id).put(cleanComment, ...);
+```
+
+**Implementation Checklist:**
+
+- [x] Add `stripUndefined<T>()` helper function to `hermesForum.ts`
+- [x] Wrap `withScore` with `stripUndefined()` before `getForumThreadChain().put()`
+- [x] Wrap `comment` with `stripUndefined()` before `getForumCommentsChain().put()`
+- [x] Add unit test verifying `stripUndefined` removes undefined keys
+- [ ] ~~Verify thread creation works in manual testing~~ — Blocked by §3.4.8
+- [ ] Verify comment creation works in manual testing
+- [x] Applied to mock store as well
+
+---
+
+#### 3.4.8 Gun Array Issue — RESOLVED ✅
+
+> **Status:** ✅ RESOLVED (Dec 6, 2025)
+> **Originally Identified:** Dec 5, 2025 (Follow-up to §3.4.7 fix)
+
+**Problem:**
+
+After fixing the `undefined` issue (§3.4.7), thread creation now fails with:
+```
+Invalid data: Array at vh.forum.threads.<uuid>.author.content.downvotes.id.schemaVersion.score.tags
+```
+
+**Root Cause:**
+
+GunDB does not natively support JavaScript arrays in `put()` operations. The `tags: string[]` field in `HermesThread` triggers this error.
+
+**Why Messaging Doesn't Have This Issue:**
+
+- `HermesChannel` contains `participants: string[]` BUT channels are **never written to Gun**
+- Channel state is stored in **localStorage only** (via `persistSnapshot`)
+- Only `HermesMessage` objects (no arrays) are written to Gun
+- Forum threads must be shared state in Gun, so arrays are exposed to `put()`
+
+**Affected Fields:**
+
+- `HermesThread.tags` — Array of strings, **must be serialized**
+- `HermesComment` — No arrays, not affected
+- `DirectoryEntry` — No arrays, not affected
+
+**Proposed Fix:**
+
+Add helpers to serialize arrays before Gun write and parse on hydration:
+
+```typescript
+/** Serialize thread for Gun storage (handles undefined + arrays) */
+function serializeThreadForGun(thread: HermesThread): Record<string, unknown> {
+  const clean = stripUndefined(thread);
+  return {
+    ...clean,
+    tags: JSON.stringify(clean.tags)  // Gun cannot handle arrays
+  };
+}
+
+/** Parse thread from Gun storage (handles stringified arrays) */
+function parseThreadFromGun(data: Record<string, unknown>): Record<string, unknown> {
+  let tags = data.tags;
+  if (typeof tags === 'string') {
+    try {
+      tags = JSON.parse(tags);
+    } catch (e) {
+      console.warn('[vh:forum] Failed to parse tags, defaulting to empty array');
+      tags = [];
+    }
+  }
+  return { ...data, tags };
+}
+```
+
+**Usage:**
+
+```typescript
+// In createThread:
+const threadForGun = serializeThreadForGun(withScore);
+getForumThreadChain(client, threadForGun.id).put(threadForGun as any, ...);
+
+// In hydrateFromGun:
+const parsedData = parseThreadFromGun(data as Record<string, unknown>);
+const result = HermesThreadSchema.safeParse(parsedData);
+```
+
+**Note:** Index writes (`getForumTagIndexChain`) remain unaffected because they iterate over the original `tags` array before serialization.
+
+**Implementation Checklist:**
+
+- [x] Add `serializeThreadForGun()` helper (combines `stripUndefined` + array serialization)
+- [x] Add `parseThreadFromGun()` helper (handles stringified arrays with try/catch)
+- [x] Update `createThread()` to use `serializeThreadForGun()` before Gun write
+- [x] Update `hydrateFromGun()` to use `parseThreadFromGun()` before schema validation
+- [x] **Update `createMockForumStore`** to mirror serialization/parsing for E2E test fidelity
+- [x] Verify thread creation works in manual testing ✅
+- [x] Verify thread hydration works after page refresh ✅
+
+**Additional Fixes Applied (Dec 6, 2025):**
+
+- [x] **Gun metadata filtering** — Changed filter from `'_' in data` (too aggressive) to checking required fields first (`id`, `schemaVersion`, `title`), then stripping `_` before parsing
+- [x] **Lazy hydration** — Made `hydrateFromGun` retry on first user action (`createThread`, `loadThreads`) if Gun client wasn't ready at store init
+- [x] **Per-store tracking** — Changed `hydrationStarted` from module-level boolean to `WeakSet<StoreApi>` for test isolation
+
+---
+
+#### 3.4.9 Comment Persistence — IN PROGRESS 🚧
+
+> **Status:** 🚧 IN PROGRESS — Comments not persisting across page refresh
+> **Identified:** Dec 6, 2025
+
+**Symptom:**
+
+- Thread creation and hydration work correctly ✅
+- Comments can be created (UI updates)
+- Comments do NOT persist after page refresh
+- Comments do NOT sync across browser instances
+
+**Investigation Plan:**
+
+1. Check if comments are being written to Gun (`getForumCommentsChain`)
+2. Check if comment hydration subscription is active
+3. Verify Gun path: `vh/forum/threads/${threadId}/comments/${commentId}`
+4. Check for similar issues as threads (undefined values, arrays, metadata filtering)
+
+**Likely Causes (to investigate):**
+
+- Comment write may not be using `stripUndefined()`
+- Comment hydration may not be triggered/subscribed
+- Comment path may not be allowed by TopologyGuard
+- Comment schema may have optional fields leaving `undefined`
+
+**Implementation Checklist:**
+
+- [ ] Verify `createComment()` uses `stripUndefined()` before Gun write
+- [ ] Verify `loadComments()` subscribes to correct Gun path
+- [ ] Add debug logging to comment write/hydration flow
+- [ ] Fix any metadata filtering issues (similar to thread fix)
+- [ ] Test comment persistence after page refresh
+- [ ] Test comment sync across browser instances
 
 ---
 
@@ -1398,16 +1599,38 @@ Project XP rides on Forum structures and tags.
 | Messaging | Timeout stays `pending` | Misleading status after write timeout |
 | Messaging | ChannelList shows ciphertext | Poor UX preview |
 
-**Pending (Phase 4 - Forum):**
+**Resolved (Phase 4 - Forum Code):**
+| Area | Gap | Status | Section |
+|------|-----|--------|---------|
+| Forum | Vote state persistence | ✅ localStorage `vh_forum_votes:<nullifier>` | §3.4.0 |
+| Forum | Hydration on init | ✅ `hydrateFromGun()` via `.map().on()` | §3.4.1 |
+| Forum | Subscriptions | ✅ Thread + comment subscriptions | §3.4.1 |
+| Forum | Deduplication | ✅ TTL-based seen tracking | §3.4.1 |
+| Forum | Index chain writes | ✅ Date + tag indexes on create | §3.4.2 |
+
+**Resolved (Phase 4.1 - Gun Undefined):**
+| Area | Gap | Status | Section |
+|------|-----|--------|---------|
+| Forum | Gun `undefined` values | ✅ `stripUndefined()` helper applied | §3.4.7 |
+
+**Resolved (Phase 4.2 - Gun Array):**
+| Area | Gap | Status | Section |
+|------|-----|--------|---------|
+| Forum | Gun `Array` values | ✅ `serializeThreadForGun()` / `parseThreadFromGun()` applied | §3.4.8 |
+| Forum | Gun metadata filtering | ✅ Check required fields first, strip `_` before parse | §3.4.8 |
+| Forum | Lazy hydration | ✅ Retry on first user action if client not ready | §3.4.8 |
+
+**IN PROGRESS (Phase 4.3 - Comment Persistence):**
 | Area | Gap | Impact | Priority | Section |
 |------|-----|--------|----------|---------|
-| Forum | **Vote state not persisted** | Double-voting after refresh | **CRITICAL** | §3.4.0 |
-| Forum | **No hydration on init** | Threads lost on reload | **HIGH** | §3.4.1 |
-| Forum | **No subscriptions** | No real-time updates | **HIGH** | §3.4.1 |
-| Forum | No deduplication | Duplicate callbacks | MEDIUM | §3.4.1 |
-| Forum | Index chains unused | Inefficient discovery | MEDIUM | §3.4.2 |
-| Forum | VENN CTA dedup fails | Duplicate threads | MEDIUM | §3.4.3 |
-| Forum | Low-trust identity blocked | Can't test TrustGate | LOW | §3.4.5 |
+| Forum | **Comment persistence** | Comments lost on refresh | **CRITICAL** | §3.4.9 |
+
+**Pending (Phase 4.4 - After Comments):**
+| Area | Gap | Impact | Priority | Section |
+|------|-----|--------|----------|---------|
+| Forum | VENN CTA dedup | Duplicate threads possible | MEDIUM | §3.4.3 |
+| Forum | Error UI | No validation feedback | LOW | §3.4.4 |
+| Forum | Low-trust testing | Can't test TrustGate | LOW | §3.4.5 |
 
 ### 8.4 Files Summary
 
@@ -1436,22 +1659,40 @@ Project XP rides on Forum structures and tags.
 **~~Phase 2 - Gun Auth & Directory:~~** ✅ COMPLETE (Dec 5, 2025)
 **~~Phase 3 - UX Polish:~~** ✅ COMPLETE (Dec 5, 2025) — Manual tests passed!
 
-**Phase 4 - Forum (CURRENT PRIORITY):**
-1. **Vote persistence** — localStorage `vh_forum_votes:<nullifier>` (§3.4.0) — **CRITICAL**
-2. **Hydration & subscriptions** — `hydrateFromGun()` with `.map().on()` (§3.4.1) — **HIGH**
-3. **Deduplication** — TTL-based seen tracking (§3.4.1) — **HIGH**
-4. **Index writes** — Write to date/tag indexes on thread creation (§3.4.2) — **MEDIUM**
+**~~Phase 4 - Forum Code:~~** ✅ COMPLETE (Dec 5, 2025)
+- ✅ Vote persistence, hydration, subscriptions, dedup, index writes — All implemented
+
+**~~Phase 4.1 - Gun Undefined Fix:~~** ✅ COMPLETE (Dec 5, 2025)
+- ✅ `stripUndefined()` helper added and applied to thread/comment writes
+- ✅ 242 tests passing
+
+**~~Phase 4.2 - Gun Array Fix:~~** ✅ COMPLETE (Dec 6, 2025)
+- ✅ `serializeThreadForGun()` / `parseThreadFromGun()` helpers implemented
+- ✅ Gun metadata filtering fixed (check required fields first, strip `_` before parse)
+- ✅ Lazy hydration (retry on first user action if client not ready)
+- ✅ Per-store hydration tracking (`WeakSet` for test isolation)
+- ✅ Thread creation works in manual testing ✅
+- ✅ Thread hydration works after page refresh ✅
+- ✅ Cross-user sync verified — Threads appear across browser instances ✅
+
+**Phase 4.3 - Comment Persistence (CURRENT FOCUS):**
+1. **Investigate comment write flow** — Is `createComment()` writing to Gun correctly? — **CRITICAL**
+2. **Investigate comment hydration** — Is `loadComments()` subscribing to correct path? — **CRITICAL**
+3. **Apply same fixes as threads** — `stripUndefined()`, metadata filtering, lazy hydration — **CRITICAL**
+4. Manual test comment creation + persistence — **CRITICAL**
+
+**Phase 4.4 - Remaining Forum Polish (After Comments):**
 5. **CTA dedup** — Fix "Discuss in Forum" lookup (§3.4.3) — **MEDIUM**
 6. Trust gate testing (§3.4.5) — **LOW**
 7. Error handling UI (§3.4.4) — **LOW**
 
 **Phase 5 - Polish (LOW PRIORITY):**
-5. Improve message status handling (timeout → explicit status)
-6. Decrypt channel preview in ChannelList
-7. Wire contacts into UI (contact list panel)
+8. Improve message status handling (timeout → explicit status)
+9. Decrypt channel preview in ChannelList
+10. Wire contacts into UI (contact list panel)
 
 **Verification:**
-8. Run full test suite (`pnpm test`) — Currently: 235 unit + 10 E2E passing ✅
-9. Execute manual test checklist (`docs/MANUAL_TEST_CHECKLIST_SPRINT3.md`) — Messaging: ✅ PASSED
-10. Upon successful Forum testing, mark Sprint 3 as ✅ Complete
-11. Proceed to `docs/04-sprint-4-the-bridge.md`
+11. Run full test suite (`pnpm test`) — Currently: 242+ unit + 10 E2E passing ✅
+12. Execute manual test checklist (`docs/MANUAL_TEST_CHECKLIST_SPRINT3.md`) — Messaging: ✅ PASSED
+13. Upon successful Forum testing (threads + comments), mark Sprint 3 as ✅ Complete
+14. Proceed to `docs/04-sprint-4-the-bridge.md`

@@ -22,7 +22,7 @@ describe('ProposalCard', () => {
     const onVote = vi.fn().mockResolvedValue(undefined);
     render(<ProposalCard proposal={sample} onVote={onVote} />);
     expect(screen.getByText(/Test Proposal/)).toBeInTheDocument();
-    fireEvent.click(screen.getByText(/Submit Vote/));
+    fireEvent.click(screen.getByTestId('submit-vote'));
     expect(onVote).toHaveBeenCalledWith('p1', 1, 'for');
   });
 });

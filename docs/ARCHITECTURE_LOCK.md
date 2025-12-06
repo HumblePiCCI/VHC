@@ -16,7 +16,7 @@ This document summarizes the non-negotiable guardrails for the TRINITY Bio-Econo
     - **Leaf Isolation**: Pure data/logic packages (`types`, `crdt`) must strictly limit global types in `tsconfig.json` (e.g., `"types": []` or `"types": ["node"]`) to prevent pollution from test runners.
 - **Lockstep Updates**: Adding or changing workspace packages requires regenerating `pnpm-lock.yaml` with `pnpm install`; choose published versions only. CI uses `--frozen-lockfile` and will fail otherwise.
 
-### 2.2 Testing Discipline
+### 2.2 Testing Discipline - 100% Line/Branch coverage required
 - **Source-Based Testing**: Unit tests (`test:quick`) run against `src/`, not `dist/`.
     - *Impl*: `vitest.config.ts` aliases `@vh/*` -> `./packages/*/src`.
 - **Segmentation**: Unit (Vitest) and E2E (Playwright) never overlap.

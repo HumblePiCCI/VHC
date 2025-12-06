@@ -103,36 +103,27 @@ describe('useGovernance', () => {
         addXp: () => {}
       } as any);
 
-    const badStorage = {
-      getItem: () => {
-        throw new Error('boom');
-      },
-      setItem: () => {
-        throw new Error('boom');
-      }
-    } as any;
-    const originalLocal = globalThis.localStorage;
-    const originalSession = globalThis.sessionStorage;
-    // @ts-expect-error override for test
-    globalThis.localStorage = badStorage;
-    // @ts-expect-error override for test
-    globalThis.sessionStorage = badStorage;
-
-    const { result } = renderHook(() => useGovernance('voter-storage', 0.95));
-    expect(result.current.votedDirections).toEqual({});
-
-    await act(async () => {
-      await result.current.submitVote({ proposalId: result.current.proposals[0].id, amount: 1, direction: 'for' });
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('boom');
     });
-    expect(result.current.proposals[0].votesFor).toBeGreaterThan(12);
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('boom');
+    });
 
-    // restore
-    // @ts-expect-error restore for test
-    globalThis.localStorage = originalLocal;
-    // @ts-expect-error restore for test
-    globalThis.sessionStorage = originalSession;
-    // restore xp
-    // @ts-expect-error restore
-    useXpLedger.getState = originalXp;
+    try {
+      const { result } = renderHook(() => useGovernance('voter-storage', 0.95));
+      expect(result.current.votedDirections).toEqual({});
+
+      await act(async () => {
+        await result.current.submitVote({ proposalId: result.current.proposals[0].id, amount: 1, direction: 'for' });
+      });
+      expect(result.current.proposals[0].votesFor).toBeGreaterThan(12);
+    } finally {
+      getItemSpy.mockRestore();
+      setItemSpy.mockRestore();
+      // restore xp
+      // @ts-expect-error restore
+      useXpLedger.getState = originalXp;
+    }
   });
 });

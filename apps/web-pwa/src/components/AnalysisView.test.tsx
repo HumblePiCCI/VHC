@@ -51,7 +51,7 @@ describe('AnalysisView', () => {
       status: 'ready'
     } as any);
     render(<AnalysisView item={sample} />);
-    const agree = screen.getByLabelText('Agree frame');
+    const [agree] = screen.getAllByLabelText('Agree frame');
     fireEvent.click(agree);
     expect(useSentimentState.getState().getAgreement(sample.id, 'pa:frame')).toBe(1);
 
