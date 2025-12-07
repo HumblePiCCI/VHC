@@ -28,7 +28,7 @@ const mockStore = {
 };
 
 vi.mock('../../../store/hermesForum', () => ({
-  useForumStore: () => mockStore
+  useForumStore: (selector?: (s: typeof mockStore) => any) => (selector ? selector(mockStore) : mockStore)
 }));
 
 vi.mock('../../../hooks/useIdentity', () => ({

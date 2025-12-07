@@ -3,6 +3,8 @@ import { Button } from '@vh/ui';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
 import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
+import { getHandleError } from '../utils/handle';
+import { HandleEditor } from '../components/HandleEditor';
 
 const WalletPanel = lazy(() => import('./WalletPanel').then((mod) => ({ default: mod.WalletPanel })));
 const AnalysisFeed = lazy(() => import('./AnalysisFeed').then((mod) => ({ default: mod.AnalysisFeed })));
@@ -11,8 +13,16 @@ const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 
 export const DashboardContent: React.FC = () => {
   const { profile, createIdentity, identityStatus, client, error } = useAppStore();
-  const { identity, status: identityRecordStatus, createIdentity: createIdentityRecord, startLinkSession, completeLinkSession } = useIdentity();
+  const {
+    identity,
+    status: identityRecordStatus,
+    createIdentity: createIdentityRecord,
+    startLinkSession,
+    completeLinkSession
+  } = useIdentity();
   const [username, setUsername] = useState('');
+  const [handleInput, setHandleInput] = useState('');
+  const [handleErrorMsg, setHandleErrorMsg] = useState<string | null>(null);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [incomingCode, setIncomingCode] = useState('');
@@ -112,8 +122,15 @@ export const DashboardContent: React.FC = () => {
             onSubmit={(e) => {
               e.preventDefault();
               const chosen = username.trim() || 'vh-user';
+              if (handleErrorMsg) return;
               void (async () => {
-                await createIdentityRecord();
+                const trimmedHandle = handleInput.trim();
+                const validation = getHandleError(trimmedHandle);
+                if (validation) {
+                  setHandleErrorMsg(validation);
+                  return;
+                }
+                await createIdentityRecord(trimmedHandle);
                 await createIdentity(chosen);
               })();
             }}
@@ -125,14 +142,30 @@ export const DashboardContent: React.FC = () => {
               onChange={(e) => setUsername(e.target.value)}
               disabled={identityStatus === 'creating' || identityRecordStatus === 'creating'}
             />
+            <input
+              className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-slate-400 focus:outline-none"
+              placeholder="Choose a handle (letters, numbers, _)"
+              value={handleInput}
+              onChange={(e) => {
+                setHandleInput(e.target.value);
+                setHandleErrorMsg(getHandleError(e.target.value) ?? null);
+              }}
+              required
+              minLength={3}
+              maxLength={20}
+              pattern="[A-Za-z0-9_]{3,20}"
+              data-testid="handle-input"
+              disabled={identityStatus === 'creating' || identityRecordStatus === 'creating'}
+            />
             <Button
               type="submit"
-              disabled={identityStatus === 'creating' || identityRecordStatus === 'creating'}
+              disabled={identityStatus === 'creating' || identityRecordStatus === 'creating' || Boolean(handleErrorMsg)}
               data-testid="create-identity-btn"
             >
               {identityStatus === 'creating' || identityRecordStatus === 'creating' ? 'Creating…' : 'Join'}
             </Button>
           </form>
+          {handleErrorMsg && <span className="text-xs text-red-700">{handleErrorMsg}</span>}
           {error && <span className="text-xs text-red-700">{error}</span>}
         </div>
       )}
@@ -191,6 +224,8 @@ export const DashboardContent: React.FC = () => {
               </Button>
             )}
           </div>
+
+          <HandleEditor />
 
           {linkModalOpen && (
             <div className="rounded-lg border border-slate-200 bg-card p-4 shadow-lg dark:border-slate-700">

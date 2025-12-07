@@ -17,13 +17,14 @@ export interface ChatState {
   contacts: Map<string, ContactRecord>;
   sendMessage(recipientIdentityKey: string, plaintext: HermesPayload, type: HermesMessageType): Promise<void>;
   subscribeToChannel(channelId: string): () => void;
-  getOrCreateChannel(peerIdentityKey: string, peerEpub?: string, peerDevicePub?: string): Promise<HermesChannel>;
+  getOrCreateChannel(peerIdentityKey: string, peerEpub?: string, peerDevicePub?: string, peerHandle?: string): Promise<HermesChannel>;
 }
 
 export interface IdentityRecord {
   session: { nullifier: string; trustScore: number };
   attestation?: { deviceKey?: string };
   devicePair?: { pub: string; priv: string; epub: string; epriv: string };
+  handle?: string;
 }
 
 export interface ContactRecord {
@@ -31,6 +32,7 @@ export interface ContactRecord {
   epub?: string;
   devicePub?: string;
   displayName?: string;
+  handle?: string;
   addedAt: number;
 }
 
@@ -43,4 +45,3 @@ export interface ChatDeps {
   now: () => number;
   randomId: () => string;
 }
-

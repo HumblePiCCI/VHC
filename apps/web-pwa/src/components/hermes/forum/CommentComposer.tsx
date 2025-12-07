@@ -19,12 +19,13 @@ export const CommentComposer: React.FC<Props> = ({ threadId, parentId, targetId,
     if (!content.trim() || busy) return;
     setBusy(true);
     try {
+      // Always create the comment
+      await createComment(threadId, content.trim(), stance, parentId, targetId);
+      setContent('');
+      // Then call onSubmit callback (e.g., to close the form)
       if (onSubmit) {
         await onSubmit(content.trim());
-      } else {
-        await createComment(threadId, content.trim(), stance, parentId, targetId);
       }
-      setContent('');
     } catch (err) {
       console.warn(err);
     } finally {

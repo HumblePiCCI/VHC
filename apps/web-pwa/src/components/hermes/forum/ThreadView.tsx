@@ -7,22 +7,27 @@ import { DebateColumn } from '../DebateColumn';
 import { useZoomNavigation } from '../../../hooks/useZoomNavigation';
 import { ZoomableCard } from '../ZoomableCard';
 import { CommentCard } from '../CommentCard';
+import { CommunityReactionSummary } from '../CommunityReactionSummary';
 
 interface Props {
   threadId: string;
 }
 
+const EMPTY_COMMENTS: readonly any[] = [];
+
 export const ThreadView: React.FC<Props> = ({ threadId }) => {
-  const { threads, comments, loadComments } = useForumStore();
-  const thread = threads.get(threadId);
+  // Use individual selectors for proper reactivity
+  const thread = useForumStore((s) => s.threads.get(threadId));
+  const loadComments = useForumStore((s) => s.loadComments);
+  const commentsForThread = useForumStore((s) => s.comments.get(threadId));
+  const allComments = commentsForThread ?? EMPTY_COMMENTS;
+  
   const [loaded, setLoaded] = useState(false);
   const zoomNav = useZoomNavigation();
 
   useEffect(() => {
     void loadComments(threadId).then(() => setLoaded(true));
   }, [threadId, loadComments]);
-
-  const allComments = comments.get(threadId) ?? [];
 
   const roots = useMemo(() => {
     const rootsOnly = allComments.filter((c) => c.parentId === null);
@@ -52,6 +57,8 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
           <span>Score: {(thread.upvotes - thread.downvotes).toFixed(2)}</span>
         </div>
       </div>
+
+      <CommunityReactionSummary threadId={threadId} />
 
       {!loaded && <p className="text-sm text-slate-500">Loading comments…</p>}
 
@@ -98,7 +105,7 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
       >
         {activeZoomComment && (
           <div className="space-y-4">
-            <CommentCard comment={activeZoomComment} allComments={allComments} onSelect={zoomNav.zoomTo} />
+            <CommentCard comment={activeZoomComment} allComments={allComments} onSelect={zoomNav.zoomTo} isExpanded />
           </div>
         )}
       </ZoomableCard>

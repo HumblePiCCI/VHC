@@ -59,7 +59,7 @@ function createRealChatStore(deps?: Partial<ChatDeps>) {
       statuses: new Map(),
       messageStats: new Map(),
       contacts: initialContacts,
-      async getOrCreateChannel(peerIdentityKey: string, peerEpub?: string, peerDevicePub?: string) {
+      async getOrCreateChannel(peerIdentityKey: string, peerEpub?: string, peerDevicePub?: string, peerHandle?: string) {
         hydrateFromGun();
         const identity = ensureIdentity();
         const participants = [identity.session.nullifier, peerIdentityKey];
@@ -88,8 +88,20 @@ function createRealChatStore(deps?: Partial<ChatDeps>) {
         if (peerDevicePub) participantDevicePubs[peerIdentityKey] = peerDevicePub;
         if (identity.devicePair?.epub) participantEpubs[identity.session.nullifier] = identity.devicePair.epub;
         if (identity.devicePair?.pub) participantDevicePubs[identity.session.nullifier] = identity.devicePair.pub;
-        const channel = createHermesChannel(channelId, participants.sort(), resolved.now(), participantEpubs, participantDevicePubs);
-        const contact: ContactRecord = { nullifier: peerIdentityKey, epub: peerEpub, devicePub: peerDevicePub, addedAt: resolved.now() };
+        const channel = createHermesChannel(
+          channelId,
+          participants.sort(),
+          resolved.now(),
+          participantEpubs,
+          participantDevicePubs
+        );
+        const contact: ContactRecord = {
+          nullifier: peerIdentityKey,
+          epub: peerEpub,
+          devicePub: peerDevicePub,
+          handle: peerHandle,
+          addedAt: resolved.now()
+        };
         setWithPersist((state) => ({
           ...state,
           channels: new Map(state.channels).set(channelId, channel),
@@ -311,4 +323,3 @@ export function createMockChatStore() {
 const isE2E = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 export const useChatStore = isE2E ? createMockChatStore() : createRealChatStore();
 export { createRealChatStore };
-

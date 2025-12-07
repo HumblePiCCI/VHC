@@ -187,6 +187,13 @@ describe('hermesMessaging store', () => {
     );
   });
 
+  it('preserves handle when provided to getOrCreateChannel', async () => {
+    setIdentity('alice');
+    const store = createRealChatStore({ resolveClient: () => ({} as any), randomId: () => 'msg-h', now: () => 20 });
+    await store.getState().getOrCreateChannel('bob', 'epub-bob', 'bob-device', 'Bob');
+    expect(store.getState().contacts.get('bob')?.handle).toBe('Bob');
+  });
+
   it('deduplicates messages by id when subscribed', async () => {
     setIdentity('alice');
     const store = createRealChatStore({

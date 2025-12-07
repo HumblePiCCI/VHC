@@ -44,6 +44,8 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
   const initialVotes = identity?.session?.nullifier ? loadVotesFromStorage(identity.session.nullifier) : new Map();
 
   let storeRef: StoreApi<ForumState> | null = null;
+  const subscribedThreads = new Set<string>(); // Track comment subscriptions to prevent duplicates
+  
   const triggerHydration = () => {
     if (storeRef) hydrateFromGun(deps.resolveClient, storeRef);
   };
@@ -221,7 +223,9 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
     async loadComments(threadId) {
       triggerHydration();
       const client = deps.resolveClient();
-      if (client) {
+      // Only set up subscription once per thread to prevent infinite loops
+      if (client && !subscribedThreads.has(threadId)) {
+        subscribedThreads.add(threadId);
         const commentsChain = getForumCommentsChain(client, threadId);
         console.debug('[vh:forum] subscribing to comments for thread:', threadId);
         commentsChain.map().on((data: unknown, key: string) => {

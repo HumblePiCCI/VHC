@@ -10,7 +10,7 @@ import { ChatLayout } from '../components/hermes/ChatLayout';
 import { ForumFeed } from '../components/hermes/forum/ForumFeed';
 import { ThreadView } from '../components/hermes/forum/ThreadView';
 import { NewThreadForm } from '../components/hermes/forum/NewThreadForm';
-import { ContactQR } from '../components/hermes/ContactQR';
+import { IDChip } from '../components/hermes/IDChip';
 import { ScanContact } from '../components/hermes/ScanContact';
 import { DashboardPage } from './dashboardContent';
 import { TrustGate } from '../components/hermes/forum/TrustGate';
@@ -53,6 +53,14 @@ const RootShell = ({ children }: { children: React.ReactNode }) => {
           </nav>
           <div className="flex items-center justify-end gap-2 text-sm text-slate-500 dark:text-slate-300">
             <ThemeToggle />
+            <Link
+              to="/hermes/messages"
+              aria-label="Messages"
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 p-2 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              data-testid="nav-messages"
+            >
+              <span aria-hidden="true">💬</span>
+            </Link>
             <Link
               to="/dashboard"
               aria-label="User"
@@ -104,58 +112,15 @@ const GovernanceComponent = () => (
 );
 
 const HermesShell: React.FC = () => {
-  const { location } = useRouterState();
-  const active = useMemo(() => {
-    if (location.pathname.startsWith('/hermes/messages')) return 'messages';
-    if (location.pathname.startsWith('/hermes/forum')) return 'forum';
-    return 'home';
-  }, [location.pathname]);
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Link
-          to="/hermes/messages"
-          className={`rounded-full px-3 py-1 text-sm ${
-            active === 'messages'
-              ? 'bg-teal-600 text-white'
-              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-          }`}
-        >
-          Messages
-        </Link>
-        <Link
-          to="/hermes/forum"
-          className={`rounded-full px-3 py-1 text-sm ${
-            active === 'forum'
-              ? 'bg-teal-600 text-white'
-              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-          }`}
-        >
-          Forum
-        </Link>
-      </div>
       <Outlet />
     </section>
   );
 };
 
-const HermesMessagesPage: React.FC = () => {
-  const params = useParams({ strict: false });
-  const channelId = (params as { channelId?: string }).channelId;
-  return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
-        <ChatLayout activeChannelId={channelId} />
-        <div className="space-y-3">
-          <ContactQR />
-          <ScanContact />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const HermesForumPage: React.FC = () => {
+// /hermes shows the forum feed directly
+const HermesIndexPage: React.FC = () => {
   const { location } = useRouterState();
   const search = location.search as { sourceAnalysisId?: string; title?: string };
   return (
@@ -168,8 +133,24 @@ const HermesForumPage: React.FC = () => {
   );
 };
 
+const HermesMessagesPage: React.FC = () => {
+  const params = useParams({ strict: false });
+  const channelId = (params as { channelId?: string }).channelId;
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-[1.2fr_1fr]">
+        <ChatLayout activeChannelId={channelId} />
+        <div className="space-y-3">
+          <IDChip />
+          <ScanContact />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const HermesThreadPage: React.FC = () => {
-  const { threadId } = useParams({ from: '/hermes/forum/$threadId' });
+  const { threadId } = useParams({ from: '/hermes/$threadId' });
   return (
     <div className="space-y-4">
       <ThreadView threadId={threadId} />
@@ -184,6 +165,11 @@ const rootRoute = createRootRoute({
 
 const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeComponent });
 const hermesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/hermes', component: HermesShell });
+const hermesIndexRoute = createRoute({
+  getParentRoute: () => hermesRoute,
+  path: '/',
+  component: HermesIndexPage
+});
 const hermesMessagesRoute = createRoute({
   getParentRoute: () => hermesRoute,
   path: '/messages',
@@ -194,14 +180,9 @@ const hermesMessagesChannelRoute = createRoute({
   path: '/messages/$channelId',
   component: HermesMessagesPage
 });
-const hermesForumRoute = createRoute({
+const hermesThreadRoute = createRoute({
   getParentRoute: () => hermesRoute,
-  path: '/forum',
-  component: HermesForumPage
-});
-const hermesForumThreadRoute = createRoute({
-  getParentRoute: () => hermesRoute,
-  path: '/forum/$threadId',
+  path: '/$threadId',
   component: HermesThreadPage
 });
 const governanceRoute = createRoute({
@@ -217,7 +198,7 @@ const dashboardRoute = createRoute({
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
-  hermesRoute.addChildren([hermesMessagesRoute, hermesMessagesChannelRoute, hermesForumRoute, hermesForumThreadRoute]),
+  hermesRoute.addChildren([hermesIndexRoute, hermesMessagesRoute, hermesMessagesChannelRoute, hermesThreadRoute]),
   governanceRoute,
   dashboardRoute
 ]);

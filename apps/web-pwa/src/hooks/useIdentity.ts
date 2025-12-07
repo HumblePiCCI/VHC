@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AttestationPayload } from '@vh/types';
 import { SEA, createSession } from '@vh/gun-client';
 import { authenticateGunUser, publishDirectoryEntry, useAppStore } from '../store';
+import { getHandleError, isValidHandle } from '../utils/handle';
 
 const IDENTITY_KEY = 'vh_identity';
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
@@ -17,6 +18,7 @@ export interface IdentityRecord {
   id: string;
   createdAt: number;
   attestation: AttestationPayload;
+  handle?: string;
   session: {
     token: string;
     trustScore: number;
@@ -59,10 +61,17 @@ export function useIdentity() {
   const [status, setStatus] = useState<IdentityStatus>(identity ? 'ready' : 'anonymous');
   const [error, setError] = useState<string | undefined>();
 
-  const createIdentity = useCallback(async () => {
+  const createIdentity = useCallback(async (handle?: string) => {
     try {
       setStatus('creating');
       const attestation = buildAttestation();
+      const trimmedHandle = handle?.trim();
+      if (trimmedHandle) {
+        const validationError = getHandleError(trimmedHandle);
+        if (validationError) {
+          throw new Error(validationError);
+        }
+      }
 
       let session: { token: string; trustScore: number; nullifier: string };
       const devicePair = await SEA.pair();
@@ -97,6 +106,7 @@ export function useIdentity() {
 
       const scaledTrustScore = clampScaledTrustScore(Math.round(session.trustScore * 10000));
 
+      const fallbackHandle = identity?.handle ?? `user_${randomToken().slice(0, 6)}`;
       const record: IdentityRecord = {
         id: randomToken(),
         createdAt: Date.now(),
@@ -112,7 +122,8 @@ export function useIdentity() {
           priv: devicePair.priv,
           epub: devicePair.epub,
           epriv: devicePair.epriv
-        }
+        },
+        handle: trimmedHandle ?? fallbackHandle
       };
       persistIdentity(record);
       const client = useAppStore.getState().client;
@@ -205,6 +216,22 @@ export function useIdentity() {
     [identity]
   );
 
+  const updateHandle = useCallback(
+    async (nextHandle: string) => {
+      const validationError = getHandleError(nextHandle);
+      if (validationError) {
+        throw new Error(validationError);
+      }
+      if (!identity) throw new Error('Identity not ready');
+      const updated: IdentityRecord = { ...identity, handle: nextHandle.trim() };
+      persistIdentity(updated);
+      emitIdentityChanged(updated);
+      setIdentity(updated);
+      return updated;
+    },
+    [identity]
+  );
+
   return {
     identity,
     status,
@@ -212,7 +239,9 @@ export function useIdentity() {
     createIdentity,
     linkDevice,
     startLinkSession,
-    completeLinkSession
+    completeLinkSession,
+    updateHandle,
+    validateHandle: isValidHandle
   };
 }
 

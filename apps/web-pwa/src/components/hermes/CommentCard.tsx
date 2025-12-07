@@ -10,10 +10,14 @@ interface Props {
   comment: HermesComment;
   allComments: HermesComment[];
   onSelect?: (id: string) => void;
+  isExpanded?: boolean; // When true, show full nested content
 }
 
-export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect }) => {
-  const { userVotes, vote } = useForumStore();
+const EMPTY_COMMENTS: readonly HermesComment[] = [];
+
+export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect, isExpanded = false }) => {
+  const userVotes = useForumStore((s) => s.userVotes);
+  const vote = useForumStore((s) => s.vote);
   const [showConcur, setShowConcur] = useState(false);
   const [showCounter, setShowCounter] = useState(false);
 
@@ -27,11 +31,20 @@ export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect })
     };
   }, [allComments, comment.id]);
 
+  const handleCardClick = () => {
+    // Only zoom when NOT already expanded - prevents re-zooming to self
+    if (!isExpanded && onSelect) {
+      onSelect(comment.id);
+    }
+  };
+
   return (
     <div
-      className="space-y-3 rounded-xl border border-slate-200 bg-card p-3 shadow-sm transition-transform hover:-translate-y-0.5 dark:border-slate-700"
+      className={`space-y-3 rounded-xl border border-slate-200 bg-card p-3 shadow-sm dark:border-slate-700 ${
+        !isExpanded ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''
+      }`}
       role="article"
-      onClick={() => onSelect?.(comment.id)}
+      onClick={handleCardClick}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2 text-sm">
@@ -119,7 +132,38 @@ export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect })
         </div>
       )}
 
-      {(concurChildren.length > 0 || counterChildren.length > 0) && (
+      {/* Show nested discussion pills (collapsed) or full content (expanded) */}
+      {(concurChildren.length > 0 || counterChildren.length > 0) && !isExpanded && (
+        <div className="flex flex-wrap gap-2">
+          {concurChildren.length > 0 && (
+            <button
+              className="rounded-full bg-teal-100 px-3 py-1 text-xs font-medium text-teal-700 hover:bg-teal-200 dark:bg-teal-900/40 dark:text-teal-300 dark:hover:bg-teal-800/60"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect?.(comment.id);
+              }}
+              aria-label={`${concurChildren.length} concur replies`}
+            >
+              👍 {concurChildren.length} Concur
+            </button>
+          )}
+          {counterChildren.length > 0 && (
+            <button
+              className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-800/60"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect?.(comment.id);
+              }}
+              aria-label={`${counterChildren.length} counter replies`}
+            >
+              👎 {counterChildren.length} Counter
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Only show full nested content when expanded */}
+      {isExpanded && (concurChildren.length > 0 || counterChildren.length > 0) && (
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-teal-600">Concur</p>

@@ -19,7 +19,7 @@ export const ThreadCard: React.FC<Props> = ({ thread, onVote, userVote }) => {
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <Link
-            to="/hermes/forum/$threadId"
+            to="/hermes/$threadId"
             params={{ threadId: thread.id }}
             className="text-lg font-semibold text-slate-900 hover:text-teal-700 dark:text-slate-100"
           >

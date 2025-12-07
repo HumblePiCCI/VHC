@@ -33,11 +33,15 @@ export const ScanContact: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const parseContactData = (input: string): { nullifier: string; epub?: string } => {
+  const parseContactData = (input: string): { nullifier: string; epub?: string; handle?: string } => {
     try {
       const parsed = JSON.parse(input);
       if (parsed && typeof parsed.nullifier === 'string') {
-        return { nullifier: parsed.nullifier, epub: typeof parsed.epub === 'string' ? parsed.epub : undefined };
+        return {
+          nullifier: parsed.nullifier,
+          epub: typeof parsed.epub === 'string' ? parsed.epub : undefined,
+          handle: typeof parsed.handle === 'string' ? parsed.handle : undefined
+        };
       }
     } catch {
       /* legacy string input */
@@ -47,7 +51,7 @@ export const ScanContact: React.FC = () => {
 
   const navigateToChannel = async (input: string) => {
     setError(null);
-    const { nullifier, epub } = parseContactData(input);
+    const { nullifier, epub, handle } = parseContactData(input);
     let resolvedEpub = epub;
     let devicePub: string | undefined;
     if (client) {
@@ -68,7 +72,7 @@ export const ScanContact: React.FC = () => {
       return;
     }
     try {
-      const channel = await getOrCreateChannel(nullifier, resolvedEpub, devicePub);
+      const channel = await getOrCreateChannel(nullifier, resolvedEpub, devicePub, handle);
       router.navigate({ to: '/hermes/messages/$channelId', params: { channelId: channel.id } });
     } catch (err) {
       setError((err as Error).message);

@@ -212,7 +212,7 @@ export const AnalysisFeed: React.FC = () => {
             <p className="text-xs text-slate-600">Biases: {item.biases.join(' · ')}</p>
             <div className="mt-2 flex justify-end">
               <Link
-                to="/hermes/forum"
+                to="/hermes"
                 search={{ sourceAnalysisId: item.urlHash, title: item.summary }}
                 className="text-xs font-medium text-teal-600 hover:text-teal-700 dark:text-teal-400"
               >

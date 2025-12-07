@@ -75,4 +75,25 @@ describe('useIdentity', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(result.current.identity?.session.scaledTrustScore).toBe(10000);
   });
+
+  it('persists a valid handle and rejects invalid handle', async () => {
+    createSessionMock.mockResolvedValue({
+      token: 'srv-token',
+      trustScore: 0.9,
+      nullifier: 'n-handle'
+    });
+    const useIdentity = await loadHook();
+    const { result } = renderHook(() => useIdentity());
+
+    await act(async () => {
+      await result.current.createIdentity('valid_handle');
+    });
+    await waitFor(() => expect(result.current.identity?.handle).toBe('valid_handle'));
+
+    await expect(
+      act(async () => {
+        await result.current.updateHandle('!!bad');
+      })
+    ).rejects.toThrow(/Handle can only contain letters/);
+  });
 });

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import type { FeedItem, Perspective } from '../hooks/useFeedStore';
 import { useSentimentState } from '../hooks/useSentimentState';
 import { useRegion } from '../hooks/useRegion';
 import { useIdentity } from '../hooks/useIdentity';
 import { useForumStore } from '../store/hermesForum';
 import { useRouter } from '@tanstack/react-router';
+import { FlippableCard } from './venn/FlippableCard';
+import { ThreadView } from './hermes/forum/ThreadView';
 
 interface AnalysisViewProps {
   item: FeedItem;
@@ -152,6 +154,12 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
   const warnOnceRef = React.useRef<NodeJS.Timeout | null>(null);
   const forumStore = useForumStore();
   const router = useRouter();
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  const linkedThread = useMemo(
+    () => Array.from(forumStore.threads.values()).find((t) => t.sourceAnalysisId === item.id),
+    [forumStore.threads, item.id]
+  );
 
   const showWarn = () => {
     setWarn(true);
@@ -161,8 +169,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
     warnOnceRef.current = setTimeout(() => setWarn(false), 1500);
   };
 
-  // Note: recordRead is called by HeadlineCard when expanded, not here
-  return (
+  const front = (
     <div className="rounded-xl border border-slate-600/60 bg-slate-900/50 p-4 shadow-lg backdrop-blur">
       <div className="flex flex-col gap-3 md:flex-row md:items-start">
         <div className="flex-1 space-y-2">
@@ -170,11 +177,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
           <p className="text-base leading-relaxed text-slate-50">{item.summary}</p>
         </div>
         {item.imageUrl && (
-          <img
-            src={item.imageUrl}
-            alt={item.title}
-            className="h-28 w-40 rounded-lg object-cover shadow-md"
-          />
+          <img src={item.imageUrl} alt={item.title} className="h-28 w-40 rounded-lg object-cover shadow-md" />
         )}
       </div>
       <div className="mt-4 space-y-3">
@@ -199,32 +202,34 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
               <PerspectiveRow itemId={item.id} perspective={p} onBlockedVote={showWarn} />
             </div>
           ))}
-      </div>
-    </div>
-
-      <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-700/60 bg-slate-900/40 p-3">
-        <div>
-          <p className="text-sm font-semibold text-slate-100">Discuss in Forum</p>
-          <p className="text-xs text-slate-300">
-            Continue the conversation in HERMES Forum with threaded replies and counterpoints.
-          </p>
         </div>
-        <button
-          className="rounded-full bg-emerald-500 px-3 py-1 text-sm font-semibold text-slate-900 hover:bg-emerald-400"
-          onClick={() => {
-            const existing = Array.from(forumStore.threads.values()).find((t) => t.sourceAnalysisId === item.id);
-            if (existing) {
-              router.navigate({ to: '/hermes/forum/$threadId', params: { threadId: existing.id } });
-              return;
-            }
-            router.navigate({ to: '/hermes/forum', search: { sourceAnalysisId: item.id, title: item.title } as any });
-          }}
-        >
-          Discuss in Forum
-        </button>
       </div>
     </div>
   );
+
+  const back = (
+    <div className="rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700">
+      {linkedThread ? (
+        <ThreadView threadId={linkedThread.id} />
+      ) : (
+        <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+          <p className="font-semibold text-slate-900 dark:text-slate-100">No forum thread yet</p>
+          <p>Start the discussion to mirror this analysis in HERMES Forum.</p>
+          <button
+            className="rounded-full bg-emerald-500 px-3 py-1 text-sm font-semibold text-slate-900 hover:bg-emerald-400"
+            onClick={() =>
+              router.navigate({ to: '/hermes', search: { sourceAnalysisId: item.id, title: item.title } as any })
+            }
+          >
+            Create thread
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  // Note: recordRead is called by HeadlineCard when expanded, not here
+  return <FlippableCard headline={item.title} front={front} back={back} isFlipped={isFlipped} onFlip={() => setIsFlipped((prev) => !prev)} />;
 };
 
 export default AnalysisView;
