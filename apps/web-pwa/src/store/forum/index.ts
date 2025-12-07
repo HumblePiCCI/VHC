@@ -1,10 +1,16 @@
 import { create, type StoreApi } from 'zustand';
-import { computeThreadScore, HermesCommentSchema, HermesThreadSchema } from '@vh/data-model';
-import type { HermesComment, HermesThread } from '@vh/types';
+import {
+  computeThreadScore,
+  HermesCommentSchema,
+  HermesCommentWriteSchema,
+  HermesThreadSchema,
+  migrateCommentToV1
+} from '@vh/data-model';
+import type { HermesComment, HermesCommentHydratable, HermesThread } from '@vh/types';
 import { getForumCommentsChain, getForumDateIndexChain, getForumTagIndexChain, getForumThreadChain } from '@vh/gun-client';
 import { useAppStore } from '../index';
 import { useXpLedger } from '../xpLedger';
-import type { ForumState, ForumDeps } from './types';
+import type { ForumState, ForumDeps, CommentStanceInput } from './types';
 import { loadIdentity, loadVotesFromStorage, persistVotes } from './persistence';
 import {
   ensureIdentity,
@@ -95,24 +101,33 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
       }
       return withScore;
     },
-    async createComment(threadId, content, type, parentId, targetId) {
+    async createComment(threadId, content, stanceInput, parentId, targetId) {
       triggerHydration();
       const identity = ensureIdentity();
       const client = ensureClient(deps.resolveClient);
-      const comment: HermesComment = HermesCommentSchema.parse({
+      const stance: Exclude<CommentStanceInput, 'reply' | 'counterpoint'> =
+        stanceInput === 'counterpoint' ? 'counter' : stanceInput === 'reply' ? 'concur' : stanceInput;
+      if (stance !== 'concur' && stance !== 'counter') {
+        throw new Error('Invalid stance');
+      }
+      const comment: HermesComment = HermesCommentWriteSchema.parse({
         id: deps.randomId(),
-        schemaVersion: 'hermes-comment-v0',
+        schemaVersion: 'hermes-comment-v1',
         threadId,
         parentId: parentId ?? null,
         content,
         author: identity.session.nullifier,
         timestamp: deps.now(),
-        type,
-        targetId,
+        stance,
+        targetId: targetId ?? undefined,
         upvotes: 0,
         downvotes: 0
       });
       const cleanComment = stripUndefined(comment);
+      const withLegacyType: HermesComment = {
+        ...comment,
+        type: stance === 'counter' ? 'counterpoint' : 'reply'
+      };
       console.info('[vh:forum] Creating comment:', cleanComment.id, 'for thread:', threadId);
       console.debug('[vh:forum] Comment data:', JSON.stringify(cleanComment, null, 2));
       await new Promise<void>((resolve, reject) => {
@@ -129,10 +144,16 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
             resolve();
           });
       });
-      set((state) => addComment(state, cleanComment));
+      set((state) => addComment(state, withLegacyType));
       const isSubstantive = content.length >= 280;
-      useXpLedger.getState().applyForumXP({ type: 'comment_created', commentId: comment.id, threadId, isOwnThread: false, isSubstantive });
-      return cleanComment;
+      useXpLedger.getState().applyForumXP({
+        type: 'comment_created',
+        commentId: comment.id,
+        threadId,
+        isOwnThread: false,
+        isSubstantive
+      });
+      return withLegacyType;
     },
     async vote(targetId, direction) {
       const identity = ensureIdentity();
@@ -225,14 +246,29 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
           const result = HermesCommentSchema.safeParse(cleanObj);
           if (result.success) {
             markCommentSeen(key);
-            console.info('[vh:forum] Hydrated comment:', result.data.id);
-            set((s) => addComment(s, result.data));
+            const normalized = migrateCommentToV1(result.data as HermesCommentHydratable);
+            console.info('[vh:forum] Hydrated comment:', normalized.id);
+            const withLegacyType: HermesComment = {
+              ...normalized,
+              type: normalized.stance === 'counter' ? 'counterpoint' : 'reply'
+            };
+            set((s) => addComment(s, withLegacyType));
           } else {
             console.debug('[vh:forum] Comment validation failed, will retry:', key, result.error.issues);
           }
         });
       }
       return (get().comments.get(threadId) ?? []).slice().sort((a, b) => a.timestamp - b.timestamp);
+    },
+    getCommentsByStance(threadId, stance) {
+      const list = get().comments.get(threadId) ?? [];
+      return list.filter((c) => c.stance === stance).sort((a, b) => a.timestamp - b.timestamp);
+    },
+    getConcurComments(threadId) {
+      return get().getCommentsByStance(threadId, 'concur');
+    },
+    getCounterComments(threadId) {
+      return get().getCommentsByStance(threadId, 'counter');
     }
   }));
 

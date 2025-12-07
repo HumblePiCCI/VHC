@@ -146,9 +146,8 @@ export interface HermesThread {
   score: number;
 }
 
-interface BaseHermesComment {
+interface BaseHermesCommentCommon {
   id: string;
-  schemaVersion: 'hermes-comment-v0';
   threadId: string;
   parentId: string | null;
   content: string;
@@ -158,15 +157,21 @@ interface BaseHermesComment {
   downvotes: number;
 }
 
-export type HermesComment =
-  | (BaseHermesComment & {
-      type: 'reply';
-      targetId?: undefined;
-    })
-  | (BaseHermesComment & {
-      type: 'counterpoint';
-      targetId: string;
-    });
+export type HermesCommentV0 = BaseHermesCommentCommon & {
+  schemaVersion: 'hermes-comment-v0';
+  type: 'reply' | 'counterpoint';
+  targetId?: string;
+};
+
+export type HermesCommentV1 = BaseHermesCommentCommon & {
+  schemaVersion: 'hermes-comment-v1';
+  stance: 'concur' | 'counter';
+  type?: 'reply' | 'counterpoint';
+  targetId?: string;
+};
+
+export type HermesCommentHydratable = HermesCommentV0 | HermesCommentV1;
+export type HermesComment = HermesCommentV1;
 
 export type HermesModerationAction = 'hide' | 'remove';
 

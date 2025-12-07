@@ -6,10 +6,11 @@ interface Props {
   threadId: string;
   parentId?: string;
   targetId?: string;
-  type: 'reply' | 'counterpoint';
+  stance: 'concur' | 'counter';
+  onSubmit?: (content: string) => Promise<void>;
 }
 
-export const CommentComposer: React.FC<Props> = ({ threadId, parentId, targetId, type }) => {
+export const CommentComposer: React.FC<Props> = ({ threadId, parentId, targetId, stance, onSubmit }) => {
   const { createComment } = useForumStore();
   const [content, setContent] = useState('');
   const [busy, setBusy] = useState(false);
@@ -18,7 +19,11 @@ export const CommentComposer: React.FC<Props> = ({ threadId, parentId, targetId,
     if (!content.trim() || busy) return;
     setBusy(true);
     try {
-      await createComment(threadId, content.trim(), type, parentId, targetId);
+      if (onSubmit) {
+        await onSubmit(content.trim());
+      } else {
+        await createComment(threadId, content.trim(), stance, parentId, targetId);
+      }
       setContent('');
     } catch (err) {
       console.warn(err);
@@ -32,7 +37,7 @@ export const CommentComposer: React.FC<Props> = ({ threadId, parentId, targetId,
       <textarea
         className="w-full resize-none rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-teal-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50"
         rows={3}
-        placeholder={type === 'counterpoint' ? 'Add a counterpoint…' : 'Add a reply…'}
+        placeholder={stance === 'counter' ? 'Add a counterpoint…' : 'Add a concur…'}
         value={content}
         data-testid="comment-composer"
         onChange={(e) => setContent(e.target.value)}

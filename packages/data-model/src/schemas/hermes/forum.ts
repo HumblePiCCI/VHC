@@ -17,26 +17,56 @@ export const HermesThreadSchema = z.object({
   score: z.number()
 });
 
-const BaseCommentSchema = z.object({
-  id: z.string().min(1),
-  schemaVersion: z.literal('hermes-comment-v0'),
+const BaseCommentFields = {
   threadId: z.string().min(1),
   parentId: z.string().min(1).nullable(),
   content: z.string().min(1).max(CONTENT_LIMIT),
   author: z.string().min(1),
   timestamp: z.number().int().nonnegative(),
-  type: z.enum(['reply', 'counterpoint']),
-  targetId: z.string().min(1).optional(),
   upvotes: z.number().int().nonnegative(),
-  downvotes: z.number().int().nonnegative()
+  downvotes: z.number().int().nonnegative(),
+  id: z.string().min(1)
+} as const satisfies Record<string, z.ZodTypeAny>;
+
+export const HermesCommentSchemaV0 = z
+  .object({
+    schemaVersion: z.literal('hermes-comment-v0'),
+    ...BaseCommentFields,
+    type: z.enum(['reply', 'counterpoint']),
+    targetId: z.string().min(1).optional()
+  })
+  .superRefine((value, ctx) => {
+    if (value.type === 'counterpoint' && !value.targetId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetId'],
+        message: 'targetId is required for counterpoints'
+      });
+    }
+
+    if (value.type === 'reply' && value.targetId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['targetId'],
+        message: 'targetId must be omitted for replies'
+      });
+    }
 });
 
-export const HermesCommentSchema = BaseCommentSchema.superRefine((value, ctx) => {
+const HermesCommentSchemaV1Base = z.object({
+  schemaVersion: z.literal('hermes-comment-v1'),
+  ...BaseCommentFields,
+  stance: z.enum(['concur', 'counter']),
+  type: z.enum(['reply', 'counterpoint']).optional(),
+  targetId: z.string().min(1).optional()
+});
+
+export const HermesCommentSchemaV1 = HermesCommentSchemaV1Base.superRefine((value, ctx) => {
   if (value.type === 'counterpoint' && !value.targetId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['targetId'],
-      message: 'targetId is required for counterpoints'
+      message: 'targetId is required when legacy type is counterpoint'
     });
   }
 
@@ -44,10 +74,25 @@ export const HermesCommentSchema = BaseCommentSchema.superRefine((value, ctx) =>
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['targetId'],
-      message: 'targetId must be omitted for replies'
+      message: 'targetId must be omitted for replies when legacy type is present'
     });
   }
+
+  if (value.type) {
+    const expectedStance = value.type === 'counterpoint' ? 'counter' : 'concur';
+    if (value.stance !== expectedStance) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['stance'],
+        message: `stance should align with legacy type (${expectedStance})`
+      });
+    }
+  }
 });
+
+export const HermesCommentSchema = z.union([HermesCommentSchemaV0, HermesCommentSchemaV1]);
+
+export const HermesCommentWriteSchema = HermesCommentSchemaV1Base.omit({ type: true }).strict();
 
 export const ModerationEventSchema = z.object({
   id: z.string().min(1),
@@ -60,8 +105,25 @@ export const ModerationEventSchema = z.object({
 });
 
 export type HermesThread = z.infer<typeof HermesThreadSchema>;
-export type HermesComment = z.infer<typeof HermesCommentSchema>;
+export type HermesCommentV0 = z.infer<typeof HermesCommentSchemaV0>;
+export type HermesCommentV1 = z.infer<typeof HermesCommentSchemaV1>;
+export type HermesComment = HermesCommentV1;
 export type ModerationEvent = z.infer<typeof ModerationEventSchema>;
+
+export function migrateCommentToV1(comment: HermesCommentV0 | HermesCommentV1): HermesCommentV1 {
+  if (comment.schemaVersion === 'hermes-comment-v1') {
+    const { type: _omit, ...rest } = comment;
+    return HermesCommentWriteSchema.parse(rest);
+  }
+
+  const stance = comment.type === 'counterpoint' ? 'counter' : 'concur';
+  const { type: _legacyType, ...rest } = comment;
+  return HermesCommentWriteSchema.parse({
+    ...rest,
+    schemaVersion: 'hermes-comment-v1',
+    stance
+  });
+}
 
 export function computeThreadScore(thread: HermesThread, now: number): number {
   const ageHours = (now - thread.timestamp) / 3_600_000;

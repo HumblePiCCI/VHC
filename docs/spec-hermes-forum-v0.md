@@ -1,10 +1,16 @@
 # HERMES Forum Spec (v0)
 
-**Version:** 0.3
-**Status:** Implementation In-Progress — Thread persistence ✅, Comment persistence pending (Dec 6, 2025)
+**Version:** 0.4
+**Status:** Implementation In-Progress — UI Refactor (Sprint 3.5) pending
 **Context:** Public, threaded civic discourse for TRINITY OS.
 
-> **ERRATA (Dec 6, 2025):** v0.3 marks thread creation and hydration as complete. Comment persistence is the next focus.
+> **ERRATA (Dec 7, 2025):** v0.4 introduces schema migration from `type` to `stance` and UI refactor to debate-first layout. See §2.2.1 and §3.2.
+>
+> **Sprint 3.5 Changes:**
+> - 🔄 Schema migration: `hermes-comment-v0` → `hermes-comment-v1`
+> - 🔄 `type: 'reply' | 'counterpoint'` → `stance: 'concur' | 'counter'`
+> - 🔄 UI: Linear thread → Two-column debate layout (Concur | Counter)
+> - 🔄 Dual-parse for backward compatibility during migration
 >
 > **RESOLVED (Dec 6, 2025):**
 > - ✅ Gun `undefined` issue — `stripUndefined()` helper (§5.4)
@@ -13,8 +19,7 @@
 > - ✅ Lazy hydration — Retry on first user action if client not ready at init
 > - ✅ Thread persistence verified — Threads survive page refresh
 > - ✅ Cross-user sync verified — Threads appear across browser instances
->
-> **IN PROGRESS:** Comment persistence (write, hydration, cross-user sync)
+> - ✅ Comment persistence verified — Comments persist and sync (Dec 7)
 
 ---
 
@@ -51,23 +56,27 @@ interface Thread {
 ```
 
 ### 2.2 Comment Schema
+
+> **Schema Migration (Sprint 3.5):** Transitioning from v0 (`type`) to v1 (`stance`). See §2.2.1 for migration details.
+
 ```typescript
+// v1 Schema (Sprint 3.5+)
 interface Comment {
   id: string;               // UUID
-  schemaVersion: 'hermes-comment-v0';
+  schemaVersion: 'hermes-comment-v1';  // Bumped from v0
   threadId: string;
-  parentId: string | null;  // null if top-level reply to thread
+  parentId: string | null;  // null if top-level reply to thread — RETAINED
   
   content: string;          // Markdown, ≤ 10,000 chars
   author: string;           // Author's Nullifier
   timestamp: number;
   
-  // Type: distinguishes normal replies from counterpoints
-  type: 'reply' | 'counterpoint';
+  // NEW: Stance for debate structure (replaces type)
+  stance: 'concur' | 'counter';
   
-  // For Counterpoints: the target being countered
-  // Required when type === 'counterpoint', omitted for normal replies
-  targetId?: string;
+  // DEPRECATED: Kept for migration compatibility
+  type?: 'reply' | 'counterpoint';  // Optional, deprecated — do not write
+  targetId?: string;                // Optional, deprecated — preserved for legacy counterpoints
   
   // Engagement (raw counts, canonical)
   upvotes: number;
@@ -75,7 +84,40 @@ interface Comment {
 }
 ```
 
-**Note:** There is no separate `Counterpoint` interface; the `Comment` type with `type: 'counterpoint'` covers this use case. For counterpoints, `targetId` must be set; for replies, it should be omitted or null.
+#### 2.2.1 Schema Migration (v0 → v1)
+
+**Read Path (Hydration):**
+- Accept both `hermes-comment-v0` and `hermes-comment-v1`
+- For v0 comments:
+  - `type: 'counterpoint'` → `stance: 'counter'`
+  - `type: 'reply'` → `stance: 'concur'`
+  - Preserve `targetId` if present
+
+**Write Path:**
+- Always write `schemaVersion: 'hermes-comment-v1'`
+- Always write `stance` field
+- Never write `type` field (deprecated)
+- Preserve `targetId` only for legacy counterpoints during migration
+
+**Zod Implementation:**
+```typescript
+// Explicit z.union() for dual-parse
+export const HermesCommentSchema = z.union([
+  HermesCommentSchemaV0,  // deprecated, read-only
+  HermesCommentSchemaV1   // current, read/write
+]);
+```
+
+**Deprecation Timeline:**
+- Sprint 3.5: Dual-parse (read v0/v1, write v1 only)
+- Sprint 4: Remove v0 read support
+
+**Test Requirements:**
+- [ ] v0 inputs hydrate with correct stance mapping
+- [ ] v1 inputs pass through unchanged
+- [ ] v0 shapes never exit write path (only v1 written to Gun)
+
+**Note:** The `parentId` field provides the tree structure. The `stance` field provides the semantic (support vs oppose). The deprecated `targetId` was redundant with `parentId` for counterpoints.
 
 ### 2.3 Content Size Limits
 
@@ -98,13 +140,20 @@ Client-side validation and Zod schemas enforce:
 *   Forum threads can be elevated into AGORA projects in future sprints (based on engagement, upvotes, tags).
 
 ### 3.2 The Discussion View
-*   **Standard Replies:** Nested tree structure (Reddit style).
-*   **Counterpoints (Side-by-Side):**
-    *   If a comment has a `counterpoint` child, the UI renders a split view.
-    *   **Left:** Original Argument.
-    *   **Right:** The Counterpoint(s).
-    *   **Source:** Counterpoints can be user-generated (flagged replies) OR AI-generated (linked to Analysis summaries).
-*   **Content Sanitization:** All content (Markdown) must be sanitized before rendering (strip scripts, dangerous HTML) using a whitelisted renderer. This prevents XSS and injection attacks.
+
+> **UI Refactor (Sprint 3.5):** Migrating from linear thread to two-column debate layout.
+
+**Debate-First Layout (Sprint 3.5+):**
+*   **Two Columns:** Concur (left) and Counter (right) at every level.
+*   **No Linear Thread:** Comments are organized by `stance`, not arrival order.
+*   **Nested Debates:** Clicking any comment zooms to reveal its OWN Concur/Counter columns.
+*   **Mirrors VENN:** Format matches the bias table's Frame/Reframe structure.
+
+**Legacy (Pre-Sprint 3.5):**
+*   ~~Standard Replies: Nested tree structure (Reddit style).~~
+*   ~~Counterpoints (Side-by-Side): Split view for counterpoint children.~~
+
+**Content Sanitization:** All content (Markdown) must be sanitized before rendering (strip scripts, dangerous HTML) using a whitelisted renderer. This prevents XSS and injection attacks.
 
 ### 3.3 Score & Hot Ranking
 

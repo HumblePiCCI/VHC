@@ -84,17 +84,12 @@ export const CommentNode: React.FC<Props> = ({ comment, depth = 0 }) => {
         </div>
         {showReply && (
           <div className="mt-2">
-            <CommentComposer threadId={comment.threadId} parentId={comment.id} type="reply" />
+            <CommentComposer threadId={comment.threadId} parentId={comment.id} stance="concur" />
           </div>
         )}
         {showCounter && (
           <div className="mt-2">
-            <CommentComposer
-              threadId={comment.threadId}
-              parentId={comment.id}
-              targetId={comment.id}
-              type="counterpoint"
-            />
+            <CommentComposer threadId={comment.threadId} parentId={comment.id} targetId={comment.id} stance="counter" />
           </div>
         )}
       </div>

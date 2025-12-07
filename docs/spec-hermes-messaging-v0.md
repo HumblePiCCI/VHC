@@ -181,11 +181,14 @@ interface DirectoryEntry {
   nullifier: string;        // Identity key
   devicePub: string;        // ECDSA pub — for inbox routing
   epub: string;             // ECDH epub — for encryption
-  displayName?: string;     // Optional human-readable name
+  displayName?: string;     // Optional human-readable name (legacy)
   registeredAt: number;     // First registration timestamp
   lastSeenAt: number;       // Last activity timestamp
+  // NOTE: No 'handle' field — handles are local-only (Sprint 3.5 privacy decision)
 }
 ```
+
+> **Privacy Note (Sprint 3.5):** The `DirectoryEntry` schema intentionally does NOT include a `handle` field. User-chosen handles are exchanged peer-to-peer via QR/copy and stored locally in `ContactRecord`. This prevents handles from being exposed on the public Gun mesh.
 
 **Gun Path:** `vh/directory/<nullifier>`
 
@@ -237,10 +240,22 @@ interface ContactRecord {
   nullifier: string;
   epub?: string;
   devicePub?: string;
-  displayName?: string;
+  displayName?: string;  // Legacy field (from DirectoryEntry)
+  handle?: string;       // User-chosen display name (Sprint 3.5+, from QR exchange)
   addedAt: number;
 }
 ```
+
+**Display Name Priority (Sprint 3.5+):**
+```typescript
+// UI should display names in this order:
+const displayName = contact.handle ?? contact.displayName ?? truncate(contact.nullifier);
+```
+
+This ensures:
+1. User-chosen handles (from QR exchange) take precedence
+2. Legacy `displayName` (if present) is fallback
+3. Truncated nullifier is last resort for contacts without names
 
 **Hydration Flow:**
 1. Load channels/contacts from localStorage (instant)
@@ -287,9 +302,12 @@ function handleMessage(message: Message) {
 // QR code / copy-paste contains JSON:
 {
   "nullifier": "dev-nullifier-abc123...",
-  "epub": "aBcDeFgH..."  // ECDH public key for encryption
+  "epub": "aBcDeFgH...",  // ECDH public key for encryption
+  "handle": "Alice"       // User's display name (Sprint 3.5+)
 }
 ```
+
+> **Handle Privacy (Sprint 3.5):** The `handle` field is exchanged peer-to-peer only. It is NOT written to the public `DirectoryEntry` in Gun. Handles are stored locally in `ContactRecord` and never leave the device except via explicit QR/copy sharing.
 
 **Flow:**
 1. **Alice** shows QR Code or copies contact JSON (contains `{ nullifier, epub }`)

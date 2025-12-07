@@ -1,28 +1,38 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useForumStore } from '../../../store/hermesForum';
-import { CommentNode } from './CommentNode';
 import { CommentComposer } from './CommentComposer';
 import { TrustGate } from './TrustGate';
-import { CounterpointPanel } from './CounterpointPanel';
 import { renderMarkdown } from '../../../utils/markdown';
+import { DebateColumn } from '../DebateColumn';
+import { useZoomNavigation } from '../../../hooks/useZoomNavigation';
+import { ZoomableCard } from '../ZoomableCard';
+import { CommentCard } from '../CommentCard';
 
 interface Props {
   threadId: string;
 }
 
 export const ThreadView: React.FC<Props> = ({ threadId }) => {
-  const { threads, comments, loadComments, createComment } = useForumStore();
+  const { threads, comments, loadComments } = useForumStore();
   const thread = threads.get(threadId);
   const [loaded, setLoaded] = useState(false);
+  const zoomNav = useZoomNavigation();
 
   useEffect(() => {
     void loadComments(threadId).then(() => setLoaded(true));
   }, [threadId, loadComments]);
 
-  const byParent = useMemo(() => {
-    const list = comments.get(threadId) ?? [];
-    return list.filter((c) => c.parentId === null);
-  }, [comments, threadId]);
+  const allComments = comments.get(threadId) ?? [];
+
+  const roots = useMemo(() => {
+    const rootsOnly = allComments.filter((c) => c.parentId === null);
+    return {
+      concur: rootsOnly.filter((c) => c.stance === 'concur'),
+      counter: rootsOnly.filter((c) => c.stance === 'counter')
+    };
+  }, [allComments]);
+
+  const activeZoomComment = zoomNav.activeId ? allComments.find((c) => c.id === zoomNav.activeId) : null;
 
   if (!thread) {
     return <p className="text-sm text-slate-500">Thread not found.</p>;
@@ -43,25 +53,55 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
         </div>
       </div>
 
-      <TrustGate>
-        <CommentComposer threadId={threadId} type="reply" />
-      </TrustGate>
-
       {!loaded && <p className="text-sm text-slate-500">Loading comments…</p>}
-      <div className="space-y-3">
-        {byParent.map((comment) => {
-          const counters = (comments.get(threadId) ?? []).filter(
-            (c) => c.type === 'counterpoint' && c.targetId === comment.id
-          );
-          return (
-            <div key={comment.id} className="space-y-2">
-              <CommentNode comment={comment} />
-              {counters.length > 0 && <CounterpointPanel base={comment} counterpoints={counters} />}
-            </div>
-          );
-        })}
-        {byParent.length === 0 && <p className="text-sm text-slate-500">No comments yet.</p>}
-      </div>
+
+      {roots.concur.length === 0 && roots.counter.length === 0 ? (
+        <div className="space-y-3 rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-600 dark:border-slate-600 dark:text-slate-300">
+          <p className="font-semibold text-slate-800 dark:text-slate-100">No discussion yet</p>
+          <p>Be the first to share your stance.</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            <TrustGate>
+              <CommentComposer threadId={threadId} stance="concur" />
+            </TrustGate>
+            <TrustGate>
+              <CommentComposer threadId={threadId} stance="counter" />
+            </TrustGate>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          <DebateColumn
+            threadId={threadId}
+            stance="concur"
+            comments={roots.concur}
+            allComments={allComments}
+            onSelect={zoomNav.zoomTo}
+          />
+          <DebateColumn
+            threadId={threadId}
+            stance="counter"
+            comments={roots.counter}
+            allComments={allComments}
+            onSelect={zoomNav.zoomTo}
+          />
+        </div>
+      )}
+
+      <ZoomableCard
+        isOpen={!!activeZoomComment}
+        onClose={zoomNav.zoomOut}
+        breadcrumbs={zoomNav.stack.map((id, idx) => ({
+          id,
+          label: `Depth ${idx + 1}`,
+          onClick: () => zoomNav.zoomOutTo(idx)
+        }))}
+      >
+        {activeZoomComment && (
+          <div className="space-y-4">
+            <CommentCard comment={activeZoomComment} allComments={allComments} onSelect={zoomNav.zoomTo} />
+          </div>
+        )}
+      </ZoomableCard>
     </div>
   );
 };

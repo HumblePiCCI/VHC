@@ -12,10 +12,19 @@ export interface ForumState {
   comments: Map<string, HermesComment[]>;
   userVotes: Map<string, 'up' | 'down' | null>;
   createThread(title: string, content: string, tags: string[], sourceAnalysisId?: string): Promise<HermesThread>;
-  createComment(threadId: string, content: string, type: 'reply' | 'counterpoint', parentId?: string, targetId?: string): Promise<HermesComment>;
+  createComment(
+    threadId: string,
+    content: string,
+    stance: CommentStanceInput,
+    parentId?: string,
+    targetId?: string
+  ): Promise<HermesComment>;
   vote(targetId: string, direction: 'up' | 'down' | null): Promise<void>;
   loadThreads(sort: 'hot' | 'new' | 'top'): Promise<HermesThread[]>;
   loadComments(threadId: string): Promise<HermesComment[]>;
+  getCommentsByStance(threadId: string, stance: 'concur' | 'counter'): HermesComment[];
+  getConcurComments(threadId: string): HermesComment[];
+  getCounterComments(threadId: string): HermesComment[];
 }
 
 export interface IdentityRecord {
@@ -28,3 +37,4 @@ export interface ForumDeps {
   randomId: () => string;
 }
 
+export type CommentStanceInput = 'concur' | 'counter' | 'reply' | 'counterpoint';

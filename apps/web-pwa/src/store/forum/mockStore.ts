@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { HermesCommentSchema, HermesThreadSchema } from '@vh/data-model';
-import type { HermesComment, HermesThread } from '@vh/types';
-import type { ForumState } from './types';
+import { HermesCommentSchema, HermesCommentWriteSchema, HermesThreadSchema, migrateCommentToV1 } from '@vh/data-model';
+import type { HermesComment, HermesCommentHydratable, HermesThread } from '@vh/types';
+import type { CommentStanceInput, ForumState } from './types';
 import { loadIdentity, loadVotesFromStorage, persistVotes } from './persistence';
 import { ensureIdentity, stripUndefined, serializeThreadForGun, parseThreadFromGun, addComment } from './helpers';
 
@@ -46,25 +46,34 @@ export function createMockForumStore() {
       mesh?.write(`vh/forum/threads/${cleanThread.id}`, threadForMesh);
       return cleanThread as HermesThread;
     },
-    async createComment(threadId, content, type, parentId, targetId) {
+    async createComment(threadId, content, stanceInput, parentId, targetId) {
       ensureIdentity();
-      const comment: HermesComment = {
+      const stance: Exclude<CommentStanceInput, 'reply' | 'counterpoint'> =
+        stanceInput === 'counterpoint' ? 'counter' : stanceInput === 'reply' ? 'concur' : stanceInput;
+      if (stance !== 'concur' && stance !== 'counter') {
+        throw new Error('Invalid stance');
+      }
+      const comment: HermesComment = HermesCommentWriteSchema.parse({
         id: `mock-comment-${Date.now()}`,
-        schemaVersion: 'hermes-comment-v0',
+        schemaVersion: 'hermes-comment-v1',
         threadId,
         parentId: parentId ?? null,
         content,
         author: 'mock-author',
         timestamp: Date.now(),
-        type,
-        targetId,
+        stance,
+        targetId: targetId ?? undefined,
         upvotes: 0,
         downvotes: 0
-      };
+      });
       const cleanComment = stripUndefined(comment);
-      set((state) => addComment(state, cleanComment as HermesComment));
+      const withLegacyType: HermesComment = {
+        ...comment,
+        type: stance === 'counter' ? 'counterpoint' : 'reply'
+      };
+      set((state) => addComment(state, withLegacyType));
       mesh?.write(`vh/forum/threads/${threadId}/comments/${cleanComment.id}`, cleanComment);
-      return cleanComment as HermesComment;
+      return withLegacyType;
     },
     async vote(targetId, direction) {
       const identity = ensureIdentity();
@@ -81,6 +90,16 @@ export function createMockForumStore() {
     },
     async loadComments(threadId) {
       return get().comments.get(threadId) ?? [];
+    },
+    getCommentsByStance(threadId, stance) {
+      const list = get().comments.get(threadId) ?? [];
+      return list.filter((c) => c.stance === stance).sort((a, b) => a.timestamp - b.timestamp);
+    },
+    getConcurComments(threadId) {
+      return get().getCommentsByStance(threadId, 'concur');
+    },
+    getCounterComments(threadId) {
+      return get().getCommentsByStance(threadId, 'counter');
     }
   }));
 
@@ -94,16 +113,20 @@ export function createMockForumStore() {
           const parsed = parseThreadFromGun(value as Record<string, unknown>);
           const validated = HermesThreadSchema.safeParse(parsed);
           if (validated.success) threads.set(validated.data.id, validated.data);
-        } else if (value?.schemaVersion === 'hermes-comment-v0') {
+        } else if (value?.schemaVersion === 'hermes-comment-v0' || value?.schemaVersion === 'hermes-comment-v1') {
           const entryPath = entry.path ?? '';
           const match = entryPath.match(/vh\/forum\/threads\/([^/]+)\/comments/);
           const threadId = match?.[1] ?? value.threadId;
           if (threadId) {
             const validated = HermesCommentSchema.safeParse(value);
             if (validated.success) {
+              const normalized = migrateCommentToV1(validated.data as HermesCommentHydratable);
               const list = comments.get(threadId) ?? [];
-              if (!list.some((c) => c.id === validated.data.id)) {
-                list.push(validated.data);
+              if (!list.some((c) => c.id === normalized.id)) {
+                list.push({
+                  ...normalized,
+                  type: normalized.stance === 'counter' ? 'counterpoint' : 'reply'
+                });
                 comments.set(threadId, list);
               }
             }
@@ -116,4 +139,3 @@ export function createMockForumStore() {
 
   return store;
 }
-

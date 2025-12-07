@@ -163,7 +163,53 @@ describe('hermesForum store', () => {
       isOwnThread: false,
       isSubstantive: true
     });
+    expect(commentWrites[0].schemaVersion).toBe('hermes-comment-v1');
+    expect(commentWrites[0].stance).toBe('concur');
+    expect(commentWrites[0].type).toBeUndefined();
     forumSpy.mockRestore();
+  });
+
+  it('filters comments by stance via selectors', async () => {
+    setIdentity('selector');
+    const store = createForumStore({ resolveClient: () => ({} as any), randomId: () => 'sel', now: () => 1 });
+
+    store.setState((state) => ({
+      ...state,
+      comments: new Map(
+        state.comments.set('thread-sel', [
+          {
+            id: 'c1',
+            schemaVersion: 'hermes-comment-v1',
+            threadId: 'thread-sel',
+            parentId: null,
+            content: 'agree',
+            author: 'selector',
+            timestamp: 1,
+            stance: 'concur',
+            upvotes: 0,
+            downvotes: 0,
+            type: 'reply'
+          },
+          {
+            id: 'c2',
+            schemaVersion: 'hermes-comment-v1',
+            threadId: 'thread-sel',
+            parentId: null,
+            content: 'disagree',
+            author: 'selector',
+            timestamp: 2,
+            stance: 'counter',
+            upvotes: 0,
+            downvotes: 0,
+            type: 'counterpoint'
+          }
+        ])
+      )
+    }));
+
+    expect(store.getState().getConcurComments('thread-sel').map((c) => c.id)).toEqual(['c1']);
+    expect(store.getState().getCounterComments('thread-sel').map((c) => c.id)).toEqual(['c2']);
+    expect(store.getState().getCommentsByStance('thread-sel', 'counter').map((c) => c.id)).toEqual(['c2']);
   });
 
   it('vote is idempotent per target', async () => {
@@ -240,13 +286,13 @@ describe('hermesForum store', () => {
     const store = createForumStore({ resolveClient: () => ({} as any), randomId: () => 'thread-4', now: () => 10 });
     const comment = {
       id: 'comment-123',
-      schemaVersion: 'hermes-comment-v0',
+      schemaVersion: 'hermes-comment-v1',
       threadId: 'thread-4',
       parentId: null,
       content: 'hi',
       author: 'other',
       timestamp: 1,
-      type: 'reply' as const,
+      stance: 'concur' as const,
       upvotes: 0,
       downvotes: 0
     };
