@@ -27,6 +27,8 @@ async function setupUser(page: any, username: string) {
   const joinBtn = page.getByTestId('create-identity-btn');
   if (await joinBtn.isVisible()) {
     await page.fill('input[placeholder="Choose a username"]', username);
+    // Handle is now required for identity creation
+    await page.fill('input[placeholder="Choose a handle (letters, numbers, _)"]', username.toLowerCase().replace(/[^a-z0-9_]/g, '_'));
     await joinBtn.click();
   }
   

@@ -21,6 +21,8 @@ test.describe('The Tracer Bullet: E2E Integration', () => {
         // 2. Create Identity (Mock)
         if (await createIdentityBtn.isVisible()) {
             await page.fill('input[placeholder="Choose a username"]', 'TrinityTester');
+            // Handle is now required for identity creation
+            await page.fill('input[placeholder="Choose a handle (letters, numbers, _)"]', 'trinitytester');
             await createIdentityBtn.click();
         }
         await expect(page.getByTestId('welcome-msg')).toContainText('TrinityTester', { timeout: 10000 });
