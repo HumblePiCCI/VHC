@@ -10,6 +10,7 @@ import type { HermesComment, HermesCommentHydratable, HermesThread } from '@vh/t
 import { getForumCommentsChain, getForumDateIndexChain, getForumTagIndexChain, getForumThreadChain } from '@vh/gun-client';
 import { useAppStore } from '../index';
 import { useXpLedger } from '../xpLedger';
+import { useSentimentState } from '../../hooks/useSentimentState';
 import type { ForumState, ForumDeps, CommentStanceInput } from './types';
 import { loadIdentity, loadVotesFromStorage, persistVotes } from './persistence';
 import {
@@ -155,6 +156,8 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
         isOwnThread: false,
         isSubstantive
       });
+      // Record engagement for lightbulb icon
+      useSentimentState.getState().recordEngagement(threadId);
       return withLegacyType;
     },
     async vote(targetId, direction) {
@@ -184,6 +187,8 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
             }
           });
         }
+        // Record engagement for lightbulb icon (thread vote)
+        useSentimentState.getState().recordEngagement(targetId);
         return;
       }
       const threadId = findCommentThread(get().comments, targetId);
@@ -211,6 +216,8 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
           }
         });
       }
+      // Record engagement for lightbulb icon (comment vote - track on thread)
+      useSentimentState.getState().recordEngagement(threadId);
     },
     async loadThreads(sort) {
       triggerHydration();

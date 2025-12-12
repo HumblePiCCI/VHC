@@ -95,10 +95,10 @@ export function addThread(state: ForumState, thread: HermesThread): ForumState {
 
 export function addComment(state: ForumState, comment: HermesComment): ForumState {
   const next = new Map(state.comments);
-  const list = next.get(comment.threadId) ?? [];
-  if (!list.some((c) => c.id === comment.id)) {
-    list.push(comment);
-    list.sort((a, b) => a.timestamp - b.timestamp);
+  const existing = next.get(comment.threadId) ?? [];
+  if (!existing.some((c) => c.id === comment.id)) {
+    // Create a NEW array to trigger Zustand reactivity
+    const list = [...existing, comment].sort((a, b) => a.timestamp - b.timestamp);
     next.set(comment.threadId, list);
   }
   return { ...state, comments: next };

@@ -1,40 +1,46 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@vh/ui';
 import { useAI } from '@vh/ai-engine';
+import { EnvelopeIcon, DocumentTextIcon, BeakerIcon } from '@heroicons/react/24/outline';
 import { useForumStore } from '../../store/hermesForum';
-import { useIdentity } from '../../hooks/useIdentity';
 
 type ActionType = 'send' | 'proposal' | 'project';
 
 interface Props {
   threadId: string;
+  children?: React.ReactNode;
 }
 
-const DEBOUNCE_MS = 45_000;
 const EMPTY_COMMENTS: readonly any[] = []; // Stable reference for empty state
 
-export const CommunityReactionSummary: React.FC<Props> = ({ threadId }) => {
+// Summary generation thresholds: first at 10, then 20, then every 20 after
+function shouldGenerateSummary(count: number, lastGeneratedAt: number): boolean {
+  if (count < 10) return false;
+  if (lastGeneratedAt === 0) return true; // First generation at 10+
+  // Generate at 10, 20, 40, 60, 80...
+  const thresholds = [10, 20];
+  for (let t = 40; t <= count; t += 20) {
+    thresholds.push(t);
+  }
+  return thresholds.includes(count);
+}
+
+export const CommunityReactionSummary: React.FC<Props> = ({ threadId, children }) => {
   const comments = useForumStore((s) => s.comments.get(threadId)) ?? EMPTY_COMMENTS;
-  const { identity } = useIdentity();
   const { analyze } = useAI({ workerFactory: undefined });
-
-  const participantCount = useMemo(() => new Set(comments.map((c) => c.author)).size, [comments]);
-  const concurCount = useMemo(() => comments.filter((c) => c.stance === 'concur').length, [comments]);
-  const counterCount = useMemo(() => comments.filter((c) => c.stance === 'counter').length, [comments]);
-
-  const userComments = useMemo(
-    () => comments.filter((c) => c.author === identity?.session?.nullifier),
-    [comments, identity?.session?.nullifier]
-  );
-  const userStance = userComments[0]?.stance;
 
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [modalOpen, setModalOpen] = useState<ActionType | null>(null);
-  const lastGeneratedRef = useRef<number>(0);
-  const debounceTimer = useRef<number | null>(null);
+  const lastGeneratedAtCount = useRef<number>(0);
 
   const buildPrompt = useCallback(() => {
+    const concurCount = comments.filter((c) => c.stance === 'concur').length;
+    const counterCount = comments.filter((c) => c.stance === 'counter').length;
+    const total = concurCount + counterCount;
+    const concurPct = total > 0 ? Math.round((concurCount / total) * 100) : 50;
+    const counterPct = total > 0 ? Math.round((counterCount / total) * 100) : 50;
+    
     const concurText = comments
       .filter((c) => c.stance === 'concur')
       .map((c) => c.content)
@@ -43,41 +49,38 @@ export const CommunityReactionSummary: React.FC<Props> = ({ threadId }) => {
       .filter((c) => c.stance === 'counter')
       .map((c) => c.content)
       .join('\n');
-    return `Summarize the following community discussion into two categories.
+    return `Summarize the following community discussion.
+
+STATISTICS:
+- ${concurPct}% of respondents concur (${concurCount} comments)
+- ${counterPct}% of respondents counter (${counterCount} comments)
 
 CONCUR ARGUMENTS (supporting the topic):
-${concurText}
+${concurText || '(none yet)'}
 
 COUNTER ARGUMENTS (opposing the topic):
-${counterText}
-
-Provide:
-1. A 1-2 sentence neutral summary of the overall debate
-2. The main theme from CONCUR arguments (1 sentence)
-3. The main theme from COUNTER arguments (1 sentence)
+${counterText || '(none yet)'}
 
 RULES:
-- Be neutral and factual
-- Do NOT include usernames or handles
-- Do NOT include any personally identifiable information
-- Focus on the substance of the arguments`;
+- Start your summary with a phrase like "The community is divided..." or "${concurPct}% of respondents feel..." or "Most participants agree..."
+- Provide a 2-3 sentence neutral summary capturing both sides
+- Be factual and balanced
+- Do NOT include usernames, handles, or any personally identifiable information
+- Do NOT use titles or headers - just the summary text`;
   }, [comments]);
 
   const isGeneratingRef = useRef(false);
   
   const generateSummary = useCallback(async () => {
-    // Use ref to check generating state to avoid callback instability
     if (isGeneratingRef.current || comments.length === 0) return;
-    if (Date.now() - lastGeneratedRef.current < DEBOUNCE_MS) return;
     isGeneratingRef.current = true;
     setIsGenerating(true);
     try {
       const res = await analyze(buildPrompt());
-      // @vh/ai-engine returns object with summary; fall back to string
       const summary = (res as any)?.summary ?? (typeof res === 'string' ? res : null);
       if (summary) {
         setAiSummary(summary);
-        lastGeneratedRef.current = Date.now();
+        lastGeneratedAtCount.current = comments.length;
       }
     } catch (err) {
       console.warn('[vh:forum] AI summary failed', err);
@@ -85,76 +88,72 @@ RULES:
       isGeneratingRef.current = false;
       setIsGenerating(false);
     }
-  }, [analyze, buildPrompt, comments.length]); // Removed isGenerating from deps
+  }, [analyze, buildPrompt, comments.length]);
 
   // Store generateSummary in a ref to avoid effect dependency instability
   const generateSummaryRef = useRef(generateSummary);
   generateSummaryRef.current = generateSummary;
 
+  // Automatic generation at thresholds: 10, 20, 40, 60, 80...
   useEffect(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    if (comments.length === 0) return;
-    debounceTimer.current = window.setTimeout(() => {
+    if (shouldGenerateSummary(comments.length, lastGeneratedAtCount.current)) {
       void generateSummaryRef.current();
-    }, DEBOUNCE_MS);
-    return () => {
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-    };
-  }, [comments.length]); // Only trigger on comment count change, not on every comments array reference change
+    }
+  }, [comments.length]);
+
+  // Don't render anything if no comments and no children (standalone mode)
+  if (comments.length === 0 && !children) {
+    return null;
+  }
+
+  // Determine summary text
+  const getSummaryText = () => {
+    if (isGenerating) return 'Generating summary…';
+    if (aiSummary) return aiSummary;
+    if (comments.length === 0) return 'Add concur or counter arguments below to start the discussion.';
+    if (comments.length >= 10) return 'Summary will be generated shortly...';
+    return `Summary will be generated when ${10 - comments.length} more comments are added.`;
+  };
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-card p-4 shadow-sm dark:border-slate-700" data-testid="community-summary">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Community Reaction Summary</p>
-        <Button size="sm" variant="ghost" onClick={() => void generateSummary()} disabled={isGenerating} data-testid="refresh-summary">
-          {isGenerating ? 'Generating…' : '🔄 Refresh Summary'}
-        </Button>
-      </div>
-      <p className="text-sm text-slate-700 dark:text-slate-200">
-        {participantCount} participants • {concurCount} Concur, {counterCount} Counter
-      </p>
-      {userComments.length > 0 && (
-        <p className="text-sm text-emerald-700 dark:text-emerald-300" data-testid="user-participated">
-          ✅ You participated{userStance ? ` (${userStance})` : ''}
+    <div data-testid="community-summary">
+      {/* Summary card with action icons and debate threads inside */}
+      <div className="rounded-lg p-4 text-sm space-y-4" style={{ backgroundColor: 'var(--summary-card-bg)' }}>
+        {/* Summary text */}
+        <p style={{ color: 'var(--summary-card-text)', opacity: 0.9, fontWeight: 300 }} data-testid="ai-summary">
+          {getSummaryText()}
         </p>
-      )}
-      <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300" data-testid="district-placeholder">
-        <span>📊</span>
-        <span className="flex items-center gap-1">
-          <span role="img" aria-label="Locked">
-            🔒
-          </span>
-          Requires verified constituency (Coming in Sprint 4)
-        </span>
-      </div>
-      <div className="space-y-2 rounded-lg border border-slate-200 bg-card-muted p-3 text-sm dark:border-slate-700">
-        <p className="font-semibold text-slate-900 dark:text-slate-100">AI Summary</p>
-        <p className="text-slate-700 dark:text-slate-200" data-testid="ai-summary">
-          {aiSummary ?? 'Summary will appear here after generation.'}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <ActionButton action="send" label="Send to Rep" onOpen={setModalOpen} />
-        <ActionButton action="proposal" label="Draft Proposal" onOpen={setModalOpen} />
-        <ActionButton action="project" label="Start Project" onOpen={setModalOpen} />
+        {/* Action icons */}
+        <div className="flex items-center gap-3" style={{ color: 'var(--thread-muted)' }}>
+          <IconAction icon={<EnvelopeIcon className="h-5 w-5" />} label="Send to Rep" onOpen={setModalOpen} action="send" />
+          <IconAction icon={<DocumentTextIcon className="h-5 w-5" />} label="Draft Proposal" onOpen={setModalOpen} action="proposal" />
+          <IconAction icon={<BeakerIcon className="h-5 w-5" />} label="Start Project" onOpen={setModalOpen} action="project" />
+        </div>
+        {/* Debate threads (Concur/Counter columns) */}
+        {children}
       </div>
       {modalOpen && <ComingSoonModal action={modalOpen} onClose={() => setModalOpen(null)} />}
     </div>
   );
 };
 
-const ActionButton: React.FC<{ action: ActionType; label: string; onOpen: (action: ActionType) => void }> = ({
-  action,
+const IconAction: React.FC<{ icon: React.ReactNode; label: string; action: ActionType; onOpen: (action: ActionType) => void }> = ({
+  icon,
   label,
+  action,
   onOpen
 }) => (
-  <Button variant="secondary" onClick={() => onOpen(action)} aria-describedby={`${action}-coming-soon`} data-testid={`action-${action}`}>
-    {label}
-  </Button>
+  <button
+    className="inline-flex items-center rounded-lg bg-slate-900/40 p-2 text-slate-400 transition hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
+    onClick={() => onOpen(action)}
+    aria-describedby={`${action}-coming-soon`}
+    aria-label={label}
+    title={label}
+    data-testid={`action-${action}`}
+    tabIndex={0}
+  >
+    {icon}
+  </button>
 );
 
 const ComingSoonModal: React.FC<{ action: ActionType; onClose: () => void }> = ({ action, onClose }) => {

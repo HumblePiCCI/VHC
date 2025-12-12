@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { FeedItem } from '../hooks/useFeedStore';
 import { useSentimentState } from '../hooks/useSentimentState';
 import AnalysisView from './AnalysisView';
+import { EyeIcon as EyeOutline, LightBulbIcon as LightBulbOutline } from '@heroicons/react/24/outline';
+import { EyeIcon as EyeSolid, LightBulbIcon as LightBulbSolid } from '@heroicons/react/24/solid';
 
 interface HeadlineCardProps {
   item: FeedItem;
@@ -45,8 +47,15 @@ export const HeadlineCard: React.FC<HeadlineCardProps> = ({ item }) => {
 
   return (
     <article
-      className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-900/10 dark:border-slate-700 dark:shadow-none"
-      style={{ transform: hovered && !expanded ? 'scale(1.01)' : 'scale(1)', zIndex }}
+      className="relative overflow-hidden rounded-2xl p-5 shadow-sm transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-md"
+      style={{
+        backgroundColor: 'var(--headline-card-bg)',
+        borderColor: 'var(--headline-card-border)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        transform: hovered && !expanded ? 'scale(1.01)' : 'scale(1)',
+        zIndex
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={() => setExpanded((prev) => !prev)}
@@ -61,9 +70,9 @@ export const HeadlineCard: React.FC<HeadlineCardProps> = ({ item }) => {
     >
       <div className="flex items-start gap-4">
         <div className="flex-1 space-y-2">
-          <h3 className="text-lg font-semibold tracking-[0.01em] text-slate-900 dark:text-slate-50">{item.title}</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">{item.summary}</p>
-          <p className="text-xs uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+          <h3 className="text-lg font-semibold tracking-[0.01em]" style={{ color: 'var(--headline-card-text)' }}>{item.title}</h3>
+          <p className="text-sm" style={{ color: 'var(--headline-card-text)', opacity: 0.85 }}>{item.summary}</p>
+          <p className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--headline-card-muted)' }}>
             {item.source} • {dateLabel}
           </p>
         </div>
@@ -75,13 +84,37 @@ export const HeadlineCard: React.FC<HeadlineCardProps> = ({ item }) => {
           />
         )}
       </div>
-      <div className="mt-4 flex items-center gap-4 text-xs text-slate-500 dark:text-slate-300">
-        <span aria-label="Read count" data-testid="read-count">👁️ {displayedReadCount}</span>
-        <span aria-label="Engagement score">💡 {displayedLightbulb}</span>
-        <span className="ml-auto text-slate-400 dark:text-slate-500">{expanded ? 'Tap to collapse' : 'Tap to expand'}</span>
+      <div className="mt-4 flex items-center gap-4 text-xs" style={{ color: 'var(--headline-card-muted)' }}>
+        <span className="flex items-center gap-1" aria-label="Read count" data-testid="read-count">
+          {eyeWeight > 0 ? (
+            <EyeSolid
+              className="h-4 w-4"
+              style={{ color: 'var(--icon-engaged)', filter: `drop-shadow(var(--icon-shadow-x) var(--icon-shadow-y) var(--icon-shadow-blur) var(--icon-shadow)) drop-shadow(0 0 4px var(--icon-glow)) drop-shadow(0 0 8px var(--icon-glow))` }}
+            />
+          ) : (
+            <EyeOutline className="h-4 w-4" style={{ color: 'var(--icon-default)' }} />
+          )}
+          {displayedReadCount}
+        </span>
+        <span className="flex items-center gap-1" aria-label="Engagement score">
+          {lightbulbWeight > 0 ? (
+            <LightBulbSolid
+              className="h-4 w-4"
+              style={{ color: 'var(--icon-engaged)', filter: `drop-shadow(var(--icon-shadow-x) var(--icon-shadow-y) var(--icon-shadow-blur) var(--icon-shadow)) drop-shadow(0 0 4px var(--icon-glow)) drop-shadow(0 0 8px var(--icon-glow))` }}
+            />
+          ) : (
+            <LightBulbOutline className="h-4 w-4" style={{ color: 'var(--icon-default)' }} />
+          )}
+          {displayedLightbulb}
+        </span>
+        <span className="ml-auto" style={{ color: 'var(--headline-card-muted)' }}>{expanded ? 'Tap to collapse' : 'Tap to expand'}</span>
       </div>
       {expanded && (
-        <div className="mt-4">
+        <div 
+          className="mt-4"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
           {loading ? (
             <div className="flex items-center justify-center py-6 text-slate-500 dark:text-slate-200" data-testid="analysis-loading">
               <svg className="mr-2 h-5 w-5 animate-spin" viewBox="0 0 24 24">

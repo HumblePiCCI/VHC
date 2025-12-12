@@ -7,9 +7,19 @@ interface PageWrapperProps {
   children: React.ReactNode;
 }
 
+const bgVars: Record<ThemeVariant, string> = {
+  venn: 'var(--page-bg-venn)',
+  hermes: 'var(--page-bg-hermes)',
+  agora: 'var(--page-bg-agora)'
+};
+
 export const PageWrapper: React.FC<PageWrapperProps> = ({ variant = 'venn', children }) => {
   return (
-    <div data-theme={variant} className="min-h-screen bg-surface-light text-slate-900 dark:bg-surface-dark dark:text-slate-100">
+    <div
+      data-theme={variant}
+      className="min-h-screen text-slate-900 dark:text-slate-100"
+      style={{ backgroundColor: bgVars[variant] }}
+    >
       {children}
     </div>
   );

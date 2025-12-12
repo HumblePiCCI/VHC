@@ -31,40 +31,53 @@ vi.mock('../../store/hermesForum', async () => {
   };
 });
 
+// Helper to create n mock comments
+function createMockComments(n: number) {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `c${i}`,
+    author: i % 2 === 0 ? 'me' : 'other',
+    content: `Comment ${i}`,
+    stance: i % 2 === 0 ? 'concur' : 'counter',
+    parentId: null,
+    threadId: 'thread-1',
+    timestamp: i
+  }));
+}
+
 describe('CommunityReactionSummary', () => {
   beforeEach(() => {
     analyzeMock.mockReset();
-    analyzeMock.mockResolvedValue({ summary: 'AI summary text' });
-    useForumStore.setState({
-      comments: new Map([
-        [
-          'thread-1',
-          [
-            { id: 'c1', author: 'me', content: 'I agree', stance: 'concur', parentId: null, threadId: 'thread-1', timestamp: 1 },
-            { id: 'c2', author: 'other', content: 'I disagree', stance: 'counter', parentId: null, threadId: 'thread-1', timestamp: 2 }
-          ] as any
-        ]
-      ])
-    } as any);
+    analyzeMock.mockResolvedValue({ summary: 'The community is divided on this topic.' });
   });
 
-  it('shows participant metrics and user participation', () => {
-    render(<CommunityReactionSummary threadId="thread-1" />);
-    expect(screen.getByText(/2 participants/)).toBeInTheDocument();
-    expect(screen.getByText(/1 Concur/)).toBeInTheDocument();
-    expect(screen.getByText(/1 Counter/)).toBeInTheDocument();
-    expect(screen.getByTestId('user-participated')).toHaveTextContent('concur');
+  it('renders nothing when there are no comments', () => {
+    useForumStore.setState({ comments: new Map([['thread-1', []]]) } as any);
+    const { container } = render(<CommunityReactionSummary threadId="thread-1" />);
+    expect(container.querySelector('[data-testid="community-summary"]')).not.toBeInTheDocument();
   });
 
-  it('refreshes AI summary on demand', async () => {
+  it('shows action icons when there are comments', () => {
+    useForumStore.setState({ comments: new Map([['thread-1', createMockComments(2)]]) } as any);
     render(<CommunityReactionSummary threadId="thread-1" />);
-    fireEvent.click(screen.getAllByTestId('refresh-summary')[0]);
+    expect(screen.getByTestId('action-send')).toBeInTheDocument();
+    expect(screen.getByTestId('action-proposal')).toBeInTheDocument();
+    expect(screen.getByTestId('action-project')).toBeInTheDocument();
+  });
+
+  it('auto-generates summary when comment count reaches 10', async () => {
+    useForumStore.setState({ comments: new Map([['thread-1', createMockComments(10)]]) } as any);
+    render(<CommunityReactionSummary threadId="thread-1" />);
     await waitFor(() => expect(analyzeMock).toHaveBeenCalled());
-    const summaries = await screen.findAllByTestId('ai-summary');
-    expect(summaries.some((el) => el.textContent?.includes('AI summary text'))).toBe(true);
+    // Wait for the summary text to be updated with AI response
+    await waitFor(() => {
+      const summaries = screen.getAllByTestId('ai-summary');
+      const summary = summaries[summaries.length - 1]; // Get the latest rendered one
+      expect(summary.textContent).toContain('The community is divided');
+    });
   });
 
   it('opens and closes coming soon modal', async () => {
+    useForumStore.setState({ comments: new Map([['thread-1', createMockComments(2)]]) } as any);
     render(<CommunityReactionSummary threadId="thread-1" />);
     fireEvent.click(screen.getAllByTestId('action-send')[0]);
     const dialog = await screen.findByRole('dialog');

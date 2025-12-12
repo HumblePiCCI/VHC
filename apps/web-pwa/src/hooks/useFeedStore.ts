@@ -28,7 +28,17 @@ interface FeedState {
   setItems: (items: FeedItem[]) => void;
 }
 
-const STORAGE_KEY = 'vh_feed_cache_v1';
+const STORAGE_KEY = 'vh_feed_cache_v2'; // Bumped to clear corrupted caches
+
+// Deduplicate items by ID (keep first occurrence)
+function dedupeItems(items: FeedItem[]): FeedItem[] {
+  const seen = new Set<string>();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+}
 
 const seedItems: FeedItem[] = [
   {
@@ -76,14 +86,27 @@ const seedItems: FeedItem[] = [
   }
 ];
 
-function loadCached(): FeedItem[] {
+function loadCached(): { items: FeedItem[]; page: number } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return seedItems;
+    if (!raw) return { items: seedItems, page: 1 };
     const parsed = JSON.parse(raw) as FeedItem[];
-    return parsed.length > 0 ? parsed : seedItems;
+    if (parsed.length === 0) return { items: seedItems, page: 1 };
+    
+    // Dedupe in case of corrupted cache
+    const deduped = dedupeItems(parsed);
+    
+    // Derive page from cached item IDs (e.g., "seed-1-p3-0" → page 3)
+    let maxPage = 1;
+    for (const item of deduped) {
+      const match = item.id.match(/-p(\d+)-/);
+      if (match) {
+        maxPage = Math.max(maxPage, parseInt(match[1], 10));
+      }
+    }
+    return { items: deduped, page: maxPage };
   } catch {
-    return seedItems;
+    return { items: seedItems, page: 1 };
   }
 }
 
@@ -101,8 +124,8 @@ export const useFeedStore = create<FeedState>((set, get) => ({
   hasMore: true,
   loading: false,
   hydrate() {
-    const cached = loadCached();
-    set({ items: cached, page: 1, hasMore: true });
+    const { items, page } = loadCached();
+    set({ items, page, hasMore: page < 5 });
   },
   setItems(items) {
     persist(items);
@@ -116,7 +139,8 @@ export const useFeedStore = create<FeedState>((set, get) => ({
       ...item,
       id: `${item.id}-p${nextPage}-${idx}`
     }));
-    const nextItems = [...get().items, ...nextBatch];
+    // Dedupe to prevent any accidental duplicates
+    const nextItems = dedupeItems([...get().items, ...nextBatch]);
     persist(nextItems);
     set({
       items: nextItems,

@@ -16,6 +16,8 @@ interface SentimentStore {
     constituency_proof?: ConstituencyProof;
   }) => void;
   recordRead: (topicId: string) => number;
+  /** Generic engagement tracker (for forum votes/comments) - increments lightbulb weight with decay */
+  recordEngagement: (topicId: string) => number;
   getAgreement: (topicId: string, pointId: string) => Agreement;
   getLightbulbWeight: (topicId: string) => number;
   getEyeWeight: (topicId: string) => number;
@@ -115,6 +117,14 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
     const eye = { ...get().eye, [topicId]: next };
     persistMap(EYE_KEY, eye);
     set({ eye });
+    return next;
+  },
+  recordEngagement(topicId) {
+    const current = get().lightbulb[topicId] ?? 0;
+    const next = current === 0 ? 1 : decayStep(current);
+    const lightbulb = { ...get().lightbulb, [topicId]: next };
+    persistMap(LIGHTBULB_KEY, lightbulb);
+    set({ lightbulb });
     return next;
   },
   getAgreement(topicId, pointId) {

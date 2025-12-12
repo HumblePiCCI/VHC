@@ -1,10 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { useForumStore } from '../../../store/hermesForum';
 import { ThreadCard } from './ThreadCard';
+import { NewThreadForm } from './NewThreadForm';
+import { TrustGate } from './TrustGate';
 
-export const ForumFeed: React.FC = () => {
+interface ForumFeedProps {
+  sourceAnalysisId?: string;
+  defaultTitle?: string;
+}
+
+export const ForumFeed: React.FC<ForumFeedProps> = ({ sourceAnalysisId, defaultTitle }) => {
   const { threads, userVotes, vote, loadThreads } = useForumStore();
   const [sort, setSort] = useState<'hot' | 'new' | 'top'>('hot');
+  const [showNewThread, setShowNewThread] = useState(false);
 
   const sortedThreads = useMemo(() => {
     return loadThreads(sort);
@@ -29,16 +37,24 @@ export const ForumFeed: React.FC = () => {
           </button>
         ))}
         <button
-          className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+          className={`rounded-full px-3 py-1 text-sm ${showNewThread ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'}`}
           data-testid="new-thread-btn"
-          onClick={() => {
-            const el = document.querySelector<HTMLInputElement>('[data-testid=\"thread-title\"]');
-            el?.focus();
-          }}
+          onClick={() => setShowNewThread((prev) => !prev)}
         >
-          New Thread
+          {showNewThread ? '✕ Cancel' : '+ New Thread'}
         </button>
       </div>
+
+      {showNewThread && (
+        <TrustGate fallback={<p className="text-xs text-amber-600" data-testid="trust-gate-msg">Verify identity to participate.</p>}>
+          <NewThreadForm
+            sourceAnalysisId={sourceAnalysisId}
+            defaultTitle={defaultTitle}
+            onSuccess={() => setShowNewThread(false)}
+          />
+        </TrustGate>
+      )}
+
       {(resolved ?? []).map((thread) => (
         <ThreadCard
           key={thread.id}
@@ -47,7 +63,7 @@ export const ForumFeed: React.FC = () => {
           onVote={(direction) => vote(thread.id, direction)}
         />
       ))}
-      {(resolved ?? []).length === 0 && <p className="text-sm text-slate-500">No threads yet.</p>}
+      {(resolved ?? []).length === 0 && !showNewThread && <p className="text-sm text-slate-500">No threads yet. Click "+ New Thread" to start one.</p>}
     </div>
   );
 };

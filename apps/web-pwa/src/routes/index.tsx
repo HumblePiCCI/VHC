@@ -9,11 +9,10 @@ import ThemeToggle from '../components/ThemeToggle';
 import { ChatLayout } from '../components/hermes/ChatLayout';
 import { ForumFeed } from '../components/hermes/forum/ForumFeed';
 import { ThreadView } from '../components/hermes/forum/ThreadView';
-import { NewThreadForm } from '../components/hermes/forum/NewThreadForm';
 import { IDChip } from '../components/hermes/IDChip';
 import { ScanContact } from '../components/hermes/ScanContact';
 import { DashboardPage } from './dashboardContent';
-import { TrustGate } from '../components/hermes/forum/TrustGate';
+import { DevColorPanel } from '../components/DevColorPanel';
 
 const RootComponent = () => (
   <RootShell>
@@ -84,14 +83,28 @@ const RootShell = ({ children }: { children: React.ReactNode }) => {
           )}
         </main>
       </div>
+      {import.meta.env.DEV && <DevColorPanel />}
     </PageWrapper>
   );
 };
 
 const HomeComponent = () => (
   <section className="space-y-4">
-    <div className="rounded-2xl border border-slate-200/80 bg-card p-5 shadow-sm shadow-slate-900/5 space-y-3 dark:border-slate-700">
-      <p className="text-sm font-semibold tracking-[0.08em] text-slate-900 uppercase">Headlines</p>
+    <div
+      className="rounded-2xl p-5 shadow-sm space-y-3"
+      style={{
+        backgroundColor: 'var(--section-container-bg)',
+        borderColor: 'var(--section-container-border)',
+        borderWidth: '1px',
+        borderStyle: 'solid'
+      }}
+    >
+      <p
+        className="text-sm font-semibold tracking-[0.08em] uppercase"
+        style={{ color: 'var(--section-title)' }}
+      >
+        Headlines
+      </p>
       <FeedList />
     </div>
   </section>
@@ -125,10 +138,23 @@ const HermesIndexPage: React.FC = () => {
   const search = location.search as { sourceAnalysisId?: string; title?: string };
   return (
     <div className="space-y-4">
-      <TrustGate fallback={<p className="text-xs text-amber-600" data-testid="trust-gate-msg">Verify identity to participate.</p>}>
-        <NewThreadForm sourceAnalysisId={search?.sourceAnalysisId} defaultTitle={search?.title} />
-      </TrustGate>
-      <ForumFeed />
+      <div
+        className="rounded-2xl p-5 shadow-sm space-y-3"
+        style={{
+          backgroundColor: 'var(--section-container-bg)',
+          borderColor: 'var(--section-container-border)',
+          borderWidth: '1px',
+          borderStyle: 'solid'
+        }}
+      >
+        <p
+          className="text-sm font-semibold tracking-[0.08em] uppercase"
+          style={{ color: 'var(--section-title)' }}
+        >
+          Forum Threads
+        </p>
+        <ForumFeed sourceAnalysisId={search?.sourceAnalysisId} defaultTitle={search?.title} />
+      </div>
     </div>
   );
 };

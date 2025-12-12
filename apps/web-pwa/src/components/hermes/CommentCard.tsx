@@ -5,6 +5,9 @@ import { useForumStore } from '../../store/hermesForum';
 import { renderMarkdown } from '../../utils/markdown';
 import { CommentComposer } from './forum/CommentComposer';
 import { TrustGate } from './forum/TrustGate';
+import { useSentimentState } from '../../hooks/useSentimentState';
+import { EngagementIcons } from '../EngagementIcons';
+import { useViewTracking } from '../../hooks/useViewTracking';
 
 interface Props {
   comment: HermesComment;
@@ -20,6 +23,9 @@ export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect, i
   const vote = useForumStore((s) => s.vote);
   const [showConcur, setShowConcur] = useState(false);
   const [showCounter, setShowCounter] = useState(false);
+  const eyeWeight = useSentimentState((s) => s.getEyeWeight(comment.id));
+  const lightbulbWeight = useSentimentState((s) => s.getLightbulbWeight(comment.id));
+  useViewTracking(comment.id, isExpanded);
 
   const score = comment.upvotes - comment.downvotes;
 
@@ -40,29 +46,34 @@ export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect, i
 
   return (
     <div
-      className={`space-y-3 rounded-xl border border-slate-200 bg-card p-3 shadow-sm dark:border-slate-700 ${
+      className={`space-y-3 rounded-xl p-3 shadow-sm ${
         !isExpanded ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''
       }`}
+      style={{ backgroundColor: 'var(--comment-card-bg)' }}
       role="article"
       onClick={handleCardClick}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-semibold text-slate-900 dark:text-slate-50">{comment.author.slice(0, 10)}…</span>
+          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--comment-meta)' }}>
+            <span className="font-semibold" style={{ color: 'var(--comment-author)' }}>{comment.author.slice(0, 10)}…</span>
             <span>{new Date(comment.timestamp).toLocaleString()}</span>
           </div>
           <div
-            className="prose prose-sm max-w-none text-slate-800 dark:prose-invert dark:text-slate-100"
+            className="prose prose-sm max-w-none"
+            style={{ color: 'var(--comment-text)' }}
             dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.content) }}
           />
         </div>
+        {isExpanded && <EngagementIcons eyeWeight={eyeWeight} lightbulbWeight={lightbulbWeight} />}
         <TrustGate
           fallback={<span className="text-[11px] text-slate-500" data-testid="trust-gate-msg">Verify to vote</span>}
         >
           <div className="flex flex-col items-center gap-1 text-xs">
             <button
-              className={`rounded border px-1 ${userVotes.get(comment.id) === 'up' ? 'border-teal-500 text-teal-700' : 'border-slate-200'}`}
+              className={`rounded px-1 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500 ${
+                userVotes.get(comment.id) === 'up' ? 'bg-teal-700 text-white' : 'bg-slate-800 text-slate-200'
+              }`}
               data-testid={`vote-up-${comment.id}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -73,7 +84,9 @@ export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect, i
             </button>
             <span>{score}</span>
             <button
-              className={`rounded border px-1 ${userVotes.get(comment.id) === 'down' ? 'border-teal-500 text-teal-700' : 'border-slate-200'}`}
+              className={`rounded px-1 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500 ${
+                userVotes.get(comment.id) === 'down' ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-200'
+              }`}
               data-testid={`vote-down-${comment.id}`}
               onClick={(e) => {
                 e.stopPropagation();
@@ -87,26 +100,26 @@ export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect, i
       </div>
 
       <div className="flex gap-2 text-xs">
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          className="rounded-lg px-3 py-2 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500"
+          style={{ backgroundColor: 'var(--concur-button)', color: '#ffffff' }}
           onClick={(e) => {
             e.stopPropagation();
             setShowConcur((v) => !v);
           }}
         >
           Add Concur
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
+        </button>
+        <button
+          className="rounded-lg px-3 py-2 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
+          style={{ backgroundColor: 'var(--counter-button)', color: '#ffffff' }}
           onClick={(e) => {
             e.stopPropagation();
             setShowCounter((v) => !v);
           }}
         >
           Add Counter
-        </Button>
+        </button>
       </div>
 
       {(showConcur || showCounter) && (

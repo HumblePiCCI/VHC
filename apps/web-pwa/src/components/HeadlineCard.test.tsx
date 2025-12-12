@@ -36,7 +36,8 @@ describe('HeadlineCard', () => {
     render(<HeadlineCard item={sample} />);
     expect(screen.getByText(/Sample Headline/)).toBeInTheDocument();
     const readCount = screen.getByTestId('read-count');
-    expect(readCount).toHaveTextContent('👁️ 4.0');
+    // Now using Heroicons instead of emoji - just check numeric value
+    expect(readCount).toHaveTextContent('4.0');
     fireEvent.click(screen.getByText(/Sample Headline/));
 
     // Shows loading state initially
@@ -47,8 +48,8 @@ describe('HeadlineCard', () => {
       expect(screen.getByText(/Frame view/)).toBeInTheDocument();
     }, { timeout: 500 });
 
-    // Read count should increment on first expansion
-    expect(screen.getByTestId('read-count')).toHaveTextContent('👁️ 5.0');
+    // Read count should increment on first expansion (Heroicons, just check value)
+    expect(screen.getByTestId('read-count')).toHaveTextContent('5.0');
 
     // Sentiment click should not collapse the card
     const [agreeFrame] = screen.getAllByLabelText('Agree frame');

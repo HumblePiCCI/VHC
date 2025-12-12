@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Button } from '@vh/ui';
 import { useForumStore } from '../../../store/hermesForum';
 
 interface Props {
@@ -33,24 +32,28 @@ export const CommentComposer: React.FC<Props> = ({ threadId, parentId, targetId,
     }
   };
 
+  const btnVar = stance === 'concur' ? '--concur-button' : '--counter-button';
+
   return (
-    <div className="space-y-2 rounded-lg border border-slate-200 bg-card p-3 dark:border-slate-700">
+    <div className="space-y-2 rounded-lg p-3" style={{ backgroundColor: 'var(--comment-card-bg)' }}>
       <textarea
-        className="w-full resize-none rounded border border-slate-200 px-3 py-2 text-sm text-slate-900 focus:border-teal-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50"
+        className="w-full resize-none rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+        style={{ backgroundColor: 'var(--summary-card-bg)', color: 'var(--comment-text)', borderColor: 'var(--thread-muted)' }}
         rows={3}
         placeholder={stance === 'counter' ? 'Add a counterpoint…' : 'Add a concur…'}
         value={content}
         data-testid="comment-composer"
         onChange={(e) => setContent(e.target.value)}
       />
-      <Button
-        size="sm"
+      <button
+        className="rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition hover:shadow-md disabled:opacity-50"
+        style={{ backgroundColor: `var(${btnVar})`, color: '#ffffff' }}
         onClick={() => void handleSubmit()}
         disabled={!content.trim() || busy}
         data-testid="submit-comment-btn"
       >
         {busy ? 'Posting…' : 'Post'}
-      </Button>
+      </button>
     </div>
   );
 };

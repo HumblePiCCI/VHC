@@ -17,6 +17,7 @@ describe('useSentimentState', () => {
       signals: [],
       setAgreement: useSentimentState.getState().setAgreement,
       recordRead: useSentimentState.getState().recordRead,
+      recordEngagement: useSentimentState.getState().recordEngagement,
       getAgreement: useSentimentState.getState().getAgreement,
       getLightbulbWeight: useSentimentState.getState().getLightbulbWeight,
       getEyeWeight: useSentimentState.getState().getEyeWeight
@@ -56,6 +57,15 @@ describe('useSentimentState', () => {
     expect(second).toBeGreaterThan(first);
     expect(second).toBeLessThanOrEqual(2);
     expect(useSentimentState.getState().getEyeWeight(TOPIC)).toBe(second);
+  });
+
+  it('accumulates lightbulb_weight via recordEngagement with decay', () => {
+    const first = useSentimentState.getState().recordEngagement(TOPIC);
+    const second = useSentimentState.getState().recordEngagement(TOPIC);
+    expect(first).toBe(1);
+    expect(second).toBeGreaterThan(first);
+    expect(second).toBeLessThanOrEqual(2);
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(second);
   });
 
   it('resets lightbulb when all cells return to neutral', () => {
