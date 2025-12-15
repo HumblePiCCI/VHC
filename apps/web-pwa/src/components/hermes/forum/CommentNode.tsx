@@ -14,9 +14,8 @@ interface Props {
 export const CommentNode: React.FC<Props> = ({ comment, depth = 0 }) => {
   const { userVotes, vote, comments } = useForumStore();
   const [showReply, setShowReply] = useState(false);
-  const [showCounter, setShowCounter] = useState(false);
   const score = comment.upvotes - comment.downvotes;
-  const isCollapsed = score < 0 && !showReply && !showCounter;
+  const isCollapsed = score < 0 && !showReply;
   const children = (comments.get(comment.threadId) ?? []).filter((c) => c.parentId === comment.id);
   return (
     <div className={`border-l border-slate-200 pl-3 dark:border-slate-700 ${depth ? 'mt-2' : ''}`}>
@@ -40,7 +39,6 @@ export const CommentNode: React.FC<Props> = ({ comment, depth = 0 }) => {
                 className="text-xs text-slate-500 underline"
                 onClick={() => {
                   setShowReply(false);
-                  setShowCounter(false);
                 }}
               >
                 [collapsed] score {score}
@@ -78,18 +76,10 @@ export const CommentNode: React.FC<Props> = ({ comment, depth = 0 }) => {
           <Button variant="ghost" size="sm" onClick={() => setShowReply((v) => !v)}>
             Reply
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowCounter((v) => !v)}>
-            Counterpoint
-          </Button>
         </div>
         {showReply && (
           <div className="mt-2">
-            <CommentComposer threadId={comment.threadId} parentId={comment.id} stance="concur" />
-          </div>
-        )}
-        {showCounter && (
-          <div className="mt-2">
-            <CommentComposer threadId={comment.threadId} parentId={comment.id} targetId={comment.id} stance="counter" />
+            <CommentComposer threadId={comment.threadId} parentId={comment.id} />
           </div>
         )}
       </div>

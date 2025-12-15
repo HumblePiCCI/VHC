@@ -22,6 +22,7 @@ export interface ForumState {
   vote(targetId: string, direction: 'up' | 'down' | null): Promise<void>;
   loadThreads(sort: 'hot' | 'new' | 'top'): Promise<HermesThread[]>;
   loadComments(threadId: string): Promise<HermesComment[]>;
+  getRootComments(threadId: string): HermesComment[];
   getCommentsByStance(threadId: string, stance: 'concur' | 'counter'): HermesComment[];
   getConcurComments(threadId: string): HermesComment[];
   getCounterComments(threadId: string): HermesComment[];
@@ -37,4 +38,4 @@ export interface ForumDeps {
   randomId: () => string;
 }
 
-export type CommentStanceInput = 'concur' | 'counter' | 'reply' | 'counterpoint';
+export type CommentStanceInput = 'concur' | 'counter' | 'discuss' | 'reply' | 'counterpoint';

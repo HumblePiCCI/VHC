@@ -76,6 +76,48 @@ describe('CommunityReactionSummary', () => {
     });
   });
 
+  it('excludes discuss from concur/counter ratios in the AI prompt', async () => {
+    const mixed = [
+      ...Array.from({ length: 3 }, (_, i) => ({
+        id: `concur-${i}`,
+        author: 'me',
+        content: `Concur ${i}`,
+        stance: 'concur',
+        parentId: null,
+        threadId: 'thread-1',
+        timestamp: i
+      })),
+      ...Array.from({ length: 2 }, (_, i) => ({
+        id: `counter-${i}`,
+        author: 'other',
+        content: `Counter ${i}`,
+        stance: 'counter',
+        parentId: null,
+        threadId: 'thread-1',
+        timestamp: 10 + i
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `discuss-${i}`,
+        author: 'other',
+        content: `Discuss ${i}`,
+        stance: 'discuss',
+        parentId: null,
+        threadId: 'thread-1',
+        timestamp: 20 + i
+      }))
+    ];
+
+    useForumStore.setState({ comments: new Map([['thread-1', mixed]]) } as any);
+    render(<CommunityReactionSummary threadId="thread-1" />);
+
+    await waitFor(() => expect(analyzeMock).toHaveBeenCalled());
+    const prompt = analyzeMock.mock.calls[0]?.[0] as string;
+    expect(prompt).toContain('Participants: 10 comments (3 concur, 2 counter, 5 discuss)');
+    expect(prompt).toContain('Debate split (excluding discuss): 60% concur, 40% counter');
+    expect(prompt).toContain('DISCUSSIONS / QUESTIONS (neutral):');
+    expect(prompt).toContain('Discuss 0');
+  });
+
   it('opens and closes coming soon modal', async () => {
     useForumStore.setState({ comments: new Map([['thread-1', createMockComments(2)]]) } as any);
     render(<CommunityReactionSummary threadId="thread-1" />);

@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import type { HermesComment } from '@vh/types';
-import { Button } from '@vh/ui';
 import { useForumStore } from '../../store/hermesForum';
 import { renderMarkdown } from '../../utils/markdown';
 import { CommentComposer } from './forum/CommentComposer';
@@ -12,186 +11,143 @@ import { useViewTracking } from '../../hooks/useViewTracking';
 interface Props {
   comment: HermesComment;
   allComments: HermesComment[];
-  onSelect?: (id: string) => void;
-  isExpanded?: boolean; // When true, show full nested content
+  depth?: number;
 }
 
-const EMPTY_COMMENTS: readonly HermesComment[] = [];
-
-export const CommentCard: React.FC<Props> = ({ comment, allComments, onSelect, isExpanded = false }) => {
+export const CommentCard: React.FC<Props> = ({ comment, allComments, depth = 0 }) => {
   const userVotes = useForumStore((s) => s.userVotes);
   const vote = useForumStore((s) => s.vote);
-  const [showConcur, setShowConcur] = useState(false);
-  const [showCounter, setShowCounter] = useState(false);
+  const [showReply, setShowReply] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  
   const eyeWeight = useSentimentState((s) => s.getEyeWeight(comment.id));
   const lightbulbWeight = useSentimentState((s) => s.getLightbulbWeight(comment.id));
-  useViewTracking(comment.id, isExpanded);
+  useViewTracking(comment.id, !isCollapsed);
 
   const score = comment.upvotes - comment.downvotes;
 
-  const { concurChildren, counterChildren } = useMemo(() => {
-    const children = allComments.filter((c) => c.parentId === comment.id);
-    return {
-      concurChildren: children.filter((c) => c.stance === 'concur'),
-      counterChildren: children.filter((c) => c.stance === 'counter')
-    };
+  const children = useMemo(() => {
+    return allComments
+      .filter((c) => c.parentId === comment.id)
+      .sort((a, b) => a.timestamp - b.timestamp);
   }, [allComments, comment.id]);
 
-  const handleCardClick = () => {
-    // Only zoom when NOT already expanded - prevents re-zooming to self
-    if (!isExpanded && onSelect) {
-      onSelect(comment.id);
-    }
+  const getStanceColor = () => {
+    if (comment.stance === 'concur') return 'bg-teal-50/50 dark:bg-teal-900/10';
+    if (comment.stance === 'counter') return 'bg-amber-50/50 dark:bg-amber-900/10';
+    return 'bg-slate-50/50 dark:bg-slate-800/10';
+  };
+  
+  const getBorderColor = () => {
+    if (comment.stance === 'concur') return '#14b8a6'; // teal-500
+    if (comment.stance === 'counter') return '#f59e0b'; // amber-500
+    return '#94a3b8'; // slate-400
+  };
+  
+  const stanceBadgeColor = () => {
+     if (comment.stance === 'concur') return 'text-teal-600 bg-teal-100 dark:bg-teal-900/30 dark:text-teal-400';
+     if (comment.stance === 'counter') return 'text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400';
+     return 'text-slate-600 bg-slate-100 dark:bg-slate-800/30 dark:text-slate-400';
+  };
+  
+  const stanceIcon = () => {
+      if (comment.stance === 'concur') return '👍';
+      if (comment.stance === 'counter') return '👎';
+      return '💬';
   };
 
   return (
-    <div
-      className={`space-y-3 rounded-xl p-3 shadow-sm ${
-        !isExpanded ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''
-      }`}
-      style={{ backgroundColor: 'var(--comment-card-bg)' }}
-      role="article"
-      onClick={handleCardClick}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--comment-meta)' }}>
-            <span className="font-semibold" style={{ color: 'var(--comment-author)' }}>{comment.author.slice(0, 10)}…</span>
-            <span>{new Date(comment.timestamp).toLocaleString()}</span>
+    <div className={`space-y-3 ${depth > 0 ? 'mt-3' : ''}`}>
+      <div 
+        className={`relative rounded-r-lg border-l-4 p-3 shadow-sm transition-all hover:shadow-md ${getStanceColor()}`}
+        style={{ borderColor: getBorderColor() }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2 text-sm w-full">
+            <div className="flex items-center gap-2 text-xs text-slate-500">
+               <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${stanceBadgeColor()}`}>
+                 {stanceIcon()} {comment.stance === 'discuss' ? 'Discuss' : comment.stance}
+               </span>
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {comment.author.slice(0, 10)}…
+              </span>
+              <span>• {new Date(comment.timestamp).toLocaleString()}</span>
+              {children.length > 0 && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }}
+                  className="ml-2 hover:underline text-slate-400 hover:text-slate-600"
+                >
+                  [{isCollapsed ? `+${children.length} replies` : '–'}]
+                </button>
+              )}
+            </div>
+            
+            {!isCollapsed && (
+              <div
+                className="prose prose-sm max-w-none dark:prose-invert"
+                style={{ color: 'var(--comment-text)' }}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.content) }}
+              />
+            )}
           </div>
-          <div
-            className="prose prose-sm max-w-none"
-            style={{ color: 'var(--comment-text)' }}
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.content) }}
-          />
+
+          <div className="flex flex-col items-center gap-1">
+             {!isCollapsed && <EngagementIcons eyeWeight={eyeWeight} lightbulbWeight={lightbulbWeight} />}
+             <TrustGate fallback={null}>
+                <div className="flex flex-col items-center gap-0.5 text-xs">
+                  <button
+                    className={`rounded px-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                      userVotes.get(comment.id) === 'up' ? 'text-teal-600' : 'text-slate-400'
+                    }`}
+                    onClick={(e) => { e.stopPropagation(); vote(comment.id, userVotes.get(comment.id) === 'up' ? null : 'up'); }}
+                  >▲</button>
+                  <span className="font-mono">{score}</span>
+                  <button
+                    className={`rounded px-1 hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                      userVotes.get(comment.id) === 'down' ? 'text-amber-600' : 'text-slate-400'
+                    }`}
+                    onClick={(e) => { e.stopPropagation(); vote(comment.id, userVotes.get(comment.id) === 'down' ? null : 'down'); }}
+                  >▼</button>
+                </div>
+             </TrustGate>
+          </div>
         </div>
-        {isExpanded && <EngagementIcons eyeWeight={eyeWeight} lightbulbWeight={lightbulbWeight} />}
-        <TrustGate
-          fallback={<span className="text-[11px] text-slate-500" data-testid="trust-gate-msg">Verify to vote</span>}
-        >
-          <div className="flex flex-col items-center gap-1 text-xs">
+
+        {!isCollapsed && (
+          <div className="flex gap-2 text-xs mt-2">
             <button
-              className={`rounded px-1 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500 ${
-                userVotes.get(comment.id) === 'up' ? 'bg-teal-700 text-white' : 'bg-slate-800 text-slate-200'
-              }`}
-              data-testid={`vote-up-${comment.id}`}
+              className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-medium flex items-center gap-1"
               onClick={(e) => {
                 e.stopPropagation();
-                vote(comment.id, userVotes.get(comment.id) === 'up' ? null : 'up');
+                setShowReply(!showReply);
               }}
             >
-              ▲
-            </button>
-            <span>{score}</span>
-            <button
-              className={`rounded px-1 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500 ${
-                userVotes.get(comment.id) === 'down' ? 'bg-amber-700 text-white' : 'bg-slate-800 text-slate-200'
-              }`}
-              data-testid={`vote-down-${comment.id}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                vote(comment.id, userVotes.get(comment.id) === 'down' ? null : 'down');
-              }}
-            >
-              ▼
+              ↩ Reply
             </button>
           </div>
-        </TrustGate>
+        )}
       </div>
 
-      <div className="flex gap-2 text-xs">
-        <button
-          className="rounded-lg px-3 py-2 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500"
-          style={{ backgroundColor: 'var(--concur-button)', color: '#ffffff' }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowConcur((v) => !v);
-          }}
-        >
-          Add Concur
-        </button>
-        <button
-          className="rounded-lg px-3 py-2 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
-          style={{ backgroundColor: 'var(--counter-button)', color: '#ffffff' }}
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowCounter((v) => !v);
-          }}
-        >
-          Add Counter
-        </button>
-      </div>
-
-      {(showConcur || showCounter) && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {showConcur && (
-            <CommentComposer
-              threadId={comment.threadId}
-              parentId={comment.id}
-              stance="concur"
-              targetId={comment.id}
-              onSubmit={async () => setShowConcur(false)}
-            />
-          )}
-          {showCounter && (
-            <CommentComposer
-              threadId={comment.threadId}
-              parentId={comment.id}
-              stance="counter"
-              targetId={comment.id}
-              onSubmit={async () => setShowCounter(false)}
-            />
-          )}
+      {showReply && !isCollapsed && (
+        <div className="ml-4">
+           <CommentComposer
+             threadId={comment.threadId}
+             parentId={comment.id}
+             onSubmit={async () => setShowReply(false)}
+           />
         </div>
       )}
 
-      {/* Show nested discussion pills (collapsed) or full content (expanded) */}
-      {(concurChildren.length > 0 || counterChildren.length > 0) && !isExpanded && (
-        <div className="flex flex-wrap gap-2">
-          {concurChildren.length > 0 && (
-            <button
-              className="rounded-full bg-teal-100 px-3 py-1 text-xs font-medium text-teal-700 hover:bg-teal-200 dark:bg-teal-900/40 dark:text-teal-300 dark:hover:bg-teal-800/60"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect?.(comment.id);
-              }}
-              aria-label={`${concurChildren.length} concur replies`}
-            >
-              👍 {concurChildren.length} Concur
-            </button>
-          )}
-          {counterChildren.length > 0 && (
-            <button
-              className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-800/60"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelect?.(comment.id);
-              }}
-              aria-label={`${counterChildren.length} counter replies`}
-            >
-              👎 {counterChildren.length} Counter
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Only show full nested content when expanded */}
-      {isExpanded && (concurChildren.length > 0 || counterChildren.length > 0) && (
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-teal-600">Concur</p>
-            {concurChildren.length === 0 && <p className="text-xs text-slate-500">No concurs yet.</p>}
-            {concurChildren.map((child) => (
-              <CommentCard key={child.id} comment={child} allComments={allComments} onSelect={onSelect} />
-            ))}
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">Counter</p>
-            {counterChildren.length === 0 && <p className="text-xs text-slate-500">No counters yet.</p>}
-            {counterChildren.map((child) => (
-              <CommentCard key={child.id} comment={child} allComments={allComments} onSelect={onSelect} />
-            ))}
-          </div>
+      {!isCollapsed && children.length > 0 && (
+        <div className={`border-l-2 border-slate-200 dark:border-slate-800 ml-2 pl-2`}> 
+           {children.map((child) => (
+             <CommentCard 
+               key={child.id} 
+               comment={child} 
+               allComments={allComments} 
+               depth={depth + 1}
+             />
+           ))}
         </div>
       )}
     </div>

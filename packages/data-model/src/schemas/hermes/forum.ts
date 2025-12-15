@@ -56,7 +56,7 @@ export const HermesCommentSchemaV0 = z
 const HermesCommentSchemaV1Base = z.object({
   schemaVersion: z.literal('hermes-comment-v1'),
   ...BaseCommentFields,
-  stance: z.enum(['concur', 'counter']),
+  stance: z.enum(['concur', 'counter', 'discuss']),
   type: z.enum(['reply', 'counterpoint']).optional(),
   targetId: z.string().min(1).optional()
 });

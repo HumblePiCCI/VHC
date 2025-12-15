@@ -3,10 +3,7 @@ import { useForumStore } from '../../../store/hermesForum';
 import { CommentComposer } from './CommentComposer';
 import { TrustGate } from './TrustGate';
 import { renderMarkdown } from '../../../utils/markdown';
-import { DebateColumn } from '../DebateColumn';
-import { useZoomNavigation } from '../../../hooks/useZoomNavigation';
-import { ZoomableCard } from '../ZoomableCard';
-import { CommentCard } from '../CommentCard';
+import { CommentStream } from '../CommentStream';
 import { CommunityReactionSummary } from '../CommunityReactionSummary';
 import { EngagementIcons } from '../../EngagementIcons';
 import { useSentimentState } from '../../../hooks/useSentimentState';
@@ -34,6 +31,8 @@ const zoomInAnimation = `
 }
 `;
 
+const CALLOUT_KEY = 'vh-thread-view-updated-dismissed';
+
 // Inject the animation styles once
 if (typeof document !== 'undefined') {
   const styleId = 'thread-zoom-animation';
@@ -55,7 +54,15 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
   const lightbulbWeight = useSentimentState((s) => s.getLightbulbWeight(threadId));
   
   const [loaded, setLoaded] = useState(false);
-  const zoomNav = useZoomNavigation();
+  const [showRootComposer, setShowRootComposer] = useState(false);
+  const [showCallout, setShowCallout] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return !window.localStorage.getItem(CALLOUT_KEY);
+    } catch {
+      return false;
+    }
+  });
   useViewTracking(threadId, true);
 
   // Check for reduced motion preference
@@ -68,15 +75,14 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
     void loadComments(threadId).then(() => setLoaded(true));
   }, [threadId, loadComments]);
 
-  const roots = useMemo(() => {
-    const rootsOnly = allComments.filter((c) => c.parentId === null);
-    return {
-      concur: rootsOnly.filter((c) => c.stance === 'concur'),
-      counter: rootsOnly.filter((c) => c.stance === 'counter')
-    };
-  }, [allComments]);
-
-  const activeZoomComment = zoomNav.activeId ? allComments.find((c) => c.id === zoomNav.activeId) : null;
+  const dismissCallout = () => {
+    try {
+      window.localStorage.setItem(CALLOUT_KEY, 'true');
+    } catch {
+      // ignore
+    }
+    setShowCallout(false);
+  };
 
   if (!thread) {
     return <p className="text-sm text-slate-500">Thread not found.</p>;
@@ -103,7 +109,7 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
             <EngagementIcons eyeWeight={eyeWeight} lightbulbWeight={lightbulbWeight} />
           </div>
           <div
-            className="prose prose-sm max-w-none"
+            className="prose prose-sm max-w-none dark:prose-invert"
             style={{ color: 'var(--thread-text)' }}
             dangerouslySetInnerHTML={{ __html: renderMarkdown(thread.content) }}
           />
@@ -114,43 +120,73 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
           </div>
         </div>
 
-        {/* Conversation summary with debate threads inside */}
+        {/* Conversation summary with threaded stream inside */}
         <CommunityReactionSummary threadId={threadId}>
-          {/* Debate columns - rendered inside the summary card */}
           {!loaded && <p className="text-sm text-slate-500">Loading comments…</p>}
 
-          {roots.concur.length === 0 && roots.counter.length === 0 ? (
-            <div className="space-y-3 text-sm" style={{ color: 'var(--thread-text)' }}>
-              <p className="font-semibold" style={{ color: 'var(--thread-title)' }}>No discussion yet</p>
-              <p>Be the first to share your stance.</p>
-              <div className="grid gap-3 md:grid-cols-2">
-                <TrustGate>
-                  <CommentComposer threadId={threadId} stance="concur" />
-                </TrustGate>
-                <TrustGate>
-                  <CommentComposer threadId={threadId} stance="counter" />
-                </TrustGate>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              <DebateColumn
-                threadId={threadId}
-                stance="concur"
-                comments={roots.concur}
-                allComments={allComments}
-                onSelect={zoomNav.zoomTo}
-              />
-              <DebateColumn
-                threadId={threadId}
-                stance="counter"
-                comments={roots.counter}
-                allComments={allComments}
-                onSelect={zoomNav.zoomTo}
-              />
+          {showCallout && (
+            <div
+              className="mt-4 flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white/60 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200"
+              role="status"
+              aria-label="Thread view updated"
+            >
+              <p>
+                Thread view updated: replies are now threaded, with stance shown as a tag.
+              </p>
+              <button
+                type="button"
+                className="shrink-0 rounded-md px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                onClick={dismissCallout}
+                aria-label="Dismiss update notice"
+              >
+                Dismiss
+              </button>
             </div>
           )}
+
+          <div className="space-y-4 mt-4">
+            {allComments.length > 0 ? (
+              <CommentStream threadId={threadId} comments={allComments} />
+            ) : (
+              loaded && <p className="text-sm text-slate-500 italic">No comments yet. Start the discussion!</p>
+            )}
+          </div>
         </CommunityReactionSummary>
+        
+        {/* Add Comment Composer */}
+        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium" style={{ color: 'var(--thread-title)' }}>Join the discussion</p>
+            <TrustGate
+              fallback={
+                <span className="text-xs text-slate-500" data-testid="trust-gate-msg">
+                  Verify to reply
+                </span>
+              }
+            >
+              <button
+                type="button"
+                className="rounded-lg px-3 py-2 text-sm font-medium shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500"
+                style={{ backgroundColor: 'var(--btn-primary-bg)', color: 'var(--btn-primary-text)' }}
+                onClick={() => setShowRootComposer((v) => !v)}
+                aria-label="Reply to thread"
+              >
+                {showRootComposer ? '✕ Close' : '↩ Reply to thread'}
+              </button>
+            </TrustGate>
+          </div>
+
+          {showRootComposer && (
+            <div className="mt-3">
+              <TrustGate>
+                <CommentComposer
+                  threadId={threadId}
+                  onSubmit={async () => setShowRootComposer(false)}
+                />
+              </TrustGate>
+            </div>
+          )}
+        </div>
 
         {/* Back button inside container */}
         <div className="flex justify-start pt-2">
@@ -164,23 +200,6 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
           </button>
         </div>
       </div>
-
-      {/* Zoom overlay (outside container) */}
-      <ZoomableCard
-        isOpen={!!activeZoomComment}
-        onClose={zoomNav.zoomOut}
-        breadcrumbs={zoomNav.stack.map((id, idx) => ({
-          id,
-          label: `Depth ${idx + 1}`,
-          onClick: () => zoomNav.zoomOutTo(idx)
-        }))}
-      >
-        {activeZoomComment && (
-          <div className="space-y-4">
-            <CommentCard comment={activeZoomComment} allComments={allComments} onSelect={zoomNav.zoomTo} isExpanded />
-          </div>
-        )}
-      </ZoomableCard>
     </div>
   );
 };

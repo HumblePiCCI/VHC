@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 import { ThreadView } from './ThreadView';
 
@@ -35,9 +35,26 @@ vi.mock('../../../hooks/useIdentity', () => ({
   useIdentity: () => ({ identity: { session: { trustScore: 1 } } })
 }));
 
+vi.mock('../../../hooks/useSentimentState', () => ({
+  useSentimentState: (selector?: any) =>
+    selector
+      ? selector({ getEyeWeight: () => 0, getLightbulbWeight: () => 0 })
+      : { getEyeWeight: () => 0, getLightbulbWeight: () => 0 }
+}));
+
+vi.mock('../../../hooks/useViewTracking', () => ({
+  useViewTracking: () => undefined
+}));
+
+vi.mock('../CommunityReactionSummary', () => ({
+  CommunityReactionSummary: ({ children }: any) => <div data-testid="community-summary">{children}</div>
+}));
+
 expect.extend(matchers);
 
-describe('ThreadView debate layout', () => {
+describe('ThreadView threaded layout', () => {
+  afterEach(() => cleanup());
+
   beforeEach(() => {
     mockStore.threads = new Map([[baseThread.id, baseThread]]);
     mockStore.comments = new Map();
@@ -45,18 +62,19 @@ describe('ThreadView debate layout', () => {
     mockStore.createComment.mockClear();
     mockStore.vote.mockClear();
     mockStore.userVotes = new Map();
+    window.localStorage.clear();
   });
 
-  it('renders empty state with dual composers', async () => {
+  it('shows a one-time callout and dismisses it', async () => {
     render(<ThreadView threadId={baseThread.id} />);
     await waitFor(() => expect(mockStore.loadComments).toHaveBeenCalled());
 
-    expect(screen.getByText('No discussion yet')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Add a concur…')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Add a counterpoint…')).toBeInTheDocument();
+    expect(screen.getByText(/Thread view updated/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /dismiss update notice/i }));
+    expect(screen.queryByText(/Thread view updated/i)).not.toBeInTheDocument();
   });
 
-  it('splits top-level comments into concur and counter columns', async () => {
+  it('renders comments in a single stream', async () => {
     mockStore.comments = new Map([
       [
         baseThread.id,
@@ -92,9 +110,17 @@ describe('ThreadView debate layout', () => {
     render(<ThreadView threadId={baseThread.id} />);
     await waitFor(() => expect(mockStore.loadComments).toHaveBeenCalled());
 
-    expect(screen.getByText(/Concur \(1\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Counter \(1\)/)).toBeInTheDocument();
     expect(screen.getByText('Agree content')).toBeInTheDocument();
     expect(screen.getByText('Counter content')).toBeInTheDocument();
+  });
+
+  it('toggles the root reply composer', async () => {
+    render(<ThreadView threadId={baseThread.id} />);
+    await waitFor(() => expect(mockStore.loadComments).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /reply to thread/i }));
+    expect(screen.getByTestId('comment-composer')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /reply to thread/i }));
+    expect(screen.queryByTestId('comment-composer')).not.toBeInTheDocument();
   });
 });

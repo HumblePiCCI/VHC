@@ -50,7 +50,7 @@ export function createMockForumStore() {
       ensureIdentity();
       const stance: Exclude<CommentStanceInput, 'reply' | 'counterpoint'> =
         stanceInput === 'counterpoint' ? 'counter' : stanceInput === 'reply' ? 'concur' : stanceInput;
-      if (stance !== 'concur' && stance !== 'counter') {
+      if (stance !== 'concur' && stance !== 'counter' && stance !== 'discuss') {
         throw new Error('Invalid stance');
       }
       const comment: HermesComment = HermesCommentWriteSchema.parse({
@@ -90,6 +90,10 @@ export function createMockForumStore() {
     },
     async loadComments(threadId) {
       return get().comments.get(threadId) ?? [];
+    },
+    getRootComments(threadId) {
+      const list = get().comments.get(threadId) ?? [];
+      return list.filter((c) => c.parentId === null).sort((a, b) => a.timestamp - b.timestamp);
     },
     getCommentsByStance(threadId, stance) {
       const list = get().comments.get(threadId) ?? [];

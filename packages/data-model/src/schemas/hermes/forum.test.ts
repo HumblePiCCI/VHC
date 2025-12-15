@@ -102,6 +102,11 @@ describe('HermesCommentSchema', () => {
     expect(parsed.stance).toBe('concur');
   });
 
+  it('accepts a v1 comment with discuss stance', () => {
+    const parsed = HermesCommentSchema.parse({ ...baseCommentV1, stance: 'discuss' as const });
+    expect(parsed.stance).toBe('discuss');
+  });
+
   it('accepts a v0 reply without targetId', () => {
     const parsed = HermesCommentSchema.parse(baseCommentV0);
     expect(parsed.targetId).toBeUndefined();
@@ -218,6 +223,12 @@ describe('HermesCommentWriteSchema', () => {
   it('accepts canonical v1 payload', () => {
     const parsed = HermesCommentWriteSchema.parse(baseCommentV1);
     expect(parsed.stance).toBe('concur');
+    expect((parsed as any).type).toBeUndefined();
+  });
+
+  it('accepts canonical v1 payload with discuss stance', () => {
+    const parsed = HermesCommentWriteSchema.parse({ ...baseCommentV1, stance: 'discuss' as const });
+    expect(parsed.stance).toBe('discuss');
     expect((parsed as any).type).toBeUndefined();
   });
 });

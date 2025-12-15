@@ -35,25 +35,28 @@ export const CommunityReactionSummary: React.FC<Props> = ({ threadId, children }
   const lastGeneratedAtCount = useRef<number>(0);
 
   const buildPrompt = useCallback(() => {
-    const concurCount = comments.filter((c) => c.stance === 'concur').length;
-    const counterCount = comments.filter((c) => c.stance === 'counter').length;
-    const total = concurCount + counterCount;
-    const concurPct = total > 0 ? Math.round((concurCount / total) * 100) : 50;
-    const counterPct = total > 0 ? Math.round((counterCount / total) * 100) : 50;
+    const concur = comments.filter((c) => c.stance === 'concur');
+    const counter = comments.filter((c) => c.stance === 'counter');
+    const discuss = comments.filter((c) => c.stance === 'discuss');
+
+    const concurCount = concur.length;
+    const counterCount = counter.length;
+    const discussCount = discuss.length;
+
+    const debateTotal = concurCount + counterCount; // Excludes discuss
+    const participantTotal = debateTotal + discussCount;
+
+    const concurPct = debateTotal > 0 ? Math.round((concurCount / debateTotal) * 100) : 0;
+    const counterPct = debateTotal > 0 ? Math.round((counterCount / debateTotal) * 100) : 0;
     
-    const concurText = comments
-      .filter((c) => c.stance === 'concur')
-      .map((c) => c.content)
-      .join('\n');
-    const counterText = comments
-      .filter((c) => c.stance === 'counter')
-      .map((c) => c.content)
-      .join('\n');
+    const concurText = concur.map((c) => c.content).join('\n');
+    const counterText = counter.map((c) => c.content).join('\n');
+    const discussText = discuss.map((c) => c.content).join('\n');
     return `Summarize the following community discussion.
 
 STATISTICS:
-- ${concurPct}% of respondents concur (${concurCount} comments)
-- ${counterPct}% of respondents counter (${counterCount} comments)
+- Participants: ${participantTotal} comments (${concurCount} concur, ${counterCount} counter, ${discussCount} discuss)
+- Debate split (excluding discuss): ${concurPct}% concur, ${counterPct}% counter
 
 CONCUR ARGUMENTS (supporting the topic):
 ${concurText || '(none yet)'}
@@ -61,8 +64,12 @@ ${concurText || '(none yet)'}
 COUNTER ARGUMENTS (opposing the topic):
 ${counterText || '(none yet)'}
 
+DISCUSSIONS / QUESTIONS (neutral):
+${discussText || '(none yet)'}
+
 RULES:
-- Start your summary with a phrase like "The community is divided..." or "${concurPct}% of respondents feel..." or "Most participants agree..."
+- If there are no concur/counter stances yet, start with "No clear stance has emerged yet..." and summarize the discussion/questions.
+- Otherwise start with a phrase like "The community is divided..." or "${concurPct}% of respondents concur..." or "Most participants concur..."
 - Provide a 2-3 sentence neutral summary capturing both sides
 - Be factual and balanced
 - Do NOT include usernames, handles, or any personally identifiable information
@@ -110,7 +117,7 @@ RULES:
   const getSummaryText = () => {
     if (isGenerating) return 'Generating summary…';
     if (aiSummary) return aiSummary;
-    if (comments.length === 0) return 'Add concur or counter arguments below to start the discussion.';
+    if (comments.length === 0) return 'Add support, oppose, or discussion comments below to start the thread.';
     if (comments.length >= 10) return 'Summary will be generated shortly...';
     return `Summary will be generated when ${10 - comments.length} more comments are added.`;
   };

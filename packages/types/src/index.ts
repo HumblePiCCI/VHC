@@ -165,7 +165,7 @@ export type HermesCommentV0 = BaseHermesCommentCommon & {
 
 export type HermesCommentV1 = BaseHermesCommentCommon & {
   schemaVersion: 'hermes-comment-v1';
-  stance: 'concur' | 'counter';
+  stance: 'concur' | 'counter' | 'discuss';
   type?: 'reply' | 'counterpoint';
   targetId?: string;
 };
