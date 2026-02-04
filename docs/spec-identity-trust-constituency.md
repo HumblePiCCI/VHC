@@ -62,14 +62,66 @@ This spec is the single contract for identity, trustScore, and constituency acro
 - Multi-device linking: prove “same human”, reuse nullifier.
 - Recovery: preserve nullifier (hence UBE/QF rewards, sentiment history); rotate wallet addresses, mesh keys, session tokens.
 
-## 6. Test Invariants
+## 6. Agentic Familiars (Delegation)
+
+Familiars are delegated sub-processes of a verified human. They inherit the principal’s trust gate and never multiply influence.
+
+**Types (doc-only, minimal):**
+
+```ts
+interface FamiliarRecord {
+  id: string;
+  label: string;
+  createdAt: number;
+  revokedAt?: number;
+  capabilityPreset: string;
+}
+
+interface DelegationGrant {
+  grantId: string;
+  principalNullifier: string;
+  familiarId: string;
+  scopes: string[];
+  issuedAt: number;
+  expiresAt: number;
+  signature: string;
+}
+
+interface OnBehalfOfAssertion {
+  principalNullifier: string;
+  familiarId: string;
+  grantId: string;
+  issuedAt: number;
+  signature: string;
+}
+```
+
+**Hard invariants (MUST):**
+
+- Familiars MUST NOT have their own `trustScore`; they inherit the principal’s session gating.
+- All platform actions MUST resolve to a principal nullifier; agents never multiply weight.
+- Grants MUST be least-privilege and short-lived (minutes/hours default).
+- Recursive delegation MUST attenuate (sub-agents can only receive a strict subset of parent scopes).
+- Revocation MUST be immediate and local-first (kill grant; background jobs stop).
+
+**Default scopes (by tier):**
+
+- **Tier 1 (Suggest):** `draft`, `triage`
+- **Tier 2 (Act):** `analyze`, `post`, `comment`, `share`
+- **Tier 3 (High-Impact):** `moderate`, `vote`, `fund`, `civic_action`
+
+**Tier rule (MUST):**
+- Tier 3 scopes require explicit human approval at time of action (not just grant issuance).
+- Proposal elevation is a Tier 3 (High-Impact) action.
+
+## 7. Test Invariants
 
 - `derive_nullifier` is deterministic for the same input and sufficiently collision-resistant for expected scale.
 - Scaling is invertible for display: `scaled / 10000` ≈ `trustScore`.
 - `decodeRegionProof` always yields consistent `ConstituencyProof`.
 - On-chain attestations reflect off-chain trustScore within rounding tolerance.
 
-## 7. Integration Map
+## 8. Integration Map
 
 - `useIdentity` / `useWallet`: store `nullifier`, `trustScore`, `scaledTrustScore`, and (when present) `RegionProof`.
 - `SentimentSignal.constituency_proof.nullifier` equals the identity nullifier; `district_hash` and `merkle_root` come from `RegionProof`.

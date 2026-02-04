@@ -51,6 +51,12 @@ This spec captures the Season 0 economic contract (RVU v0, UBE, Faucet, Quadrati
 
 ## 8. XP Linkage (Participation Weight)
 
+### 8.1 Proposal Threads & QF Mapping
+
+- Proposals are **threads with a `proposal` extension** (see `spec-hermes-forum-v0.md`).
+- `qfProjectId` links the proposal-thread to the on-chain `QuadraticFunding` contract.
+- Season 0: proposal support is **off-chain simulation**; future seasons may route real RVU via `castVote`.
+
 - XP is the off-chain, per-nullifier participation ledger (see `spec-xp-ledger-v0.md`), partitioned into `civicXP`, `socialXP`, `projectXP`, with `totalXP` as a deterministic function.
 - XP prototypes the future distribution weight for GWC:
 
@@ -60,3 +66,5 @@ RVU_i   = α * pool * share_i
 ```
 
 - XP is non-transferable, monotonic, and per-nullifier; emission parameters can evolve without retro-editing historic XP. When GWU/RVU index mechanics go live, a defined fraction of new issuance can be allocated using this weight function.
+- Value share and influence are computed per **principal nullifier** with diminishing returns across active projects/topics.
+- Agents (familiars) do not create additional economic identity, voting power, or share; they inherit the principal’s budgets and falloff.

@@ -26,9 +26,11 @@
 ## 1. Core Principles
 
 1.  **The Agora:** A public square for debate. Accessible to all, navigable from the global header.
-2.  **Structured Debate:** Not just comments, but **Counterpoints**.
-3.  **Sybil Resistance:** Posting and voting requires a verified `TrustScore` (e.g., ≥0.5).
-4.  **Community Moderation:** Visibility is driven by `CivicXP` weighted voting and `CivicDecay`.
+2.  **Unified Feed ↔ Forum:** Headlines and threads are the same civic object viewed through different lenses.
+3.  **Proposal Elevation:** Threads can be elevated into proposals with funding metadata and QF linkage.
+4.  **Structured Debate:** Not just comments, but **Counterpoints**.
+5.  **Sybil Resistance:** Posting and voting requires a verified `TrustScore` (e.g., ≥0.5).
+6.  **Community Moderation:** Visibility is driven by `CivicXP` weighted voting and `CivicDecay`.
 
 ---
 
@@ -43,10 +45,17 @@ interface Thread {
   content: string;          // Markdown, ≤ 10,000 chars
   author: string;           // Author's Nullifier (identity key)
   timestamp: number;        // Unix timestamp (ms)
+  topicId: string;          // Stable topic key (urlHash or thread-derived)
   tags: string[];           // e.g., ["Infrastructure", "Proposal"]
   
-  // Optional: Link to VENN analysis
+  // Optional: Link to external source / canonical analysis
+  sourceUrl?: string;
+  urlHash?: string;
+  isHeadline?: boolean;
   sourceAnalysisId?: string; // Link to CanonicalAnalysis.topic_id or analysis_id
+
+  // Optional: Proposal extension (elevated thread)
+  proposal?: ProposalExtension;
   
   // Engagement (raw counts, canonical)
   upvotes: number;
@@ -54,6 +63,31 @@ interface Thread {
   score: number;            // Computed: (upvotes - downvotes) * decayFactor
 }
 ```
+
+```typescript
+interface ProposalExtension {
+  fundingRequest: string;         // RVU amount (display)
+  recipient: string;              // recipient address
+  status: 'draft' | 'active' | 'elevated' | 'funded' | 'closed';
+  qfProjectId?: string;           // set when elevated on-chain
+  sourceTopicId?: string;         // optional link to parent topic when multiple proposals exist
+  attestationProof?: string;      // optional
+  createdAt: number;
+  updatedAt: number;
+}
+```
+
+**Back-compat:** Existing threads without `proposal` remain valid and require no backfill.  
+Treat missing `proposal` as “not a proposal.”
+
+#### 2.1.1 Topic Linkage Rules (Unified Model)
+
+- Every headline maps to exactly one thread (shared `topicId`).
+- Every user-created thread becomes a headline card (shared `topicId`).
+- For URL topics: `topicId = urlHash` (canonical URL hash).
+- For native threads: `topicId = sha256(THREAD_TOPIC_PREFIX + threadId)` to keep a stable key.
+- `THREAD_TOPIC_PREFIX = "thread:"` (constant; do not vary).
+- The scroll is a view over **Topics**, not a separate content system.
 
 ### 2.2 Comment Schema
 
@@ -69,6 +103,7 @@ interface Comment {
   
   content: string;          // Markdown, ≤ 10,000 chars
   author: string;           // Author's Nullifier
+  via?: 'human' | 'familiar'; // Optional provenance (no familiarId by default)
   timestamp: number;
   
   // NEW: Stance for debate structure (replaces type)
@@ -110,7 +145,7 @@ export const HermesCommentSchema = z.union([
 
 **Deprecation Timeline:**
 - Sprint 3.5: Dual-parse (read v0/v1, write v1 only)
-- Sprint 4: Remove v0 read support
+- Sprint 5: Remove v0 read support
 
 **Test Requirements:**
 - [ ] v0 inputs hydrate with correct stance mapping
@@ -126,20 +161,38 @@ Client-side validation and Zod schemas enforce:
 *   `content` (thread or comment): ≤ 10,000 characters.
 *   UI should truncate long content with "Show more" expansion.
 
+### 2.4 Proposal Elevation Rules
+
+- **Trust-gated:** Elevation requires `trustScore ≥ 0.7` (principal nullifier).
+- **Familiar constraint:** Familiars may draft proposal fields, but **cannot elevate** without explicit human approval.
+- **One proposal per topic:** Default is one proposal per `topicId`.  
+  - If multiple proposals are needed, create a new proposal thread and set `proposal.sourceTopicId` (optional) to link back.
+- **Voting separation:** Forum votes affect visibility; proposal support uses QF-style voting (off-chain in Season 0).
+
 ---
 
 ## 3. UI & UX
 
 ### 3.1 The Feed
-*   **Global View:** List of threads sorted by `Hot`, `New`, or `Top`.
+*   **Global View:** List of **Topics** (external headlines + user threads) sorted by `Hot`, `New`, or `Top`.
 *   **Navigation:** Forum is accessed under the HERMES section of the app (e.g., `/hermes/forum`), not under AGORA/governance.
 
 **HERMES vs AGORA Distinction:**
 *   **HERMES** = Communications layer: Messaging (DMs) + Forum (public civic discourse).
-*   **AGORA** = Governance & projects (Sprint 4+): Collaborative document editing, project/policy development, decision-making.
+*   **AGORA** = Governance & projects (Sprint 5+): Collaborative document editing, project/policy development, decision-making.
 *   Forum threads can be elevated into AGORA projects in future sprints (based on engagement, upvotes, tags).
 
-### 3.2 The Discussion View
+### 3.2 Topic Summary Refresh (Verified-Only)
+
+- For topics linked to analyses, re-synthesis is triggered after **N verified comments**.
+- Defaults (aligned with `canonical-analysis-v2`):
+  - `N = 10` verified comments since last synthesis.
+  - Minimum **3 unique verified principals** since last synthesis.
+  - Debounce: at most one refresh per **30 minutes**.
+  - Daily cap: **4** refreshes per topic.
+- Familiars count only if acting on behalf of a verified principal (no extra weight).
+
+### 3.3 The Discussion View
 
 > **UI Refactor (Sprint 3.5):** Migrating from linear thread to two-column debate layout.
 
@@ -155,7 +208,7 @@ Client-side validation and Zod schemas enforce:
 
 **Content Sanitization:** All content (Markdown) must be sanitized before rendering (strip scripts, dangerous HTML) using a whitelisted renderer. This prevents XSS and injection attacks.
 
-### 3.3 Score & Hot Ranking
+### 3.4 Score & Hot Ranking
 
 **Decay Formula:**
 ```typescript

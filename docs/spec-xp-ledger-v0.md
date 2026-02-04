@@ -59,7 +59,25 @@ Where `γ` (concavity) and `α` (pool fraction) are policy variables. Changing c
 
 Exact coefficients are configurable; the ledger tracks the resulting monotonic totals.
 
-## 4. Privacy & Topology
+## 4. Action & Compute Budgets (Per Nullifier)
+
+To prevent agent swarms, each principal nullifier maintains local-first budgets. Agent-triggered actions consume the same budgets as human actions.
+
+**Required counters (Season 0 defaults):**
+- `posts/day`: 20
+- `comments/day`: 50
+- `sentiment_votes/day`: 200
+- `governance_votes/day`: 20
+- `moderation/day`: 10
+- `analyses/day`: 25 (max 5 per topic)
+- `civic_actions/day`: 3 (report generation / send)
+- `shares/day`: 10
+
+Elevation of a thread to a proposal consumes the `governance_votes/day` budget (governance action).
+
+`analyses/day` applies to candidate submissions (v2) and canonical writes (v1/v2). Budgets are enforced locally and MAY be mirrored to an encrypted outbox for audits. They are not public and never increase influence.
+
+## 5. Privacy & Topology
 
 - XP ledger is **sensitive**:
   - Stored on-device per nullifier.
@@ -69,7 +87,7 @@ Exact coefficients are configurable; the ledger tracks the resulting monotonic t
   - Only safe aggregates (e.g., district-level averages) with cohort thresholds (see `spec-data-topology-privacy-v0.md`).
 - No on-chain storage in Season 0.
 
-## 5. Integration Map
+## 6. Integration Map
 
 - `useIdentity`: provides `nullifier` as the XP key.
 - `useXpLedger` (Season 0): maintains `XpLedger` locally; applies emission rules on qualified events.
@@ -79,7 +97,7 @@ Exact coefficients are configurable; the ledger tracks the resulting monotonic t
 
 **Cross-Reference:** The canonical Season 0 emission policy for HERMES Messaging, HERMES Forum, and Project XP is defined in `docs/03-sprint-3-the-agora.md` §3.4. That section specifies exact amounts, caps, windows, and quality thresholds.
 
-## 6. Test Invariants
+## 7. Test Invariants
 
 - XP updates are monotonic and per-nullifier.
 - `totalXP` recomputes deterministically from track values.

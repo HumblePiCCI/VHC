@@ -12,7 +12,7 @@
     - [ ] **Coverage:** **100%** Line/Branch coverage for new/modified modules.
     - [ ] **Browser-Safe:** No `node:*` imports in client code.
     - [ ] **Bundle Budget:** Initial < **1 MiB** (gzip). Lazy AI assets < **10 MiB** (gzip) & cached via SW.
-    - [ ] **Offline E2E:** New flows (Feed/Vote) must pass with `VITE_E2E_MODE=true` (Mocked Clients).
+    - [ ] **Offline E2E:** New flows (Topics/Vote) must pass with `VITE_E2E_MODE=true` (Mocked Clients).
     - [ ] **Performance:** "Expand to Analyze" < 2s (Warm Cache).
     - [ ] **Security:** Attestation/Trust gating required for all engagement/voting.
 
@@ -35,22 +35,28 @@
 
 ---
 
-## Phase 2: The Civic Feed & Nervous System (VENN)
+## Phase 2: The Civic Topics Stream & Nervous System (VENN)
 
-### 2.1 The Civic Feed Experience (UX)
-- [x] **Feed:** Virtualized infinite scroll.
+### 2.1 The Topics Stream Experience (UX)
+- [x] **Feed:** Virtualized infinite scroll over **Topics** (external headlines + user threads).
     - **Tests:** Component tests for windowing thresholds, empty/error states.
 - [x] **Metrics:**
     - **Eye:** Read Interest derived from per-user `eye_weight ∈ [0,2]` (Civic Decay applied on each read/expand). UI may show Eye score plus unique readers (`eye_weight > 0`).
-    - **Lightbulb:** Engagement Score derived from per-user `lightbulb_weight ∈ [0,2]` (Civic Decay applied on table interactions), used for story-level engagement (not per-cell ratios).
+    - **Lightbulb:** Engagement Score derived from per-user `lightbulb_weight ∈ [0,2]` (Civic Decay applied on table interactions), used for topic-level engagement (not per-cell ratios).
 - [x] **Transitions:** "Lift & Hover" effect (Scale + Z-Index) on expansion.
     - **Tests:** Verify lift state, metric rendering, and a11y/keyboard support.
-- [x] **Analysis UI:**
+- [x] **Analysis + Thread UI:**
     - Narrative Summary.
     - **Perspectives Table:** Two columns (Frame/Reframe).
     - **Voting:** Independent +/- toggle per cell (Frame & Reframe).
     - **Logic:** 3-state (Agree/Disagree/None). Toggling active state resets to None. Switching state flips vote.
     - **Stats:** Display aggregate sentiment ratio for each item.
+    - **Thread:** Embedded discussion for the same `topicId` when available.
+    - **Proposal threads:** Any thread can be elevated to a proposal by adding `thread.proposal` (fundingRequest + recipient), which enables the Support widget.
+    - **Table provenance:** Frame/Reframe rows come from `CanonicalAnalysisV1.perspectives[]`.
+    - **Quorum mode:** The first **N verified opens** (default 5) generate candidate analyses that critique/refine prior summaries/tables for accuracy before canonicalization.
+    - **Reanalysis epochs (verified-only):** After every **10 verified** new comments (min 3 unique verified principals), the Topic is re-analyzed (article/topic seed + thread digest) and `perspectives[]` may update.
+    - **Rate limits:** Debounce at most one refresh per 30 minutes; cap 4 per topic per day.
 - [x] **State Management:**
     - **Tests:** Unit tests for pagination, caching, and local persistence.
     - **E2E:** Mocked offline mode (no network).
@@ -60,7 +66,7 @@
     - **Formula:** `next = current + (2.0 - current) * 0.3`.
     - **Tests:** Verify asymptotic ceiling (never > 2.0) and monotonic growth.
     - **Scope:** Applied to the user's per-topic Lightbulb weight. Each qualifying interaction = one decay step (engagement only per `spec-civic-sentiment.md` §4; reads update Eye separately).
-- [x] **Local State:** Persist `article_interaction_state` (current score) in Gun/IDB.
+- [x] **Local State:** Persist `topic_interaction_state` (current score) in Gun/IDB.
 - [x] **Optimization:** Integrate `q4f16_1` (or optimal) weights.
     - **Validation:** Worker entry < 20KB, Lazy Chunk < 10MB.
 - [x] **Caching:** Implement persistent caching (IndexedDB) for weights & analysis.
@@ -168,6 +174,7 @@
   - [x] Implement `RemoteApiEngine` (calls `/api/analyze` proxy) and `LocalMlEngine` (wraps WebLLM/MLC).
   - [x] Implement `EngineRouter` supporting `remote-first`, `local-first`, `remote-only`, `local-only`, and `shadow` modes with fallback behavior.
   - [x] Tests: simulate engine failures and verify correct fallback per policy.
+  - [!] **Direction Update (2026-02-02):** Default policy is now `local-only` until explicit user opt-in for remote engines. Real engine wiring remains pending; current worker uses a mock engine for output.
 
 - [x] **Parsing & Schema Validation:**
   - [x] Add `AnalysisResultSchema` and `parseAnalysisResponse(raw)` in `packages/ai-engine/src/schema.ts` mirroring `AnalysisResult` from `canonical-analysis-v1`.
@@ -206,8 +213,9 @@
     - [x] `worker.ts` unwraps `{ step_by_step, final_refined }` and validates raw `AnalysisResult` fallback.
     - [x] Tests cover wrapped + raw responses and validation failures.
 - [x] **First-to-File Logic:**
-    - [x] `getOrGenerate(url, store, generate)` enforces strict first-to-file on `urlHash`.
-    - [x] Tests cover `reused=true` for existing and storing once for new.
+  - [x] `getOrGenerate(url, store, generate)` enforces strict first-to-file on `urlHash`.
+  - [x] Tests cover `reused=true` for existing and storing once for new.
+  - [!] **Direction Update (2026-02-02):** v1 remains first-to-file; v2 will shift canonicalization to quorum synthesis (first N candidate analyses → synthesis + divergence).
 - [x] **Array Invariants:**
     - [x] Zod refine enforces equal lengths for `bias_claim_quote`, `justify_bias_claim`, `biases`, `counterpoints`.
     - [x] Tests prove valid payload passes and mismatched lengths fail.
@@ -334,6 +342,6 @@
 ## Exit Criteria for Sprint 2
 - [x] **CI Green:** All gates (Unit, Build, E2E, Bundle, Lighthouse) passing.
 - [x] **Governance Live:** Users can submit/vote (Attestation Enforced).
-- [x] **Civic Feed Polished:** UX is smooth, AI is fast (≤ 2s), Decay is visible, Eye/Lightbulb behave according to `spec-civic-sentiment.md`, and SentimentSignal events are emitted and validated locally.
+- [x] **Topics Stream Polished:** UX is smooth, AI is fast (≤ 2s), Decay is visible, Eye/Lightbulb behave according to `spec-civic-sentiment.md`, and SentimentSignal events are emitted and validated locally.
 - [x] **Canonical Contract Locked:** `canonical-analysis-v1` defined, validated, and used end-to-end (LLM → worker → storage → UI) with tests green.
 - [x] **Docs:** `manual_test_plan.md` updated for Governance flows.

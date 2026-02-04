@@ -1,32 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 interface Props {
-  onPost: (stance: 'concur' | 'counter' | 'discuss') => Promise<void>;
+  value: number;
+  onChange: (value: number) => void;
   disabled?: boolean;
 }
 
-type Stance = 'concur' | 'counter' | 'discuss';
-
-export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
+export const SlideToPost: React.FC<Props> = ({ value, onChange, disabled = false }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState(50); // 0..100, 50=center
-  const [isPosting, setIsPosting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-
   const cleanupMouseListenersRef = useRef<null | (() => void)>(null);
-  const resetTimerRef = useRef<number | null>(null);
-  const positionRef = useRef(position);
-  const isPostingRef = useRef(isPosting);
   const disabledRef = useRef(disabled);
-
-  useEffect(() => {
-    positionRef.current = position;
-  }, [position]);
-
-  useEffect(() => {
-    isPostingRef.current = isPosting;
-  }, [isPosting]);
 
   useEffect(() => {
     disabledRef.current = disabled;
@@ -36,12 +20,6 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
-
-  const positionToStance = (pos: number): Stance => {
-    if (pos <= 30) return 'concur';
-    if (pos >= 70) return 'counter';
-    return 'discuss';
-  };
 
   const getLabel = (pos: number): string => {
     if (pos <= 15) return 'Strong Support';
@@ -67,43 +45,6 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
     return Math.max(0, Math.min(100, pct));
   }, []);
 
-  const setPositionFromClientX = useCallback(
-    (clientX: number) => {
-      const next = getPositionFromClientX(clientX);
-      positionRef.current = next;
-      setPosition(next);
-    },
-    [getPositionFromClientX]
-  );
-
-  const resetToCenter = useCallback(() => {
-    positionRef.current = 50;
-    setPosition(50);
-  }, []);
-
-  const commitPost = useCallback(async () => {
-    if (disabledRef.current || isPostingRef.current) return;
-    const stance = positionToStance(positionRef.current);
-    isPostingRef.current = true;
-    setIsPosting(true);
-
-    try {
-      await onPost(stance);
-      setShowSuccess(true);
-      if (resetTimerRef.current) window.clearTimeout(resetTimerRef.current);
-      resetTimerRef.current = window.setTimeout(() => {
-        setShowSuccess(false);
-        resetToCenter();
-      }, 1200);
-    } catch (err) {
-      console.warn('[vh:forum] Slide-to-post failed:', err);
-      resetToCenter();
-    } finally {
-      isPostingRef.current = false;
-      setIsPosting(false);
-    }
-  }, [onPost, resetToCenter]);
-
   const endDrag = useCallback(() => {
     setIsDragging(false);
     cleanupMouseListenersRef.current?.();
@@ -112,14 +53,17 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
 
   const startMouseDrag = useCallback(
     (clientX: number) => {
-      if (disabledRef.current || isPostingRef.current) return;
+      if (disabledRef.current) return;
       setIsDragging(true);
-      setPositionFromClientX(clientX);
+      
+      const next = getPositionFromClientX(clientX);
+      onChange(next);
 
-      const onMouseMove = (e: MouseEvent) => setPositionFromClientX(e.clientX);
+      const onMouseMove = (e: MouseEvent) => {
+        onChange(getPositionFromClientX(e.clientX));
+      };
       const onMouseUp = () => {
         endDrag();
-        void commitPost();
       };
 
       document.addEventListener('mousemove', onMouseMove);
@@ -129,13 +73,12 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
         document.removeEventListener('mouseup', onMouseUp);
       };
     },
-    [commitPost, endDrag, setPositionFromClientX]
+    [endDrag, getPositionFromClientX, onChange]
   );
 
   useEffect(() => {
     return () => {
       cleanupMouseListenersRef.current?.();
-      if (resetTimerRef.current) window.clearTimeout(resetTimerRef.current);
     };
   }, []);
 
@@ -145,47 +88,38 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
   };
 
   const onTouchStart = (e: React.TouchEvent) => {
-    if (disabled || isPosting) return;
+    if (disabled) return;
     setIsDragging(true);
-    setPositionFromClientX(e.touches[0].clientX);
+    onChange(getPositionFromClientX(e.touches[0].clientX));
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
-    setPositionFromClientX(e.touches[0].clientX);
+    onChange(getPositionFromClientX(e.touches[0].clientX));
   };
 
   const onTouchEnd = () => {
     if (!isDragging) return;
     endDrag();
-    void commitPost();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled || isPosting) return;
+    if (disabled) return;
 
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      const next = Math.max(0, positionRef.current - 10);
-      positionRef.current = next;
-      setPosition(next);
+      onChange(Math.max(0, value - 10));
       return;
     }
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      const next = Math.min(100, positionRef.current + 10);
-      positionRef.current = next;
-      setPosition(next);
+      onChange(Math.min(100, value + 10));
       return;
-    }
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      void commitPost();
     }
   };
 
-  const thumbColor = getThumbColor(position);
-  const label = getLabel(position);
+  const thumbColor = getThumbColor(value);
+  const label = getLabel(value);
 
   return (
     <div
@@ -210,11 +144,11 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
       onTouchEnd={onTouchEnd}
       onKeyDown={onKeyDown}
       role="slider"
-      aria-label="Slide to post your comment. Left for support, right for oppose, center for discuss."
+      aria-label="Select stance. Left for support, right for oppose, center for discuss."
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(position)}
-      aria-valuetext={`${label}. Release to post.`}
+      aria-valuenow={Math.round(value)}
+      aria-valuetext={label}
       aria-disabled={disabled}
       tabIndex={disabled ? -1 : 0}
       data-testid="slide-to-post"
@@ -233,7 +167,7 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
           ].join(' ')}
           data-testid="slide-label-idle"
         >
-          {showSuccess ? '✓ Posted!' : isPosting ? 'Posting…' : 'Slide to Post'}
+          {label}
         </span>
 
         <span
@@ -252,11 +186,10 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
         className={[
           'pointer-events-none absolute top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white',
           !prefersReducedMotion ? 'transition-all duration-75' : '',
-          !prefersReducedMotion && isDragging ? 'scale-110' : '',
-          !prefersReducedMotion && isPosting ? 'animate-pulse' : ''
+          !prefersReducedMotion && isDragging ? 'scale-110' : ''
         ].join(' ')}
         style={{
-          left: `calc(${position}% - 20px)`,
+          left: `calc(${value}% - 20px)`,
           borderWidth: '3px',
           borderColor: thumbColor,
           boxShadow:
@@ -277,4 +210,3 @@ export const SlideToPost: React.FC<Props> = ({ onPost, disabled = false }) => {
 };
 
 export default SlideToPost;
-

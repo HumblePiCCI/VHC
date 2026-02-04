@@ -299,5 +299,5 @@ jobs:
 - All HERMES components have `data-testid` attributes
 - Forum and Messaging E2E flows implemented
 
-**Next step**: Proceed to Sprint 4 (The Bridge) or add BrowserStack for real cross-device testing.
+**Next step**: Proceed to Sprint 4 (Agentic Foundation) or add BrowserStack for real cross-device testing.
 

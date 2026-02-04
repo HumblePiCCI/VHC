@@ -36,6 +36,7 @@ interface Message {
   
   // Metadata (Unencrypted but minimal)
   type: 'text' | 'image' | 'file';
+  via?: 'human' | 'familiar'; // Optional provenance (no familiarId by default)
   
   // Integrity & Device Keys (REQUIRED)
   signature: string;        // SEA.sign(id:timestamp:content, senderDevicePair)

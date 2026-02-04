@@ -7,6 +7,13 @@ This document summarizes the non-negotiable guardrails for the TRINITY Bio-Econo
 - **Local-First**: Data is authored/stored locally. Cloud is a relay. Offline operation is mandatory.
 - **350 LOC Limit**: Hard cap per source file (tests/types exempt). Enforce via CI. Split modules aggressively.
 
+## 1.1 Agentic Guardrails (Confusable Deputies by Default)
+- **Prompt Injection is First-Class**: Any agent that reads untrusted content is a confusable deputy; treat content as hostile by default.
+- **Deny-by-Default Tools**: No shell/file write/network/signing unless explicitly scoped by a `DelegationGrant`.
+- **Sandbox “Skills”**: Treat third-party skills as untrusted code; marketplaces are supply-chain risk.
+- **Short-Lived Tokens**: Use scoped, expiring grants; never pass raw tokens to upstream tools.
+- **Human-in-the-Loop for High Impact**: Votes, funding, civic actions require explicit human approval (OWASP “Excessive Agency”).
+
 ## 2. CI/CD & Tooling Guardrails
 
 ### 2.1 Dependency & Type Hygiene
@@ -23,7 +30,7 @@ This document summarizes the non-negotiable guardrails for the TRINITY Bio-Econo
     - *Impl*: Vitest excludes `packages/e2e`. Playwright runs separately against a built preview.
 - **True Offline Mode (The Short-Circuit)**:
     - **Rule**: E2E tests must not just "configure" network down; they must **bypass initialization** of heavy I/O subsystems entirely.
-    - *Impl*: App State must detect `VITE_E2E_MODE` and inject **Full Mocks** (not just empty configs) for Gun, WebLLM, and Auth. No WebSocket or WASM initialization allowed in Playwright.
+    - *Impl*: App State must detect `VITE_E2E_MODE` and inject **Full Mocks** (not just empty configs) for Gun, WebLLM, Auth, and Familiar orchestration. No WebSocket or WASM initialization allowed in Playwright.
 - **Runtime Compatibility**:
     - **Rule**: Legacy libs accessing `process` or `global` must be stubbed at the Bundler level, not the Code level.
     - *Impl*: `vite.config.ts` uses `define: { 'process.env': {}, global: 'window' }` to satisfy strict browser environments without polyfilling Node core.

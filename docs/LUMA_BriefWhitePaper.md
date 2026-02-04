@@ -37,6 +37,10 @@ The link between a user's legal identity (KYC) and their anonymous DDNA is seale
 
 We assume our adversaries are state-level actors with unlimited compute and physical access. Therefore, our security relies on the one thing they cannot spoof: Physics. We bind identity to time, entropy, and physical interaction with the real world.
 
+2.5 Delegated Agents (Familiars) — Inheritance Rule (Note)
+
+Agents (“familiars”) are delegated sub‑processes of a verified human. They **inherit** the principal’s trust gate and never multiply influence. All agent actions must resolve to a human principal nullifier and are scoped, expiring, and revocable.
+
 3. Technical Architecture: The "Physics of Trust"
 
 LUMA replaces static passwords and simple selfies with dynamic, physics-bound proofs.

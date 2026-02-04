@@ -17,6 +17,10 @@ This spec defines where data lives (device, mesh, chain, cloud), what is public 
 | RegionProof       | Local-only (per `spec-identity-trust-constituency.md`)           | – (no v0 usage)                                | –                                                | –            | Sensitive |
 | XP Ledger         | `localStorage: vh_xp_ledger` (per nullifier XP tracks)           | – (or encrypted outbox to Guardian node)       | –                                                | –            | Sensitive |
 | Messages (future) | TBD                                                              | `vh/chat/*`, `vh/outbox/*` (guarded; see below)| –                                                | Attachments  | Sensitive |
+| FamiliarRecord    | Local-only (encrypted)                                           | –                                              | –                                                | –            | Sensitive |
+| DelegationGrant   | Local-only (encrypted)                                           | – (optional encrypted backup only)             | –                                                | –            | Sensitive |
+| AgentActionLog    | Local-only                                                       | – (optional encrypted outbox)                  | –                                                | –            | Sensitive |
+| DraftArtifacts    | Local-only until publish                                         | –                                              | –                                                | –            | Sensitive |
 
 ## 2. Classification & Rules
 
@@ -28,6 +32,8 @@ Rules:
 - Sensitive objects either stay on-device or travel via encrypted channels (user-scoped Gun space, outbox to Guardian Nodes).
 - `district_hash` and `nullifier` never appear together in any public structure; no identity/constituency data in CanonicalAnalysis.
 - XP ledger (per nullifier) is sensitive; only safe aggregates with cohort thresholds may be exposed.
+- Public mesh objects MUST NOT include delegation grants, familiar IDs, or agent logs in plaintext.
+- If exported to a Guardian/aggregator, delegation data MUST be encrypted and still obey the existing `{district_hash, nullifier}` separation rules.
 
 ## 3. Sentiment & Constituency Flow
 

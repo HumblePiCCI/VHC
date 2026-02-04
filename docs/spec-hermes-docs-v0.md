@@ -1,7 +1,7 @@
 # HERMES Docs Spec (v0)
 
 **Version:** 0.1
-**Status:** Draft — Sprint 4 Planning
+**Status:** Draft — Sprint 5 Planning
 **Context:** Secure, collaborative document editing for TRINITY OS.
 
 ---
@@ -45,7 +45,8 @@ interface HermesDocument {
   // Elevation (optional)
   sourceThreadId?: string;        // If created from Forum thread
   elevatedToThreadId?: string;    // If published to Forum
-  elevatedToActionId?: string;    // If used for Bridge action
+  elevatedToProposalThreadId?: string; // If elevated to proposal-thread
+  elevatedToActionId?: string;    // If used for Civic Action Kit action
 }
 ```
 
@@ -62,6 +63,7 @@ interface DocumentOperation {
   
   // Authorship
   author: string;                 // Nullifier of editor
+  via?: 'human' | 'familiar';     // Optional provenance (no familiarId by default)
   timestamp: number;              // Unix timestamp (ms)
   
   // Ordering
@@ -102,7 +104,7 @@ interface DocumentKeyShare {
 | `draft` | Personal notes, work-in-progress | 0.5 | None |
 | `proposal` | Elevatable to QF / governance | 0.5 | `projectXP` |
 | `report` | Civic analysis summary | 0.5 | `civicXP` |
-| `letter` | Legislative Bridge draft | 0.7 | `civicXP` |
+| `letter` | Civic Action Kit draft | 0.7 | `civicXP` |
 
 ---
 
@@ -556,7 +558,7 @@ function persistDocumentKey(nullifier: string, docId: string, key: string): void
 ### 9.3 Elevation XP
 
 - Document elevated to Forum thread: +2 `projectXP`
-- Document used for Bridge action: +2 `civicXP`
+- Document used for Civic Action Kit action: +2 `civicXP`
 
 ---
 
@@ -637,4 +639,3 @@ function persistDocumentKey(nullifier: string, docId: string, key: string): void
 - **Public Documents:** Optional public sharing with read-only link
 - **Templates:** Pre-built document templates for proposals, letters
 - **Export:** PDF, Markdown, DOCX export
-

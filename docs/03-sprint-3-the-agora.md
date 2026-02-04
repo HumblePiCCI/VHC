@@ -71,11 +71,11 @@
 ### 1.6 HERMES vs AGORA Naming
 - [x] **Navigation Model:**
     - **HERMES** = Communications layer: Messaging (DMs) + Forum (public civic discourse).
-    - **AGORA** = Governance & projects (Sprint 4+): Collaborative documents, project/policy development, decision-making.
+    - **AGORA** = Governance & projects (Sprint 5+): Collaborative documents, project/policy development, decision-making.
 - [x] **Routing:**
     - HERMES tab → `/hermes` → surfaces both Messaging and Forum.
-    - AGORA tab → `/governance` (or `/agora`) → governance/proposals (Sprint 4+).
-- [x] **Elevation Path (Future):** Forum threads can be elevated into AGORA projects based on engagement, upvotes, and tags. *Deferred to Sprint 4.*
+    - AGORA tab → `/governance` (or `/agora`) → governance/proposals (Sprint 5+).
+- [x] **Elevation Path (Future):** Forum threads can be elevated into AGORA projects based on engagement, upvotes, and tags. *Deferred to Sprint 5.*
 
 ---
 
@@ -1670,10 +1670,10 @@ Project XP rides on Forum structures and tags.
 5. Decrypt channel preview in ChannelList
 6. Wire contacts into UI (contact list panel)
 
-**✅ SPRINT 3 CORE COMPLETE — Ready for Sprint 4:**
+**✅ SPRINT 3 CORE COMPLETE — Ready for Sprint 4 (Agentic Foundation):**
 - All tests passing: 242+ unit + 10 E2E ✅
 - Manual test checklist complete ✅
 - Messaging: ✅ PASSED
 - Forum Threads: ✅ PASSED
 - Forum Comments: ✅ PASSED
-- **Proceed to `docs/04-sprint-4-the-bridge.md`**
+- **Proceed to `docs/04-sprint-agentic-foundation.md`**

@@ -88,11 +88,11 @@ Note: Civic Decay logic implemented in Sprint 1 is a prototype. The canonical Ci
 *Note:* The Sprint 1 analysis pipeline is a prototype. The canonical AI engine contract (prompt, JSON wrapper, schema validation, and hallucination guardrails) is defined in `docs/AI_ENGINE_CONTRACT.md` and `docs/canonical-analysis-v1.md` and fully enforced in Sprint 2. Season 1 data placement (analyses, sentiment) is proto; Season 0 topology/privacy rules (public CanonicalAnalyses, local-only sentiment, no constituency in mesh) are defined in `spec-data-topology-privacy-v0.md` and enforced starting in Sprint 2.
 
 ### 3.3 UI Polish & Integration
-- [x] **Feed:** Create a "News Feed" view showing recent Canonical Analyses.
+- [x] **Feed:** Create a "Topics stream" (formerly News Feed) showing recent Canonical Analyses.
 - [x] **Wallet:** Create a "Wallet" view showing RVU balance and UBE claim status.
 - [x] **Performance:** Enforce Bundle Budget (≤ 1 MiB gz) and Lighthouse Perf ≥ 90.
 
-**DoD:** User can paste a URL, generate/view an Analysis (local inference), and see it appear in the global feed. UI meets performance budgets.
+**DoD:** User can paste a URL, generate/view an Analysis (local inference), and see it appear in the global Topics stream. UI meets performance budgets.
 
 ---
 

@@ -1,7 +1,8 @@
 # AI Engine & Analysis Contract
 
 Version: 0.1  
-Status: Canonical for Sprints 2–3
+Status: Canonical for Sprints 2–3  
+Implementation note (2026-02-02): Worker currently uses a mock engine; real engine wiring is pending and defaults to `local-only`.
 
 Defines the contract between raw article text, AI engines (remote/local), JSON responses, validation/guardrails, and `CanonicalAnalysisV1` objects.
 
@@ -23,7 +24,7 @@ Create a precise, engine-agnostic pipeline: prompt → engine → JSON → valid
 - `JsonCompletionEngine`: `{ id, kind: 'remote' | 'local', modelName, completeJson(prompt) }`.
 - `EnginePolicy`: `remote-first`, `local-first`, `remote-only`, `local-only`, `shadow`.
 - `EngineRouter.run(articleText)`: generates prompt, selects engine per policy, returns `{ raw, engine }`.
-- Migration: Season 0 prod = `remote-first`; dev/E2E = `local-only`; later `local-first` / `shadow`.
+- Migration: Season 0 prod = `local-only` by default; `remote-*` requires explicit user opt-in. `local-first` / `shadow` are roadmap targets.
 
 ## 4. JSON Schema & Parsing
 
@@ -58,7 +59,8 @@ Create a precise, engine-agnostic pipeline: prompt → engine → JSON → valid
 - Build `CanonicalAnalysisV1` from validated `AnalysisResult` plus:
   - `engine` provenance `{ id, kind, modelName }`.
   - `warnings`.
-- Validate with `CanonicalAnalysisSchema` (see `docs/canonical-analysis-v1.md`); persist via mesh/First-to-File logic.
+- Validate with `CanonicalAnalysisSchema` (see `docs/canonical-analysis-v1.md`); persist via mesh/First-to-File logic (v1).
+- Planned v2 will shift canonicalization to quorum synthesis (see `docs/canonical-analysis-v2.md`).
 
 ## 7. Failure Modes & Logging
 
@@ -67,7 +69,13 @@ Create a precise, engine-agnostic pipeline: prompt → engine → JSON → valid
 - Guardrail warnings attached (non-fatal).
 - Shadow mode: log/compare primary vs shadow outputs for evaluation.
 
-## 8. Test Matrix
+## 8. Familiar Runtime Appendix
+
+- Familiars may act as **job runners** for analysis generation, but outputs MUST flow through the same prompt → JSON → validation pipeline.
+- Free-form tool use in the analysis path is forbidden unless explicitly scoped by a `DelegationGrant` and logged locally.
+- Remote engine use requires explicit user opt-in; default remains `local-only`.
+
+## 9. Test Matrix
 
 - Prompt tests: required keys present; article enclosed.
 - EngineRouter tests: policy behaviors, fallbacks.

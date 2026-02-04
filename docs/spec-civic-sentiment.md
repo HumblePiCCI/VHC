@@ -7,7 +7,7 @@ This document is the normative contract for engagement and sentiment across clie
 
 ## 1. Domain Concepts
 
-- `topic_id` – hash of canonical URL.
+- `topic_id` – stable topic key (urlHash for URL topics; deterministic thread-derived hash for native threads).
 - `analysis_id` – stable ID/hash of the canonical analysis object.
 - `point_id` – ID for a bias/counterpoint/perspective cell.
 - `user_id` / `nullifier` – identity linkage via LUMA.
@@ -22,7 +22,7 @@ This document is the normative contract for engagement and sentiment across clie
 ```ts
 // One user, one point, one interaction
 interface SentimentSignal {
-  topic_id: string;       // Hash of Canonical URL
+  topic_id: string;       // Stable topic key (urlHash or thread-derived)
   analysis_id: string;    // Hash of the Canonical Analysis Object
   point_id: string;       // ID of the bias/counterpoint/perspective
   agreement: 1 | 0 | -1;  // 3-state Agree / None / Disagree
@@ -47,6 +47,8 @@ Invariants:
 - `agreement` is a 3-state toggle; there is no partial sentiment.
 - `constituency_proof.nullifier` equals the user’s identity nullifier.
 - `district_hash` MUST come from a valid RegionProof (or dev stub shape).
+- Sentiment is per **principal nullifier** only; familiars cannot create additional voters or weight.
+- Optional local-only debug metadata (e.g., `emitted_via_familiar_id`) MAY exist in memory but MUST NOT be published to mesh or chain.
 
 Emission rules:
 

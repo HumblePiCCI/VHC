@@ -1,21 +1,21 @@
-# Sovereign Legislative Bridge Spec (v0)
+# Civic Action Kit Spec (v0)
 
 **Version:** 0.1
-**Status:** Draft — Sprint 4 Planning
-**Context:** Automated delivery of verified constituent sentiment to legislators for TRINITY OS.
+**Status:** Draft — Sprint 5 Planning
+**Context:** Facilitation of verified constituent outreach (reports + contact channels) for TRINITY OS.
 
-> **"We do not ask permission to speak. If APIs are blocked, we automate the delivery via headless browsers."**
-> — System Architecture Prime Directive #5
+> **"We enable constituents to speak through user-initiated channels. No default automation."**
+> — System Architecture Prime Directive #5 (updated)
 
 ---
 
 ## 1. Core Principles
 
-1.  **Sovereign Delivery:** If APIs are blocked, we automate via headless browsers.
-2.  **Verified Voice:** All actions require constituency proof (RegionProof) — you can only contact YOUR representatives.
+1.  **Civic Facilitation:** We provide reports + contact channels; the user initiates delivery.
+2.  **Verified Voice:** Actions require constituency proof (RegionProof) — you can only contact YOUR representatives.
 3.  **Privacy-Preserving:** Nullifiers and ZK proofs prevent de-anonymization while proving residency.
-4.  **Proof of Delivery:** Every submission generates a screenshot receipt as proof.
-5.  **Human-in-the-Loop:** CAPTCHAs require user intervention; automation assists, not replaces.
+4.  **Local-Only PII:** Personal details remain on-device; no nullifier + PII linkage in shared records.
+5.  **Clear Consent:** Delivery is explicit (email/phone/share/export) and user-visible.
 
 ---
 
@@ -39,46 +39,17 @@ interface Representative {
   districtHash: string;           // SHA256 hash for matching RegionProof
   
   // Contact
-  contactUrl: string;             // Official contact form URL
-  contactMethod: 'form' | 'email' | 'both';
+  contactUrl?: string;            // Official contact page (manual use)
+  contactMethod: 'email' | 'phone' | 'both' | 'manual';
   email?: string;                 // Direct email if available
-  
-  // Form Automation
-  formMapping: FormFieldMapping;  // Field ID → CSS selector mapping
+  phone?: string;                 // Direct office phone if available
+  website?: string;
   
   // Metadata
   photoUrl?: string;
   website?: string;
   socialHandles?: Record<string, string>;
-  lastVerified: number;           // When form mapping was last verified
-}
-
-interface FormFieldMapping {
-  // Standard fields
-  firstName?: string;             // CSS selector
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  
-  // Message fields
-  subject?: string;
-  topic?: string;                 // Dropdown selector
-  message?: string;
-  
-  // Form submission
-  submitButton: string;           // Submit button selector
-  
-  // Optional fields
-  prefix?: string;                // Mr/Ms/Dr
-  suffix?: string;
-  addressLine2?: string;
-  
-  // CAPTCHA detection
-  captchaSelector?: string;       // If present, requires human intervention
+  lastVerified: number;           // When contact data was last verified
 }
 ```
 
@@ -98,26 +69,16 @@ interface LegislativeAction {
   // Content
   topic: string;                  // Topic category (≤ 100 chars)
   stance: 'support' | 'oppose' | 'inform';
-  subject: string;                // Email/form subject (≤ 200 chars)
+  subject: string;                // Email subject (≤ 200 chars)
   body: string;                   // Letter body (50-5000 chars)
-  
-  // User Info (for form filling)
-  userData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    address: string;
-    city: string;
-    state: string;
-    zip: string;
-  };
+  reportId: string;               // Local report reference (PDF)
+  deliveryMethod: 'email' | 'phone' | 'share' | 'export' | 'manual';
   
   // Verification
   constituencyProof: ConstituencyProof;
   
   // State
-  status: 'draft' | 'queued' | 'sending' | 'sent' | 'failed' | 'captcha_required';
+  status: 'draft' | 'ready' | 'shared' | 'sent' | 'failed';
   
   // Source (optional)
   sourceDocId?: string;           // If drafted in HERMES Docs
@@ -125,11 +86,9 @@ interface LegislativeAction {
   
   // Timestamps
   createdAt: number;
-  queuedAt?: number;
   sentAt?: number;
   
-  // Retry
-  retryCount: number;
+  // Errors (local-only)
   lastError?: string;
 }
 
@@ -151,21 +110,17 @@ interface DeliveryReceipt {
   actionId: string;               // Parent action ID
   
   // Result
-  status: 'pending' | 'success' | 'failed' | 'captcha_required';
+  status: 'pending' | 'success' | 'failed';
   timestamp: number;
-  
-  // Proof
-  screenshotHash?: string;        // SHA256 of screenshot PNG
-  screenshotUrl?: string;         // MinIO URL (encrypted blob)
+  deliveryMethod: 'email' | 'phone' | 'share' | 'export' | 'manual';
   
   // Debug (for failures)
   errorMessage?: string;
-  errorCode?: string;             // e.g., 'TIMEOUT', 'CAPTCHA', 'FORM_CHANGED'
-  pageUrl?: string;               // Final URL after submission
+  errorCode?: string;             // e.g., 'SEND_FAILED'
   
-  // Retry metadata
+  // Retry metadata (local-only)
   retryCount: number;
-  previousReceiptId?: string;     // If this is a retry
+  previousReceiptId?: string;
 }
 ```
 
@@ -240,7 +195,7 @@ async function updateDatabase(): Promise<void> {
 
 ---
 
-## 4. Automation Engine
+## 4. Delivery Flow (Facilitation)
 
 ### 4.1 Architecture Overview
 
@@ -248,239 +203,79 @@ async function updateDatabase(): Promise<void> {
 ┌─────────────────────────────────────────────────────────────────┐
 │                         PWA (Web)                                │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │                 Action Center UI                         │    │
+│  │                Civic Action Kit UI                       │    │
 │  │   • Draft letter                                         │    │
-│  │   • Queue for submission                                 │    │
-│  │   • View receipts                                        │    │
+│  │   • Generate report (PDF)                                │    │
+│  │   • Open email/phone/share/export                        │    │
+│  │   • Mark as sent                                         │    │
 │  └───────────────────────┬─────────────────────────────────┘    │
 └──────────────────────────┼──────────────────────────────────────┘
-                           │ IPC / Tauri Command
+                           │ Native intents / OS share sheet
 ┌──────────────────────────▼──────────────────────────────────────┐
-│                    Desktop App (Tauri)                           │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │              AutomationRunner                            │    │
-│  │   • Launch Playwright browser                            │    │
-│  │   • Fill form fields                                     │    │
-│  │   • Handle CAPTCHA (show to user)                       │    │
-│  │   • Capture screenshot                                   │    │
-│  │   • Return receipt                                       │    │
-│  └─────────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-                           │
-                           │ OR (Mobile / Web-only fallback)
-                           ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Home Guardian Node                             │
-│   • Receives signed action payload                               │
-│   • Verifies constituency proof                                  │
-│   • Executes automation on user's behalf                        │
-│   • Returns encrypted receipt                                    │
+│                     User Devices & Apps                          │
+│  • Email client (mailto)                                         │
+│  • Phone app (tel)                                               │
+│  • Share target (copy/export/PDF)                                │
+│  • Official contact page (manual use)                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 Desktop Automation Flow
+### 4.2 Report Generation
 
 ```typescript
-interface AutomationResult {
-  success: boolean;
-  receipt: DeliveryReceipt;
-  screenshot?: Buffer;
+interface ReportResult {
+  reportId: string;
+  filePath: string;
+  format: 'pdf';
 }
 
-async function submitLegislativeAction(
+async function generateReport(
   action: LegislativeAction,
   representative: Representative
-): Promise<AutomationResult> {
-  const browser = await chromium.launch({
-    headless: false,  // User can see and intervene
-    slowMo: 100       // Slow enough for user to follow
-  });
-  
-  const context = await browser.newContext({
-    viewport: { width: 1280, height: 800 }
-  });
-  
-  const page = await context.newPage();
-  
-  try {
-    // 1. Navigate to contact form
-    await page.goto(representative.contactUrl, {
-      waitUntil: 'networkidle',
-      timeout: 30000
-    });
-    
-    // 2. Fill form fields
-    await fillFormFields(page, action, representative.formMapping);
-    
-    // 3. Check for CAPTCHA
-    if (representative.formMapping.captchaSelector) {
-      const captcha = await page.$(representative.formMapping.captchaSelector);
-      if (captcha) {
-        // Notify user to solve CAPTCHA
-        await notifyUserForCaptcha();
-        await waitForCaptchaSolution(page, representative.formMapping.captchaSelector);
-      }
-    }
-    
-    // 4. Submit form
-    await page.click(representative.formMapping.submitButton);
-    
-    // 5. Wait for navigation/confirmation
-    await page.waitForNavigation({ timeout: 15000 }).catch(() => {});
-    
-    // 6. Capture screenshot
-    const screenshot = await page.screenshot({
-      fullPage: true,
-      type: 'png'
-    });
-    
-    // 7. Verify success (check for confirmation message)
-    const success = await verifySubmissionSuccess(page);
-    
-    // 8. Generate receipt
-    const receipt = createReceipt(action, success, screenshot);
-    
-    return { success, receipt, screenshot };
-    
-  } catch (error) {
-    const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
-    const receipt = createFailedReceipt(action, error, screenshot);
-    return { success: false, receipt, screenshot };
-    
-  } finally {
-    await browser.close();
-  }
+): Promise<ReportResult> {
+  // 1. Compose report content (letter + metadata)
+  const payload = buildReportPayload(action, representative);
+
+  // 2. Render to PDF (local-only)
+  const filePath = await renderPdf(payload);
+
+  // 3. Persist report metadata (local)
+  const reportId = await saveLocalReport(filePath, action.id);
+
+  return { reportId, filePath, format: 'pdf' };
 }
 ```
 
-### 4.3 Form Filling
+### 4.3 User-Initiated Delivery
 
 ```typescript
-async function fillFormFields(
-  page: Page,
+type DeliveryIntent = 'email' | 'phone' | 'share' | 'export' | 'manual';
+
+async function openDeliveryChannel(
   action: LegislativeAction,
-  mapping: FormFieldMapping
+  rep: Representative,
+  intent: DeliveryIntent
 ): Promise<void> {
-  const { userData, subject, body, topic } = action;
-  
-  // Personal info
-  if (mapping.firstName) await safeType(page, mapping.firstName, userData.firstName);
-  if (mapping.lastName) await safeType(page, mapping.lastName, userData.lastName);
-  if (mapping.email) await safeType(page, mapping.email, userData.email);
-  if (mapping.phone && userData.phone) await safeType(page, mapping.phone, userData.phone);
-  
-  // Address
-  if (mapping.address) await safeType(page, mapping.address, userData.address);
-  if (mapping.city) await safeType(page, mapping.city, userData.city);
-  if (mapping.state) await safeSelect(page, mapping.state, userData.state);
-  if (mapping.zip) await safeType(page, mapping.zip, userData.zip);
-  
-  // Message
-  if (mapping.topic) await safeSelect(page, mapping.topic, topic);
-  if (mapping.subject) await safeType(page, mapping.subject, subject);
-  if (mapping.message) await safeType(page, mapping.message, body);
-}
-
-async function safeType(page: Page, selector: string, value: string): Promise<void> {
-  try {
-    await page.waitForSelector(selector, { timeout: 5000 });
-    await page.fill(selector, value);
-  } catch (error) {
-    console.warn(`[vh:bridge] Field not found: ${selector}`);
-    throw new FormFieldError(selector, 'not_found');
-  }
-}
-
-async function safeSelect(page: Page, selector: string, value: string): Promise<void> {
-  try {
-    await page.waitForSelector(selector, { timeout: 5000 });
-    await page.selectOption(selector, value);
-  } catch (error) {
-    console.warn(`[vh:bridge] Select not found: ${selector}`);
-    throw new FormFieldError(selector, 'not_found');
+  switch (intent) {
+    case 'email':
+      return openMailto(rep.email, action.subject, action.body);
+    case 'phone':
+      return openTel(rep.phone);
+    case 'share':
+      return openShareSheet(action.reportId);
+    case 'export':
+      return exportReportFile(action.reportId);
+    case 'manual':
+      return openContactPage(rep.contactUrl);
   }
 }
 ```
 
-### 4.4 CAPTCHA Handling
+### 4.4 Delivery Receipts (User-Attested)
 
-```typescript
-async function waitForCaptchaSolution(
-  page: Page,
-  captchaSelector: string,
-  timeout: number = 120000 // 2 minutes
-): Promise<void> {
-  // Show notification to user
-  await showCaptchaNotification();
-  
-  // Focus the browser window
-  await page.bringToFront();
-  
-  // Wait for CAPTCHA element to disappear (solved)
-  // or for form to become submittable
-  const startTime = Date.now();
-  
-  while (Date.now() - startTime < timeout) {
-    const captchaVisible = await page.$(captchaSelector);
-    if (!captchaVisible) {
-      // CAPTCHA solved
-      hideCaptchaNotification();
-      return;
-    }
-    
-    // Check if we can submit (some CAPTCHAs don't disappear)
-    const canSubmit = await checkFormSubmittable(page);
-    if (canSubmit) {
-      hideCaptchaNotification();
-      return;
-    }
-    
-    await page.waitForTimeout(1000);
-  }
-  
-  throw new CaptchaTimeoutError();
-}
-```
-
-### 4.5 Security Sandbox
-
-```typescript
-// Domain allowlist for automation
-const ALLOWED_DOMAINS = [
-  'senate.gov',
-  'house.gov',
-  'congress.gov',
-  'governor.*.gov',
-  '*.state.*.us',
-  // Add more as needed
-];
-
-function isDomainAllowed(url: string): boolean {
-  const hostname = new URL(url).hostname;
-  return ALLOWED_DOMAINS.some(pattern => {
-    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
-    return regex.test(hostname);
-  });
-}
-
-// Validate before automation
-async function validateAction(action: LegislativeAction, rep: Representative): void {
-  // Check domain is allowed
-  if (!isDomainAllowed(rep.contactUrl)) {
-    throw new SecurityError('Domain not in allowlist');
-  }
-  
-  // Verify constituency proof matches representative's district
-  if (action.constituencyProof.district_hash !== rep.districtHash) {
-    throw new SecurityError('Constituency proof does not match representative district');
-  }
-  
-  // Verify author matches nullifier in proof
-  if (action.author !== action.constituencyProof.nullifier) {
-    throw new SecurityError('Author does not match constituency proof');
-  }
-}
-```
+- Receipts record user-initiated delivery, not automated submission.
+- We store a local receipt when the OS share flow returns success or the user marks the action as sent.
+- No screenshots, no form automation evidence.
 
 ---
 
@@ -490,8 +285,8 @@ async function validateAction(action: LegislativeAction, rep: Representative): v
 
 | Path | Type | Description |
 |------|------|-------------|
-| `~<devicePub>/hermes/bridge/actions/<actionId>` | Auth | User's actions (drafts + sent) |
-| `~<devicePub>/hermes/bridge/receipts/<receiptId>` | Auth | User's delivery receipts |
+| `~<devicePub>/hermes/bridge/actions/<actionId>` | Auth | User's actions (non-PII metadata only) |
+| `~<devicePub>/hermes/bridge/receipts/<receiptId>` | Auth | User's delivery receipts (non-PII) |
 | `vh/bridge/stats/<repId>` | Public | Aggregate action counts (anonymous) |
 
 ### 5.2 Action Storage
@@ -502,7 +297,7 @@ async function saveAction(
   client: VennClient,
   action: LegislativeAction
 ): Promise<void> {
-  const cleanAction = stripUndefined(action);
+  const cleanAction = stripUndefined(stripPII(action));
   
   await new Promise<void>((resolve, reject) => {
     getUserActionsChain(client)
@@ -519,7 +314,7 @@ async function saveReceipt(
   client: VennClient,
   receipt: DeliveryReceipt
 ): Promise<void> {
-  const cleanReceipt = stripUndefined(receipt);
+  const cleanReceipt = stripUndefined(stripPII(receipt));
   
   await new Promise<void>((resolve, reject) => {
     getUserReceiptsChain(client)
@@ -558,24 +353,22 @@ async function incrementRepStats(
 |-----|---------|
 | `vh_bridge_actions:<nullifier>` | Array of action IDs |
 | `vh_bridge_receipts:<nullifier>` | Map of actionId → receiptId |
-| `vh_bridge_queue:<nullifier>` | Array of queued action IDs |
-| `vh_bridge_userData:<nullifier>` | Saved user form data |
+| `vh_bridge_reports:<nullifier>` | Map of reportId → local file path |
+| `vh_bridge_profile:<nullifier>` | Encrypted user profile data |
 
-### 6.2 User Data Persistence
+### 6.2 User Profile Persistence (Local-Only)
 
 ```typescript
-// Save user data for future actions
-function saveUserData(nullifier: string, userData: UserData): void {
-  localStorage.setItem(
-    `vh_bridge_userData:${nullifier}`,
-    JSON.stringify(userData)
-  );
+// Save user profile for future actions (local-only, encrypted)
+async function saveUserProfile(nullifier: string, profile: UserProfile): Promise<void> {
+  const encrypted = await encryptLocal(profile);
+  await indexedDbSet(`vh_bridge_profile:${nullifier}`, encrypted);
 }
 
-// Load saved user data
-function loadUserData(nullifier: string): UserData | null {
-  const raw = localStorage.getItem(`vh_bridge_userData:${nullifier}`);
-  return raw ? JSON.parse(raw) : null;
+// Load saved profile
+async function loadUserProfile(nullifier: string): Promise<UserProfile | null> {
+  const encrypted = await indexedDbGet(`vh_bridge_profile:${nullifier}`);
+  return encrypted ? decryptLocal(encrypted) : null;
 }
 ```
 
@@ -589,8 +382,8 @@ function loadUserData(nullifier: string): UserData | null {
 |--------|---------------------|------------------------|
 | View representatives | 0.5 | Valid RegionProof |
 | Draft action | 0.5 | Valid RegionProof |
-| Queue action | 0.7 | Valid RegionProof |
-| Submit action | 0.7 | Valid RegionProof, Desktop app OR Guardian |
+| Generate report | 0.7 | Valid RegionProof |
+| Mark as sent | 0.7 | Valid RegionProof |
 
 ### 7.2 Constituency Verification
 
@@ -629,7 +422,7 @@ function verifyConstituencyProof(
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  AGORA > Legislative Bridge                                      │
+│  AGORA > Civic Action Kit                                        │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  Your Representatives (based on verified residency)             │
@@ -641,9 +434,9 @@ function verifyConstituencyProof(
 │                                                                  │
 │  Recent Actions                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │ ✅ Climate Action Letter to Sen. Feinstein (Dec 5)       │   │
-│  │ ⏳ Infrastructure Letter to Rep. Pelosi (Queued)         │   │
-│  │ ❌ Tax Policy Letter to Sen. Padilla (Failed - Retry)    │   │
+│  │ ✅ Climate Action Report to Sen. Feinstein (Dec 5)       │   │
+│  │ 📝 Infrastructure Report to Rep. Pelosi (Draft)          │   │
+│  │ 📨 Tax Policy Report to Sen. Padilla (Sent)              │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
@@ -678,14 +471,14 @@ function verifyConstituencyProof(
 │                                                                  │
 │  ─────────────────────────────────────────────────────────────  │
 │                                                                  │
-│  Your Information (saved for future letters)                    │
+│  Your Information (saved locally)                               │
 │  Name: [John Doe        ]  Email: [john@example.com   ]         │
 │  Address: [123 Main St  ]  City: [San Francisco]                │
 │  State: [CA]  Zip: [94102]  Phone: [(415) 555-0123]            │
 │                                                                  │
 │  ─────────────────────────────────────────────────────────────  │
 │                                                                  │
-│  [Save Draft]                               [Queue for Sending]  │
+│  [Save Draft]                          [Generate Report (PDF)]  │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -697,7 +490,7 @@ function verifyConstituencyProof(
 │  Delivery Receipt                                        [Close] │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
-│  ✅ Successfully Delivered                                       │
+│  ✅ Marked as Sent (User-Initiated)                              │
 │                                                                  │
 │  To: Sen. Dianne Feinstein                                      │
 │  Subject: Support the Climate Action Now Act                    │
@@ -705,16 +498,10 @@ function verifyConstituencyProof(
 │                                                                  │
 │  ─────────────────────────────────────────────────────────────  │
 │                                                                  │
-│  Screenshot Proof:                                               │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                                                           │   │
-│  │  [Screenshot of confirmation page]                        │   │
-│  │                                                           │   │
-│  └──────────────────────────────────────────────────────────┘   │
+│  Delivery Method: Email                                          │
+│  Report: climate-action-report.pdf                               │
 │                                                                  │
-│  Screenshot Hash: a3f2b1c4d5e6...                               │
-│                                                                  │
-│  [Download Screenshot]                          [View Full Size] │
+│  [Open Report]                          [Change Delivery Method] │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -759,7 +546,7 @@ Sincerely,
 
 ## 9. XP Integration
 
-### 9.1 Bridge XP (`civicXP`)
+### 9.1 Civic Action XP (`civicXP`)
 
 | Action | XP Reward | Cap |
 |--------|-----------|-----|
@@ -796,109 +583,42 @@ function applyBridgeXP(event: BridgeXPEvent): void {
 
 ---
 
-## 10. Guardian Node Delegation
+## 10. Implementation Checklist
 
-### 10.1 Delegation Flow (Mobile/Web Users)
-
-For users without the desktop app:
-
-```
-User (Mobile/Web)                    Guardian Node
-       │                                  │
-       │  1. Sign action payload          │
-       │─────────────────────────────────>│
-       │                                  │
-       │                                  │ 2. Verify signature
-       │                                  │ 3. Verify constituency
-       │                                  │ 4. Execute automation
-       │                                  │ 5. Capture screenshot
-       │                                  │
-       │  6. Return encrypted receipt     │
-       │<─────────────────────────────────│
-       │                                  │
-       │  7. Decrypt and display          │
-       │                                  │
-```
-
-### 10.2 Delegation Protocol
-
-```typescript
-interface DelegatedAction {
-  action: LegislativeAction;
-  signature: string;              // SEA.sign(action, userDevicePair)
-  userPub: string;                // For signature verification
-  timestamp: number;
-  
-  // Optional: encrypted user data for form filling
-  encryptedUserData?: string;     // SEA.encrypt(userData, sharedSecret)
-}
-
-interface DelegationResponse {
-  receipt: DeliveryReceipt;
-  encryptedScreenshot?: string;   // SEA.encrypt(screenshot, sharedSecret)
-}
-
-// Guardian verifies before execution
-async function verifyDelegation(delegation: DelegatedAction): Promise<boolean> {
-  // 1. Verify signature
-  const valid = await SEA.verify(
-    JSON.stringify(delegation.action),
-    delegation.signature,
-    delegation.userPub
-  );
-  if (!valid) return false;
-  
-  // 2. Verify constituency proof
-  const rep = getRepresentative(delegation.action.representativeId);
-  const proofValid = verifyConstituencyProof(delegation.action, rep);
-  if (!proofValid.valid) return false;
-  
-  // 3. Check rate limits
-  if (isRateLimited(delegation.action.author)) return false;
-  
-  return true;
-}
-```
-
----
-
-## 11. Implementation Checklist
-
-### 11.1 Data Model
+### 10.1 Data Model
 - [ ] Create `RepresentativeSchema` in `packages/data-model`
 - [ ] Create `LegislativeActionSchema` in `packages/data-model`
 - [ ] Create `DeliveryReceiptSchema` in `packages/data-model`
 - [ ] Export types to `packages/types`
 - [ ] Add schema validation tests
 
-### 11.2 Representative Database
+### 10.2 Representative Database
 - [ ] Create `apps/web-pwa/src/data/representatives.json`
 - [ ] Implement `findRepresentatives` lookup
 - [ ] Add database update mechanism
 - [ ] Add sample representatives for testing
 
-### 11.3 Gun Adapters
+### 10.3 Gun Adapters
 - [ ] Create `packages/gun-client/src/bridgeAdapters.ts`
-- [ ] Implement action/receipt storage
+- [ ] Implement action/receipt storage (non-PII)
 - [ ] Implement aggregate stats
 - [ ] Add adapter tests
 
-### 11.4 Store
+### 10.4 Store
 - [ ] Implement `useBridgeStore` in `apps/web-pwa`
 - [ ] Add hydration from Gun
-- [ ] Add localStorage persistence
+- [ ] Add encrypted IndexedDB persistence
 - [ ] Implement E2E mock store
 - [ ] Add store tests
 
-### 11.5 Automation (Desktop)
-- [ ] Set up Playwright in `apps/desktop`
-- [ ] Implement `submitLegislativeAction` runner
-- [ ] Implement CAPTCHA detection and handling
-- [ ] Implement screenshot capture
-- [ ] Add security sandbox
-- [ ] Add automation tests (against mock server)
+### 10.5 Report & Delivery
+- [ ] Implement PDF report generator
+- [ ] Add native intent integrations (mailto/tel/share/export)
+- [ ] Implement delivery receipt creation (user-attested)
+- [ ] Add contact directory UI + manual contact page open
+- [ ] Add report storage + retrieval
 
-### 11.6 UI
+### 10.6 UI
 - [ ] Implement `BridgeLayout` component
 - [ ] Implement `RepresentativeSelector` component
 - [ ] Implement `ActionComposer` component
@@ -906,47 +626,40 @@ async function verifyDelegation(delegation: DelegatedAction): Promise<boolean> {
 - [ ] Add letter templates
 - [ ] Add accessibility tests
 
-### 11.7 Guardian Delegation
-- [ ] Design delegation protocol
-- [ ] Implement signature verification
-- [ ] Implement rate limiting
-- [ ] Add Guardian endpoint (services/guardian)
-
-### 11.8 XP Integration
+### 10.7 XP Integration
 - [ ] Add `applyBridgeXP` to XP ledger
 - [ ] Wire XP calls in store actions
 - [ ] Add XP emission tests
 
 ---
 
-## 12. Security Considerations
+## 11. Security Considerations
 
-### 12.1 Threat Model
+### 11.1 Threat Model
 
 | Threat | Mitigation |
 |--------|------------|
 | Spam/abuse | Rate limits, high trust threshold (0.7), constituency verification |
 | Impersonation | Signature verification, constituency proof |
-| Form scraping | Domain allowlist, no external data collection |
-| CAPTCHA farming | Human-in-the-loop only, no automated solving |
-| Credential theft | User data encrypted, stored locally only |
-| Guardian abuse | Signed payloads, audit logging |
+| Data export leakage | Explicit user action for share/export, local-only storage |
+| Contact data drift | Scheduled data updates, versioned DB |
+| PII exposure | Encrypted local profile storage, never sync PII |
 
-### 12.2 Privacy Invariants
+### 11.2 Privacy Invariants
 
-- User's personal info (address, phone) NEVER leaves the device except to fill forms
+- User's personal info (address, phone) NEVER leaves the device except when the user initiates a send
 - Constituency proof reveals district hash, NOT exact address
 - Aggregate stats are anonymous (no nullifiers)
-- Screenshots stored encrypted, only user can decrypt
+- Reports are local-only unless explicitly shared
 
 ---
 
-## 13. Future Enhancements (v1+)
+## 12. Future Enhancements (v1+)
 
-- **Email fallback:** Direct email sending for reps without web forms
+- **Mail clients:** Deep-link support for multiple mail apps
 - **Batch sending:** Send to multiple representatives at once
 - **Campaign support:** Pre-drafted campaigns users can join
 - **Response tracking:** Detect and log representative responses
 - **Impact dashboard:** Show aggregate community impact
 - **International support:** Support for non-US legislators
-
+- **Local assist (optional):** User-visible helper for contact-page navigation (no default automation)

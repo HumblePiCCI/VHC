@@ -48,11 +48,13 @@ The system operates three tightly‑coupled layers:
 
 3. **VENN – Interface / Civic Layer**  
    - A local‑first “super app” that:
-     - Shows a **news feed**,  
+     - Shows a **Topics stream** (external headlines + user threads),  
      - Generates or fetches **canonical analyses** for articles,  
      - Lets users vote on biases and counterpoints,  
      - Hosts discussions and proposals,  
-     - Exposes a **control panel** for score/wallet and district‑level metrics.
+     - Unifies headlines and threads into a single Topic object (analysis + discussion in one place),  
+     - Exposes a **control panel** for score/wallet and district‑level metrics,  
+     - Includes a **Familiar Control Panel** (in Messaging) to manage delegated agents.
 
 A useful mental model:
 
@@ -73,10 +75,11 @@ In **Season 0**, the app is deliberately framed as a **news & participation app 
    - Behind the scenes, LUMA/attestors give them:
      - A **trust score** (0..1) and **scaledTrustScore** (0..10000),  
      - A unique **nullifier** (one per human, reused in VENN, GWC, and constituency proofs),  
-     - Optional region proof → they become a constituent of district X.
+   - Optional region proof → they become a constituent of district X.
+   - Optional: configure a **familiar** (delegated agent) to draft/triage; it acts on the user’s behalf, consumes the user’s budgets, and never multiplies influence.
 
-2. **Scroll a clean civic feed**  
-   - The feed is a list of **topics**, not just clickbait headlines.  
+2. **Scroll a clean Topics stream**  
+   - The stream is a list of **Topics** (external headlines + user threads), not just clickbait headlines.  
    - Each card has:
      - Headline,  
      - Source,  
@@ -91,6 +94,8 @@ In **Season 0**, the app is deliberately framed as a **news & participation app 
      - A **bias / counterpoint table**:
        - Each row is a *perspective* → frame + reframe,  
        - Each cell has its own **+ / –** buttons.
+   - **Early‑open accuracy:** the first **N** verified opens (default 5) each produce a candidate analysis that re‑reads the source and **critiques/refines** prior summaries/tables for maximum accuracy.
+   - **Ongoing refresh:** after every **N verified comments** (default 10, min 3 unique principals), the synthesis is refreshed so the summary and frames evolve with the discussion.
 
 4. **Cast nuanced sentiment**  
    - For each bias or counterpoint, the user can:
@@ -135,6 +140,7 @@ For Season 0, the governance loop is **soft‑launched**, with hard economics in
      - Requested budget (in RVU units),  
      - Recipient address,  
      - Current support (For/Against).
+   - **Unified model:** proposals are elevated threads (proposal‑threads) within the Topic, not separate objects.
 
 3. **Support with “weight”**  
    - The user chooses an amount (in RVU units) to back it with.  

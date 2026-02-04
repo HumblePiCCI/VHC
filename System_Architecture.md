@@ -21,9 +21,10 @@ TRINITY is a **Parallel Institution**: A self-sovereign Operating System for Ide
 1.  **Local is Truth:** Canonical identity and civic state live on the user's device. Mesh and chain hold public or encrypted replicas; untrusted infrastructure sees routing metadata, not raw identity or constituency.
 2.  **Physics is Trust:** Keys are bound to hardware (TEE/Enclave), not passwords.
 3.  **Math is Law:** Governance is receipt-free (MACI) and anti-collusive.
-4.  **Shared Reality:** Analysis is generated at the edge but deduplicated via the "First-to-File" protocol.
-5.  **Sovereign Delivery:** We do not ask permission to speak. If APIs are blocked, we automate the delivery via headless browsers.
-6.  **Strict Discipline:** Modularization (350 LOC hard cap) and Testing (100% coverage) are non-negotiable.
+4.  **Shared Reality:** Analysis is generated at the edge but deduplicated via the "First-to-File" protocol. Canonical analyses may be refreshed in discrete **reanalysis epochs** (e.g., after N trusted discussion additions), with first-to-file applying per epoch window.
+5.  **Civic Facilitation:** We enable verified constituents to speak through user-initiated channels (email/phone/share/export). We do not automate form submission by default.
+6.  **Human Sovereignty (Delegated Agents):** Familiars are delegated sub-processes of a verified human. They never hold independent influence. Every agent action is attributable to a principal nullifier, scoped, expiring, revocable, and budgeted per human.
+7.  **Strict Discipline:** Modularization (350 LOC hard cap) and Testing (100% coverage) are non-negotiable.
 
 -----
 
@@ -58,7 +59,14 @@ TRINITY is a **Parallel Institution**: A self-sovereign Operating System for Ide
 
   * **Role:** User Interaction, Communication, Civic Action (HERMES).
   * **Tech:** React, Tauri/Capacitor, WebLLM (Edge AI), `@venn-hermes/*`.
-  * **Function:** Canonical News Analysis, E2EE Messaging, Sovereign Legislative Bridge (VENN).
+  * **Function:** Canonical News Analysis, E2EE Messaging, Civic Action Kit (facilitation), and proposal-threads (threads elevated with funding metadata).
+  * **Familiar Runtime (Delegated Agents):**
+      * Local-first orchestration; keys never leave device.
+      * **Suggest:** summaries, drafts, triage (low risk).
+      * **Act:** post/comment/thread ops — trust gated + rate limited.
+      * **High-impact:** votes/funding/civic action — explicit human approval + higher trust threshold.
+      * **Defaults:** See `docs/spec-identity-trust-constituency.md` §6 (scopes/tiers) and `docs/spec-xp-ledger-v0.md` §4 (budget caps).
+      * **Execution plan:** See `docs/04-sprint-agentic-foundation.md`.
 
 -----
 
@@ -74,7 +82,7 @@ The system functions as a Monorepo with polyglot micro-services.
       * *Transient:* Zustand.
       * *Durable:* `@venn-hermes/gun-client` (Strictly isolated GUN wrapper).
   * **Edge AI:** **WebLLM (WASM)** running local inference (Llama-3-8B-Quantized or similar).
-  * **Automation:** Playwright (bundled in Desktop) for Sovereign Delivery.
+  * **Automation:** Optional local tooling for user-initiated assist (no default automation).
 
 ### 3.2 Server-Side (The Untrusted Cloud)
 
@@ -108,6 +116,12 @@ We unify identity across LUMA, GWC, and VENN-HERMES using three primitives:
 * **TrustScore (0–1):** Device/session trust derived from hardware attestation. On-chain representation: integer 0–10000 (`scaled = Math.round(trustScore * 10000)`, using `TRUST_SCORE_SCALE`). Thresholds (v0): 0.5 for session/UBE/Faucet, 0.7 for QF.
 * **UniquenessNullifier:** Stable per-human key. Off-chain: string. On-chain: `bytes32` hash. Shared across PWA identity, `SentimentSignal.constituency_proof.nullifier`, Region proofs, and UBE/QF attestation.
 * **ConstituencyProof:** Derived from a RegionProof SNARK. Public signals: `[district_hash, nullifier, merkle_root]`. Used to attribute civic signals to a district without exposing raw region codes; `district_hash` is never stored on-chain.
+
+**Terminology standard:**
+- `principalNullifier` = human’s `UniquenessNullifier`.
+- `familiar` = delegated agent.
+- `DelegationGrant` = scoped, expiring authority.
+- `OnBehalfOfAssertion` = attached to any agent action.
 
 Invariants: same human → same nullifier across all layers; scaled trustScore = `Math.round(trustScore * 10000)`. See `docs/spec-identity-trust-constituency.md` for the canonical contract.
 
@@ -162,7 +176,7 @@ See `docs/spec-xp-ledger-v0.md` for the canonical Season 0 XP ledger contract. F
     1.  **Lookup:** User opens URL. App queries Mesh for hash of URL.
     2.  **Scenario A (Exists):** User downloads shared Analysis. WebLLM (Local) audits it. If valid, User votes.
     3.  **Scenario B (New):** **WebLLM (Local)** generates Analysis. User signs and publishes it as the **Canonical Record**.
-  * **Canonical Record:** For each `urlHash`, at most one `CanonicalAnalysis` (schemaVersion `canonical-analysis-v1`) is stored and reused. Civic signals (votes, decay, messaging threads) key off the canonical `urlHash` and immutable timestamp. See `docs/canonical-analysis-v1.md`.
+* **Canonical Record:** For each `urlHash`, at most one `CanonicalAnalysis` (schemaVersion `canonical-analysis-v1`) is stored and reused. Civic signals (votes, decay, messaging threads) key off the canonical `urlHash` and immutable timestamp. v1 is first-to-file; v2 will shift to quorum synthesis (first N candidate analyses → synthesis + divergence). See `docs/canonical-analysis-v1.md`.
   * **Immutability:** CanonicalAnalysis objects are append-only in v1. Corrections or disputes are modeled as separate signals or future schema versions; they are not edited in place.
   * **Civic Decay (Asymptotic):**
           * Formula: $E_{new} = E_{current} + 0.3 * (2.0 - E_{current})$.
@@ -235,15 +249,26 @@ Article analyses are generated via a fixed 5-step pipeline:
 
 This pipeline is independent of model choice; swapping remote/local engines only changes the engine implementation/policy, not the canonical analysis contract. See `docs/AI_ENGINE_CONTRACT.md` for the detailed AI engine contract.
 
-### 4.4 HERMES: The Sovereign Legislative Bridge
+#### 4.3.3 Participation Governors (Anti-Swarm)
 
-  * **Purpose:** Verified influence that cannot be blocked.
+We enforce three distinct governors to prevent agent swarms from overrunning the system:
+
+1. **Influence Falloff (Value Share Governor):** Diminishing returns across active projects/topics per principal nullifier.
+2. **Action Budget (Spam Governor):** Posts/votes/moderation actions per time window per principal nullifier.
+3. **Compute/Analysis Budget (Analysis Governor):** Analyses/day plus per-topic throttles per principal nullifier.
+
+All governors apply to the **principal**; familiars consume the same budgets and never multiply influence.
+
+### 4.4 HERMES: The Civic Action Kit
+
+  * **Purpose:** Verified constituent voice via user-initiated civic contact.
   * **Mechanism:**
     1.  **Aggregate:** Nodes collect proposals via HRW hashing.
     2.  **Verify:** LUMA attaches **ZK-Proof of Constituency**.
-    3.  **Deliver (Sovereign Fallback):**
-          * **Desktop:** Local Playwright instance fills the `.gov` form.
-          * **Mobile:** Delegate delivery to **Home Guardian Node** (Trusted Relay). The Node fills the form using the user's signed payload.
+    3.  **Facilitate (User-Initiated):**
+          * **Desktop/Mobile:** Generate a local report (PDF) and open native actions (`mailto:`, `tel:`, share sheet).
+          * **Fallback:** Always expose representative contact info for manual submission.
+          * **Automation:** Optional, local-only assist may be explored later; no default form submission.
 
 -----
 
@@ -309,15 +334,24 @@ See `docs/spec-data-topology-privacy-v0.md` for the canonical Season 0 topology 
   * **HERMES:** Threaded Civic Forum (Debate & Counterpoints).
   * **Deliverable:** Beta v0.8 (Secure Communication).
 
-### Sprint 4: The Agora - Action (Weeks 27–32)
+### Sprint 4: Agentic Foundation (Weeks 27–32)
 
-**Goal:** The Bridge (Docs, Legislation).
+**Goal:** Safety baseline + unified topics + analysis robustness.
+
+  * **LUMA/HERMES:** Delegation grants + familiar runtime (scopes, budgets).
+  * **VENN:** Quorum synthesis + comment-driven re-synthesis flow.
+  * **Interface:** Unified Topics model (analysis + thread).
+  * **Deliverable:** Safe agentic foundation + unified feed.
+
+### Sprint 5: The Agora - Action (Weeks 33–40)
+
+**Goal:** The Bridge (Docs, Civic Action).
 
   * **HERMES:** Collaborative Documents (CRDTs).
-  * **HERMES:** Sovereign Legislative Bridge (Playwright Automation).
+  * **HERMES:** Civic Action Kit (facilitation: reports + contact channels).
   * **Deliverable:** Beta v0.9 (Full Feature Set).
 
-### Sprint 5: The Ironclad Hardening (Weeks 33–40)
+### Sprint 6: The Ironclad Hardening (Weeks 41–48)
 
 **Goal:** Sovereignty & Anti-Collusion (Mainnet Prep).
 
@@ -454,7 +488,7 @@ Summaries and bias tables MUST NOT introduce information absent from the source 
 * Canonical analysis is keyed by `urlHash`.
 * The first successfully validated analysis for a `urlHash` is reused; later writes cannot overwrite it in v1.
 * Corrections/disagreements are separate signals (votes, sentiment, replies), not mutations of the canonical object.
-* Future versions (e.g., `canonical-analysis-v2`) may introduce explicit amendment/supersession; v1 treats the record as append-only.
+* Future versions (e.g., `canonical-analysis-v2`) will introduce quorum synthesis and explicit amendment/supersession; v1 treats the record as append-only. See `docs/canonical-analysis-v2.md`.
 
 URLs are normalized upstream; the canonical schema enforces `url` as a valid URL (Zod `.url()`), and hashing always uses the normalized form.
 
@@ -488,7 +522,7 @@ See `docs/spec-rvu-economics-v0.md` for detailed Season 0 economic semantics.
 | **R-01** | Injection / Emulation | L0 | **Hardware Attestation:** TEE Signatures required. |
 | **R-02** | Account Renting | L1 | **Bio-Tethering:** Random micro-gestures prevent hand-offs. |
 | **R-03** | Reality Fragmentation | L3 | **Canonical Analysis:** First-to-file protocol + AI Audit. |
-| **R-04** | Legislative Blocking | L3 | **Sovereign Delivery:** Headless Browser Automation (Playwright). |
+| **R-04** | Legislative Blocking | L3 | **Civic Facilitation:** User-initiated contact via reports + native channels; no automated form submission by default. |
 | **R-05** | Device Loss | L1 | **Recovery:** Multi-device linking & Social Recovery. |
 | **R-06** | Malicious Analysis | L3 | **Distributed Moderation:** Local AI audits & community override votes. |
 | **R-07** | Civic Signal Drift (types/math diverge between client, mesh, and chain) | L1/L3 | **Canonical Contract:** Enforce single spec (`spec-civic-sentiment.md`), shared types in `packages/types`, and Zod schemas in `packages/data-model`. CI blocks on schema mismatch. |

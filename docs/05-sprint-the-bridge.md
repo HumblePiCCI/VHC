@@ -1,9 +1,9 @@
-# Sprint 4: The Agora - Action (Implementation Plan)
+# Sprint 5: The Agora - Action (Implementation Plan)
 
-**Context:** `System_Architecture.md` v0.2.0 (Sprint 4: The "Agora" - Action)
-**Goal:** Implement the "Action" layer of the Agora. This consists of **HERMES Docs** (secure collaborative editing) and the **Sovereign Legislative Bridge** (automated delivery of verified constituent sentiment).
+**Context:** `System_Architecture.md` v0.2.0 (Sprint 5: The "Agora" - Action)
+**Goal:** Implement the "Action" layer of the Agora. This consists of **HERMES Docs** (secure collaborative editing) and the **Civic Action Kit** (facilitation of verified constituent outreach).
 **Status:** [ ] Planning
-**Predecessor:** Sprint 3 (HERMES Messaging + Forum) — ✅ COMPLETE (Dec 6, 2025)
+**Predecessor:** Sprint 4 (Agentic Foundation) — ⚪ Planning
 
 > **Sprint 3 Learnings Applied:**
 > - Gun write sanitization (`stripUndefined`, array serialization)
@@ -19,20 +19,20 @@
 ### 1.1 Non-Negotiables (Engineering Discipline)
 - [ ] **LOC Cap:** Hard limit of **350 lines** per file (tests/types exempt).
 - [ ] **Coverage:** **100%** Line/Branch coverage for new/modified modules.
-- [ ] **Browser-Safe:** No `node:*` imports in client code (except in Electron/Tauri main process or Playwright automation scripts).
+- [ ] **Browser-Safe:** No `node:*` imports in client code (except in Electron/Tauri main process).
 - [ ] **Security:** E2EE (End-to-End Encryption) for all private documents.
 - [ ] **Privacy:** No metadata leakage; "First-to-File" principles apply to public civic data.
 
 ### 1.2 True Offline Mode (E2E Compatibility)
-- [ ] **True Offline Mode:** Docs and Bridge flows must run with `VITE_E2E_MODE=true` using full mocks (no WebSocket, no real Gun relay, no real Playwright automation), per `ARCHITECTURE_LOCK.md`.
+- [ ] **True Offline Mode:** Docs and Bridge flows must run with `VITE_E2E_MODE=true` using full mocks (no WebSocket, no real Gun relay), per `ARCHITECTURE_LOCK.md`.
 
 ### 1.3 Gun Isolation & Topology
 - [ ] **Gun Isolation:** All access to Gun goes through `@vh/gun-client`. No direct `gun` imports in `apps/*`.
 - [ ] **TopologyGuard Update:** Extend allowed prefixes to include:
     - `vh/docs/<docId>` — Document metadata (public or encrypted)
     - `vh/docs/<docId>/ops` — CRDT operations (encrypted)
-    - `vh/bridge/actions/<actionId>` — Legislative action metadata
-    - `vh/bridge/receipts/<receiptId>` — Delivery receipts (proof of submission)
+    - `vh/bridge/reports/<reportId>` — Public report metadata (no PII)
+    - `vh/bridge/actions/<actionId>` — Action metadata (no PII)
 
 ### 1.4 Identity & Trust Gating
 - [ ] **Trust Gating (Docs):** Creating and editing shared documents requires `TrustScore >= 0.5`.
@@ -47,10 +47,10 @@
 ### 1.6 HERMES vs AGORA Naming
 - [ ] **Navigation Model:**
     - **HERMES** = Communications layer: Messaging (DMs) + Forum + Docs
-    - **AGORA** = Governance & civic action: Bridge (legislative contact), voting, QF
+    - **AGORA** = Governance & civic action: Civic Action Kit, voting, QF
 - [ ] **Routing:**
     - HERMES tab → `/hermes` → surfaces Messaging, Forum, and Docs
-    - AGORA tab → `/agora` → surfaces Bridge, Proposals, Voting
+    - AGORA tab → `/agora` → surfaces Civic Action Kit, Proposals, Voting
 
 ---
 
@@ -328,17 +328,14 @@ interface DocsState {
 
 ---
 
-## 3. Phase 2: Sovereign Legislative Bridge (The Voice)
+## 3. Phase 2: Civic Action Kit (Facilitation)
 
-**Objective:** Enable users to send verified sentiment reports and community-derived policy proposals directly to legislators using local automation, bypassing API blocks.
-**Canonical Reference:** `docs/spec-legislative-bridge-v0.md` (to be created)
-
-> **"We do not ask permission to speak. If APIs are blocked, we automate the delivery via headless browsers."**
-> — System Architecture Prime Directive #5
+**Objective:** Enable users to generate verified civic reports and contact their representatives via user-initiated channels (email/phone/share/export). No automated form submission by default.
+**Canonical Reference:** `docs/spec-civic-action-kit-v0.md`
 
 ### 3.1 Data Model & Schema (`packages/data-model`)
 
-#### 3.1.1 Legislative Action Schema
+#### 3.1.1 Civic Action Schema
 
 **New File:** `packages/data-model/src/schemas/hermes/bridge.ts`
 
@@ -352,8 +349,10 @@ export const RepresentativeSchema = z.object({
   state: z.string().length(2),            // "CA", "NY"
   district: z.string().optional(),        // For House reps
   party: z.string().optional(),
-  contactUrl: z.string().url(),           // Official contact form URL
-  formMapping: z.record(z.string(), z.string()) // Field ID → form field name
+  contactUrl: z.string().url().optional(),// Official contact page (manual use)
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  website: z.string().url().optional()
 });
 
 export type Representative = z.infer<typeof RepresentativeSchema>;
@@ -363,17 +362,15 @@ export const LegislativeActionSchema = z.object({
   id: z.string().min(1),
   author: z.string().min(1),              // nullifier
   representativeId: z.string().min(1),
-  topic: z.string().min(1).max(100),
-  stance: z.enum(['support', 'oppose', 'inform']),
-  subject: z.string().min(1).max(200),
-  body: z.string().min(50).max(5000),
+  reportId: z.string().min(1),            // Local report reference
+  deliveryMethod: z.enum(['email', 'phone', 'share', 'export', 'manual']),
   constituencyProof: z.object({
     district_hash: z.string(),
     nullifier: z.string(),
     merkle_root: z.string()
   }),
   createdAt: z.number(),
-  status: z.enum(['draft', 'queued', 'sending', 'sent', 'failed']),
+  status: z.enum(['draft', 'ready', 'shared', 'sent', 'failed']),
   sourceDocId: z.string().optional(),     // If drafted in HERMES Docs
   sourceThreadId: z.string().optional()   // If linked from Forum thread
 });
@@ -384,11 +381,10 @@ export const DeliveryReceiptSchema = z.object({
   schemaVersion: z.literal('hermes-receipt-v0'),
   id: z.string().min(1),
   actionId: z.string().min(1),
-  status: z.enum(['pending', 'success', 'failed', 'captcha_required']),
+  status: z.enum(['pending', 'success', 'failed']),
   timestamp: z.number(),
-  screenshotHash: z.string().optional(),  // SHA256 of screenshot blob
-  errorMessage: z.string().optional(),
-  retryCount: z.number().default(0)
+  deliveryMethod: z.enum(['email', 'phone', 'share', 'export', 'manual']),
+  errorMessage: z.string().optional()
 });
 
 export type DeliveryReceipt = z.infer<typeof DeliveryReceiptSchema>;
@@ -421,7 +417,7 @@ function findRepresentatives(
 - [ ] Implement `findRepresentatives` lookup
 - [ ] Add script to update representative data from public APIs
 
-### 3.2 Automation Engine
+### 3.2 Report Generator + Native Intents
 
 #### 3.2.1 Architecture
 
@@ -430,108 +426,22 @@ function findRepresentatives(
 │                     PWA (Web)                            │
 │  ┌─────────────────────────────────────────────────┐    │
 │  │              Action Center UI                    │    │
-│  │   (Draft → Queue → Status Tracking)             │    │
+│  │   (Draft → Report → Share/Send)                  │    │
 │  └───────────────────────┬─────────────────────────┘    │
 └──────────────────────────┼──────────────────────────────┘
-                           │ IPC / WebSocket
-┌──────────────────────────▼──────────────────────────────┐
-│                  Desktop App (Tauri)                     │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │           Playwright Automation Runner           │    │
-│  │   - Form filling                                 │    │
-│  │   - Screenshot capture                           │    │
-│  │   - CAPTCHA human-in-loop                       │    │
-│  └─────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────┘
-           │
-           │ OR (Mobile fallback)
-           ▼
+                           │ Native intents
+                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│              Home Guardian Node                          │
-│  - Receives signed action payload                        │
-│  - Executes automation on behalf of user                │
-│  - Returns receipt + screenshot                          │
+│  Email / Phone / Share Sheet / Download (User-Initiated)│
+│  - mailto: / tel: / share / export PDF                  │
 └─────────────────────────────────────────────────────────┘
 ```
 
-#### 3.2.2 Desktop Automation (`apps/desktop`)
+#### 3.2.2 Report Generation (`apps/web-pwa`)
 
-**New File:** `apps/desktop/src/bridge/automationRunner.ts`
-
-```typescript
-import { chromium, type Page } from 'playwright';
-
-interface FormSubmissionResult {
-  success: boolean;
-  screenshot: Buffer;
-  error?: string;
-}
-
-export async function submitLegislativeForm(
-  action: LegislativeAction,
-  representative: Representative
-): Promise<FormSubmissionResult> {
-  const browser = await chromium.launch({ headless: false }); // User can see
-  const page = await browser.newPage();
-  
-  try {
-    await page.goto(representative.contactUrl);
-    
-    // Fill form fields based on mapping
-    for (const [fieldId, value] of Object.entries(action.formFields)) {
-      const selector = representative.formMapping[fieldId];
-      await page.fill(selector, value);
-    }
-    
-    // Pause for CAPTCHA if present
-    const captcha = await page.$('[class*="captcha"], [id*="captcha"]');
-    if (captcha) {
-      // Notify user to solve CAPTCHA
-      await waitForUserCaptchaSolution(page);
-    }
-    
-    // Submit
-    await page.click('button[type="submit"], input[type="submit"]');
-    
-    // Wait for confirmation
-    await page.waitForNavigation({ timeout: 10000 });
-    
-    // Capture screenshot
-    const screenshot = await page.screenshot({ fullPage: true });
-    
-    return { success: true, screenshot };
-  } catch (error) {
-    const screenshot = await page.screenshot({ fullPage: true });
-    return { success: false, screenshot, error: error.message };
-  } finally {
-    await browser.close();
-  }
-}
-```
-
-- [ ] Set up Playwright in `apps/desktop`
-- [ ] Implement `submitLegislativeForm` runner
-- [ ] Add CAPTCHA detection and human-in-loop flow
-- [ ] Implement screenshot capture and hashing
-- [ ] Add security sandbox (domain allowlist)
-
-#### 3.2.3 Mobile/Web Fallback (Guardian Node)
-
-For users without desktop app, delegate to trusted Home Guardian Node:
-
-```typescript
-interface GuardianDelegation {
-  action: LegislativeAction;
-  encryptedCredentials: string; // Optional, for login-required forms
-  signature: string;            // User's signature authorizing action
-}
-
-// Guardian validates signature, executes, returns receipt
-```
-
-- [ ] Design Guardian delegation protocol
-- [ ] Implement signature verification
-- [ ] Add rate limiting per user
+- [ ] Generate PDF report from Doc/Forum thread (local-only).
+- [ ] Export/share via native intents (`mailto:`, `tel:`, share sheet, download).
+- [ ] Always show contact info for manual use.
 
 ### 3.3 Gun Adapters (`packages/gun-client`)
 
@@ -564,12 +474,9 @@ export function getRepActionCountChain(client: VennClient, repId: string) {
 interface BridgeState {
   actions: Map<string, LegislativeAction>;
   receipts: Map<string, DeliveryReceipt>;
-  queue: string[]; // Action IDs pending submission
-  
   // Actions
   createAction(data: Omit<LegislativeAction, 'id' | 'status'>): Promise<LegislativeAction>;
-  queueAction(actionId: string): Promise<void>;
-  submitAction(actionId: string): Promise<DeliveryReceipt>;
+  markShared(actionId: string, method: LegislativeAction['deliveryMethod']): Promise<DeliveryReceipt>;
   loadUserActions(): Promise<LegislativeAction[]>;
   loadUserReceipts(): Promise<DeliveryReceipt[]>;
   
@@ -590,9 +497,8 @@ interface BridgeState {
 - [ ] `BridgeLayout`: Main action center view
 - [ ] `RepresentativeSelector`: Find reps by region
 - [ ] `ActionComposer`: Draft letter with templates
-- [ ] `ActionQueue`: Pending submissions
 - [ ] `ActionHistory`: Sent letters with receipts
-- [ ] `ReceiptViewer`: View screenshot proof
+- [ ] `ReceiptViewer`: View delivery metadata
 
 #### 3.5.2 User Flows
 
@@ -601,9 +507,9 @@ interface BridgeState {
 2. Selects representative
 3. Chooses topic + stance (or starts from Forum thread)
 4. Drafts letter (or uses template)
-5. Reviews and queues
-6. (Desktop) Automation runs, captures receipt
-7. Sees confirmation with screenshot
+5. Reviews and generates report
+6. Chooses delivery method (email/phone/share/export/manual)
+7. Sees confirmation with delivery metadata
 
 **Flow 2: Elevate Forum Thread**
 1. Popular Forum thread (net score ≥ 10) shows "Send to Rep" button
@@ -622,11 +528,11 @@ interface BridgeState {
 | Schema definitions | HIGH | 0.5d |
 | Representative database | HIGH | 1d |
 | Bridge store | HIGH | 1d |
-| Playwright automation | HIGH | 2d |
-| CAPTCHA human-in-loop | HIGH | 1d |
+| PDF report generation | HIGH | 2d |
+| Native intents wiring | HIGH | 1d |
 | E2E mock store | MEDIUM | 0.5d |
 | Thread-to-letter flow | MEDIUM | 1d |
-| Guardian delegation | LOW | 2d |
+| Representative data updates | LOW | 1d |
 
 ---
 
@@ -680,15 +586,15 @@ interface BridgeState {
 - [ ] `LegislativeAction` and `DeliveryReceipt` schemas
 - [ ] CRDT merge logic (Yjs + Gun provider)
 - [ ] Document encryption/decryption round-trips
-- [ ] Bridge form field mapping
+- [ ] Bridge delivery method validation
 
 #### 5.1.2 Integration Tests (Vitest)
 - [ ] `useDocsStore` creates and shares documents
 - [ ] Collaborator can decrypt shared document
-- [ ] `useBridgeStore` queues and processes actions
+- [ ] `useBridgeStore` stores and tracks actions
 - [ ] Trust gating for both Docs and Bridge
 
-#### 5.1.3 E2E Tests (Playwright, `VITE_E2E_MODE=true`)
+#### 5.1.3 E2E Tests (`VITE_E2E_MODE=true`)
 
 **Docs E2E:**
 - [ ] Alice creates document, shares with Bob
@@ -697,9 +603,9 @@ interface BridgeState {
 
 **Bridge E2E:**
 - [ ] User drafts letter to mock representative
-- [ ] Queues for submission
-- [ ] Mock automation returns success receipt
-- [ ] Receipt displays with screenshot placeholder
+- [ ] Generates report and selects delivery method
+- [ ] Mock share intent returns success receipt
+- [ ] Receipt displays delivery metadata
 
 ### 5.2 Manual Verification Plan
 
@@ -713,9 +619,8 @@ interface BridgeState {
 #### 5.2.2 Bridge Manual Tests
 - [ ] Find representatives by region
 - [ ] Draft letter using template
-- [ ] Queue and submit (with test target)
-- [ ] Verify receipt and screenshot
-- [ ] Verify CAPTCHA human-in-loop (if present)
+- [ ] Generate report (PDF)
+- [ ] Verify delivery via email/phone/share/export
 
 ---
 
@@ -725,10 +630,9 @@ interface BridgeState {
 |------|------------|
 | CRDT complexity | Use Yjs (battle-tested) over custom implementation |
 | Document encryption key sharing | Leverage existing SEA patterns from messaging |
-| CAPTCHAs on legislative forms | Human-in-the-loop mode where user solves in visible browser |
-| Form layout changes | Abstracted form mapping; easy to update per representative |
+| Contact data drift | Versioned representative DB + update script |
+| User privacy on export | Local-only reports; user-initiated sharing |
 | Abuse of Bridge for spam | Rate limits, high trust threshold (0.7), RegionProof required |
-| Guardian node trust | Actions are signed; Guardian only executes, doesn't modify |
 
 ---
 
@@ -738,30 +642,30 @@ interface BridgeState {
 - `yjs` — CRDT implementation for collaborative editing
 - `@tiptap/react` — Rich text editor framework
 - `@tiptap/extension-*` — TipTap extensions (collaboration, placeholder, etc.)
-- `playwright` — Browser automation (already in e2e, add to desktop)
+- `pdf-lib` (or equivalent) — Local report generation (TBD)
 
 ### 7.2 Deliverables
 - [ ] Secure collaborative document editing with E2EE
 - [ ] Real-time collaboration with live cursors
-- [ ] Legislative Bridge with automated form submission
-- [ ] CAPTCHA-aware human-in-loop automation
-- [ ] Delivery receipts with screenshot proof
+- [ ] Civic Action Kit (reports + contact directory + native intents)
+- [ ] Delivery receipts with method metadata
 - [ ] Full test coverage (unit, integration, E2E)
-- [ ] Updated specs (`spec-hermes-docs-v0.md`, `spec-legislative-bridge-v0.md`)
+- [ ] Updated specs (`spec-hermes-docs-v0.md`, `spec-civic-action-kit-v0.md`)
 
 ---
 
-## 8. Sprint 4 Status Summary
+## 8. Sprint 5 Status Summary
 
 **Status:** [ ] Planning
-**Predecessor:** Sprint 3 — ✅ COMPLETE (Dec 6, 2025)
+**Predecessor:** Sprint 3 — ✅ COMPLETE (Dec 6, 2025)  
+**Dependency:** Sprint 4 (Agentic Foundation) Phase 0–1 — ⛔ Required before Sprint 5 execution
 
 ### 8.1 Phase Breakdown
 
 | Phase | Scope | Estimate | Status |
 |-------|-------|----------|--------|
 | 1 | HERMES Docs | ~2 weeks | [ ] Not Started |
-| 2 | Legislative Bridge | ~2 weeks | [ ] Not Started |
+| 2 | Civic Action Kit | ~2 weeks | [ ] Not Started |
 | 3 | Verification | ~1 week | [ ] Not Started |
 
 ### 8.2 Key Files to Create
@@ -776,9 +680,9 @@ interface BridgeState {
 | `packages/gun-client/src/bridgeAdapters.ts` | Gun adapters for bridge |
 | `apps/web-pwa/src/store/hermesDocs.ts` | Docs store |
 | `apps/web-pwa/src/store/hermesBridge.ts` | Bridge store |
-| `apps/desktop/src/bridge/automationRunner.ts` | Playwright automation |
+| `apps/web-pwa/src/bridge/reportGenerator.ts` | Local report generator |
 | `docs/spec-hermes-docs-v0.md` | Docs specification |
-| `docs/spec-legislative-bridge-v0.md` | Bridge specification |
+| `docs/spec-civic-action-kit-v0.md` | Civic Action Kit specification |
 
 ### 8.3 Prerequisites from Sprint 3
 
@@ -793,17 +697,17 @@ All met:
 
 ### 8.4 Next Steps
 
-1. **Create spec documents** (`spec-hermes-docs-v0.md`, `spec-legislative-bridge-v0.md`)
+1. **Create spec documents** (`spec-hermes-docs-v0.md`, `spec-civic-action-kit-v0.md`)
 2. **Implement schemas** (document, bridge)
 3. **Build Yjs + Gun provider** (CRDT layer)
 4. **Build TipTap editor** (UI)
-5. **Build Bridge automation** (Playwright)
+5. **Build report generator + native intents**
 6. **Wire E2E mocks and tests**
 7. **Manual verification**
 
 ---
 
-## 9. Appendix: Representative Form Mapping Example
+## 9. Appendix: Representative Contact Example
 
 ```json
 {
@@ -813,19 +717,10 @@ All met:
   "state": "CA",
   "party": "D",
   "contactUrl": "https://www.feinstein.senate.gov/public/index.cfm/e-mail-me",
-  "formMapping": {
-    "firstName": "#first_name",
-    "lastName": "#last_name",
-    "email": "#email",
-    "address": "#address",
-    "city": "#city",
-    "state": "#state",
-    "zip": "#zip",
-    "phone": "#phone",
-    "subject": "#subject",
-    "message": "#message"
-  }
+  "email": "senator@example.gov",
+  "phone": "+1-202-555-0100",
+  "website": "https://www.feinstein.senate.gov"
 }
 ```
 
-This mapping allows the automation to fill any legislative form by field ID, making it easy to add new representatives without code changes.
+This contact record powers the Civic Action Kit without automated form submission.
