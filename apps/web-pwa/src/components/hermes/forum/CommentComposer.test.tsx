@@ -14,12 +14,12 @@ vi.mock('../../../store/hermesForum', () => ({
 }));
 
 vi.mock('./SlideToPost', () => ({
-  SlideToPost: ({ onPost, disabled }: any) => (
+  SlideToPost: ({ onChange, disabled }: any) => (
     <button
       type="button"
       data-testid="slide-to-post-mock"
       disabled={disabled}
-      onClick={() => onPost('concur')}
+      onClick={() => onChange(10)}
     >
       Slide
     </button>
@@ -34,11 +34,16 @@ describe('CommentComposer', () => {
     render(<CommentComposer threadId="thread-1" parentId="parent-1" onSubmit={onSubmit} />);
 
     const slide = screen.getByTestId('slide-to-post-mock');
+    const submit = screen.getByTestId('submit-comment-btn');
     expect(slide).toBeDisabled();
+    expect(submit).toBeDisabled();
 
     fireEvent.change(screen.getByTestId('comment-composer'), { target: { value: ' Hello ' } });
     expect(slide).not.toBeDisabled();
+    expect(submit).not.toBeDisabled();
+
     fireEvent.click(slide);
+    fireEvent.click(submit);
 
     await waitFor(() => expect(createCommentMock).toHaveBeenCalled());
     expect(createCommentMock).toHaveBeenCalledWith('thread-1', 'Hello', 'concur', 'parent-1');

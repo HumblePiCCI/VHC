@@ -3,37 +3,36 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { SlideToPost } from './SlideToPost';
 
 describe('SlideToPost', () => {
   afterEach(() => cleanup());
 
   it('renders idle state', () => {
-    render(<SlideToPost onPost={vi.fn()} />);
+    render(<SlideToPost value={50} onChange={vi.fn()} />);
     expect(screen.getByTestId('slide-to-post')).toBeInTheDocument();
-    expect(screen.getByTestId('slide-label-idle')).toHaveTextContent('Slide to Post');
+    expect(screen.getByTestId('slide-label-idle')).toHaveTextContent('Discuss');
   });
 
   it('is disabled when disabled prop is true', () => {
-    render(<SlideToPost onPost={vi.fn()} disabled />);
+    render(<SlideToPost value={50} onChange={vi.fn()} disabled />);
     expect(screen.getByTestId('slide-to-post')).toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('calls onPost with discuss stance when released at center (fallback width)', async () => {
-    const onPost = vi.fn().mockResolvedValue(undefined);
-    render(<SlideToPost onPost={onPost} />);
+  it('calls onChange with center value when width is unavailable', () => {
+    const onChange = vi.fn();
+    render(<SlideToPost value={50} onChange={onChange} />);
 
     const track = screen.getByTestId('slide-to-post');
     fireEvent.mouseDown(track, { clientX: 192 });
-    fireEvent.mouseUp(document);
 
-    await waitFor(() => expect(onPost).toHaveBeenCalledWith('discuss'));
+    expect(onChange).toHaveBeenCalledWith(50);
   });
 
-  it('calls onPost with concur stance when released on left', async () => {
-    const onPost = vi.fn().mockResolvedValue(undefined);
-    render(<SlideToPost onPost={onPost} />);
+  it('calls onChange with a left-side value when clicked on left', () => {
+    const onChange = vi.fn();
+    render(<SlideToPost value={50} onChange={onChange} />);
 
     const track = screen.getByTestId('slide-to-post');
     Object.defineProperty(track, 'getBoundingClientRect', {
@@ -41,14 +40,15 @@ describe('SlideToPost', () => {
     });
 
     fireEvent.mouseDown(track, { clientX: 50 }); // ~13%
-    fireEvent.mouseUp(document);
 
-    await waitFor(() => expect(onPost).toHaveBeenCalledWith('concur'));
+    const nextValue = onChange.mock.calls[0][0];
+    expect(nextValue).toBeGreaterThanOrEqual(0);
+    expect(nextValue).toBeLessThanOrEqual(30);
   });
 
-  it('calls onPost with counter stance when released on right', async () => {
-    const onPost = vi.fn().mockResolvedValue(undefined);
-    render(<SlideToPost onPost={onPost} />);
+  it('calls onChange with a right-side value when clicked on right', () => {
+    const onChange = vi.fn();
+    render(<SlideToPost value={50} onChange={onChange} />);
 
     const track = screen.getByTestId('slide-to-post');
     Object.defineProperty(track, 'getBoundingClientRect', {
@@ -56,39 +56,37 @@ describe('SlideToPost', () => {
     });
 
     fireEvent.mouseDown(track, { clientX: 330 }); // ~86%
-    fireEvent.mouseUp(document);
 
-    await waitFor(() => expect(onPost).toHaveBeenCalledWith('counter'));
+    const nextValue = onChange.mock.calls[0][0];
+    expect(nextValue).toBeGreaterThanOrEqual(70);
+    expect(nextValue).toBeLessThanOrEqual(100);
   });
 
-  it('supports keyboard navigation', async () => {
-    const onPost = vi.fn().mockResolvedValue(undefined);
-    render(<SlideToPost onPost={onPost} />);
+  it('supports keyboard navigation', () => {
+    const onChange = vi.fn();
+    render(<SlideToPost value={50} onChange={onChange} />);
 
     const track = screen.getByTestId('slide-to-post');
     track.focus();
 
     fireEvent.keyDown(track, { key: 'ArrowLeft' });
-    fireEvent.keyDown(track, { key: 'ArrowLeft' });
-    fireEvent.keyDown(track, { key: 'ArrowLeft' });
-    fireEvent.keyDown(track, { key: 'Enter' });
+    fireEvent.keyDown(track, { key: 'ArrowRight' });
 
-    await waitFor(() => expect(onPost).toHaveBeenCalledWith('concur'));
+    expect(onChange).toHaveBeenCalledWith(40);
+    expect(onChange).toHaveBeenCalledWith(60);
   });
 
-  it('shows success message after posting', async () => {
-    const onPost = vi.fn().mockResolvedValue(undefined);
-    render(<SlideToPost onPost={onPost} />);
+  it('updates label based on value prop', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<SlideToPost value={50} onChange={onChange} />);
+    expect(screen.getByTestId('slide-label-idle')).toHaveTextContent('Discuss');
 
-    const track = screen.getByTestId('slide-to-post');
-    fireEvent.mouseDown(track, { clientX: 192 });
-    fireEvent.mouseUp(document);
-
-    await waitFor(() => expect(screen.getByTestId('slide-label-idle')).toHaveTextContent('✓ Posted!'));
+    rerender(<SlideToPost value={10} onChange={onChange} />);
+    expect(screen.getByTestId('slide-label-idle')).toHaveTextContent('Strong Support');
   });
 
   it('has proper ARIA attributes', () => {
-    render(<SlideToPost onPost={vi.fn()} />);
+    render(<SlideToPost value={50} onChange={vi.fn()} />);
     const track = screen.getByTestId('slide-to-post');
 
     expect(track).toHaveAttribute('role', 'slider');
@@ -99,4 +97,3 @@ describe('SlideToPost', () => {
     expect(track).toHaveAttribute('tabIndex', '0');
   });
 });
-
