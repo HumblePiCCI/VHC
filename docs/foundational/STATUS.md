@@ -23,7 +23,7 @@
 
 ---
 
-## Recently Completed (Issues #11, #12, #15, #18, #22, #23, #24)
+## Recently Completed (Issues #11, #12, #15, #18, #22, #23, #24, #27)
 
 - ✅ **Issue #11** — Added root `pnpm typecheck` script.
 - ✅ **Issue #12** — Landed defensive-copy semantics for `getFullIdentity()` plus race test harness coverage.
@@ -37,12 +37,12 @@
   - `useColorPanel.ts`
 - ✅ **Issue #23** — Aligned `Identity` / `IdentityRecord` types across packages.
 - ✅ **Issue #24** — Added `apps/web-pwa/tsconfig.test.json` for test-file typechecking.
+- ✅ **Issue #27** — Fixed fresh-checkout typecheck: workspace `exports.types` point at `src/`, data-model uses `bundler` moduleResolution, gun-client stale references removed (PR #30, `4d19026c`).
 
 ---
 
 ## Active Follow-ups
 
-- **Issue #27** — infra: fresh-checkout `pnpm typecheck` requires prior build artifacts (open).
 - **Issue #19** — fix contracts and e2e typecheck errors (open).
 - **Issue #6** — harden xpLedger/profile localStorage for SSR (open).
 - **Issue #4** — SMOKE: agent loop end-to-end (open).
