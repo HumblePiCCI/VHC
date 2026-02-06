@@ -404,7 +404,7 @@ const router = new EngineRouter(mockEngine, undefined, 'local-only');
 
 ## Test Coverage
 
-**Repo-wide:** 64 test files, 390 tests (unit + component + integration). Coverage: **100%** statements / branches / functions / lines.
+**Repo-wide (Vitest `pnpm test:quick`):** 64 test files, 390 tests (unit + component + integration). Coverage: **100%** statements / branches / functions / lines.
 
 ---
 
