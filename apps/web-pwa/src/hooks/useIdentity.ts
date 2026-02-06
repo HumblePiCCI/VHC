@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AttestationPayload, IdentityRecord } from '@vh/types';
+import type { IdentityRecord } from '@vh/types';
 import { SEA, createSession } from '@vh/gun-client';
 import { authenticateGunUser, publishDirectoryEntry, useAppStore } from '../store';
 import { getHandleError, isValidHandle } from '../utils/handle';
@@ -233,7 +233,7 @@ export function useIdentity() {
   };
 }
 
-function buildAttestation(): AttestationPayload {
+function buildAttestation(): IdentityRecord['attestation'] {
   if (E2E_MODE) {
     return {
       platform: 'web',

@@ -27,7 +27,9 @@ export interface ForumState {
   getCounterComments(threadId: string): HermesComment[];
 }
 
-export type ForumIdentity = Pick<IdentityRecord, 'session'>;
+export type ForumIdentity = {
+  session: Pick<IdentityRecord['session'], 'nullifier' | 'trustScore' | 'scaledTrustScore'>;
+};
 
 export interface ForumDeps {
   resolveClient: () => VennClient | null;

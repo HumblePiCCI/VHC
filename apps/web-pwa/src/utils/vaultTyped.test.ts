@@ -56,6 +56,12 @@ describe('vaultTyped', () => {
     await expect(loadIdentityRecord()).resolves.toBeNull();
   });
 
+  it('loadIdentityRecord returns null for array payload', async () => {
+    loadIdentityMock.mockResolvedValueOnce([1, 2, 3]);
+
+    await expect(loadIdentityRecord()).resolves.toBeNull();
+  });
+
   it('loadIdentityRecord returns typed record when vault has identity data', async () => {
     loadIdentityMock.mockResolvedValueOnce(sampleRecord);
 

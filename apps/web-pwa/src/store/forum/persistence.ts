@@ -5,8 +5,7 @@ import { getPublishedIdentity } from '../identityProvider';
 export function loadIdentity(): ForumIdentity | null {
   const snapshot = getPublishedIdentity();
   if (!snapshot) return null;
-  // Public snapshot omits session.token by design; forum never uses it.
-  return { session: snapshot.session } as ForumIdentity;
+  return { session: snapshot.session };
 }
 
 export function loadVotesFromStorage(nullifier: string): Map<string, 'up' | 'down' | null> {

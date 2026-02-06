@@ -9,7 +9,7 @@ import { loadIdentity as vaultLoad, saveIdentity as vaultSave } from '@vh/identi
  * should be added at this boundary when needed.
  */
 function isIdentityRecordLike(value: unknown): value is IdentityRecord {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export async function loadIdentityRecord(): Promise<IdentityRecord | null> {
