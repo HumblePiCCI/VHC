@@ -7,6 +7,7 @@
     "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
+    // Keep enabled: disabling surfaces thousands of third-party .d.ts errors unrelated to app source/tests.
     "skipLibCheck": true,
     "types": ["vite/client"],
     "baseUrl": "./",

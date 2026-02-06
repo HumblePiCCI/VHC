@@ -52,10 +52,10 @@ describe('AnalysisView', () => {
     } as any);
     render(<AnalysisView item={sample} />);
     const [agree] = screen.getAllByLabelText('Agree frame');
-    fireEvent.click(agree);
+    fireEvent.click(agree!);
     expect(useSentimentState.getState().getAgreement(sample.id, 'pa:frame')).toBe(1);
 
-    fireEvent.click(agree);
+    fireEvent.click(agree!);
     expect(useSentimentState.getState().getAgreement(sample.id, 'pa:frame')).toBe(0);
   });
 });

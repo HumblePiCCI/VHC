@@ -65,7 +65,7 @@ const {
 });
 
 vi.mock('@vh/gun-client', async (orig) => {
-  const actual = await orig();
+  const actual = (await orig()) as Record<string, unknown>;
   return {
     ...actual,
     getForumThreadChain: vi.fn(() => threadChain),
@@ -261,7 +261,7 @@ describe('hermesForum store (comments & hydration)', () => {
     const store = createForumStore({ resolveClient: () => ({} as any), randomId: () => 'thread-4', now: () => 10 });
     const comment = {
       id: 'comment-123',
-      schemaVersion: 'hermes-comment-v1',
+      schemaVersion: 'hermes-comment-v1' as const,
       threadId: 'thread-4',
       parentId: null,
       content: 'hi',

@@ -40,7 +40,7 @@ const devicePair = { pub: 'device-pub', priv: 'device-priv', epub: 'device-epub'
 const lookupMock = vi.fn();
 
 vi.mock('@vh/data-model', async (orig) => {
-  const actual = await orig();
+  const actual = (await orig()) as Record<string, unknown>;
   return {
     ...actual,
     deriveChannelId: vi.fn(async () => 'channel-123')
@@ -48,7 +48,7 @@ vi.mock('@vh/data-model', async (orig) => {
 });
 
 vi.mock('@vh/gun-client', async (orig) => {
-  const actual = await orig();
+  const actual = (await orig()) as Record<string, unknown>;
   return {
     ...actual,
     SEA: {
@@ -225,7 +225,7 @@ describe('hermesMessaging store', () => {
 
     const channelMessages = store.getState().messages.get('channel-123') ?? [];
     expect(channelMessages).toHaveLength(1);
-    expect(channelMessages[0].id).toBe('msg-dup');
+    expect(channelMessages[0]!.id).toBe('msg-dup');
     expect(store.getState().channels.get('channel-123')?.participantEpubs?.alice).toBe('sender-epub');
     expect(store.getState().channels.get('channel-123')?.participantDevicePubs?.alice).toBe('sender-device');
   });
@@ -350,7 +350,7 @@ describe('hermesMessaging store', () => {
       senderDevicePub: 'sender-epub',
       deviceId: 'sender-device'
     });
-    expect(store.getState().messages.get('channel-123')?.[0].id).toBe('m1');
+    expect(store.getState().messages.get('channel-123')?.[0]?.id).toBe('m1');
     unsub();
   });
 });

@@ -71,7 +71,7 @@ describe('CommunityReactionSummary', () => {
     // Wait for the summary text to be updated with AI response
     await waitFor(() => {
       const summaries = screen.getAllByTestId('ai-summary');
-      const summary = summaries[summaries.length - 1]; // Get the latest rendered one
+      const summary = summaries[summaries.length - 1]!; // Get the latest rendered one
       expect(summary.textContent).toContain('The community is divided');
     });
   });
@@ -121,7 +121,7 @@ describe('CommunityReactionSummary', () => {
   it('opens and closes coming soon modal', async () => {
     useForumStore.setState({ comments: new Map([['thread-1', createMockComments(2)]]) } as any);
     render(<CommunityReactionSummary threadId="thread-1" />);
-    fireEvent.click(screen.getAllByTestId('action-send')[0]);
+    fireEvent.click(screen.getAllByTestId('action-send')[0]!);
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });

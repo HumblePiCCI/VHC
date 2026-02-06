@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { useAppStore, isE2EMode } from './index';
 import { createClient } from '@vh/gun-client';
 import * as storeModule from './index';
@@ -66,7 +67,7 @@ beforeEach(() => {
   mockPublishDirectory.mockReset();
   mockGunAuth.mockClear();
   mockGunUser.is = null;
-  (createClient as unknown as vi.Mock).mockClear();
+  (createClient as unknown as Mock).mockClear();
   useAppStore.setState({
     client: null,
     profile: null,
@@ -101,7 +102,7 @@ describe('useAppStore', () => {
   it('init respects existing client (early return)', async () => {
     useAppStore.setState({ client: { config: { peers: [] } } as any });
     await useAppStore.getState().init();
-    expect((createClient as unknown as vi.Mock).mock.calls.length).toBe(0);
+    expect((createClient as unknown as Mock).mock.calls.length).toBe(0);
   });
 
   it('init handles corrupted persisted profile gracefully', async () => {
@@ -155,7 +156,7 @@ describe('useAppStore', () => {
   });
 
   it('init surfaces client creation failures', async () => {
-    (createClient as unknown as vi.Mock).mockImplementationOnce(() => {
+    (createClient as unknown as Mock).mockImplementationOnce(() => {
       throw new Error('boom');
     });
     await useAppStore.getState().init();
@@ -178,7 +179,7 @@ describe('useAppStore', () => {
     const spy = vi.spyOn(storeModule, 'isE2EMode');
     expect(isE2EMode()).toBe(true);
     await useAppStore.getState().init();
-    expect((createClient as unknown as vi.Mock).mock.calls).toHaveLength(0);
+    expect((createClient as unknown as Mock).mock.calls).toHaveLength(0);
     expect(useAppStore.getState().client?.config.peers).toEqual([]);
     expect(useAppStore.getState().sessionReady).toBe(true);
     spy.mockRestore();

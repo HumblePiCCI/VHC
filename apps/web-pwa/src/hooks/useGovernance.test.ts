@@ -21,7 +21,7 @@ describe('useGovernance', () => {
 
   it('submits votes and updates counts', async () => {
     const { result } = renderHook(() => useGovernance('voter-1', 0.9));
-    const proposalId = result.current.proposals[0].id;
+    const proposalId = result.current.proposals[0]!.id;
     await act(async () => {
       await result.current.submitVote({ proposalId, amount: 2, direction: 'for' });
     });
@@ -31,7 +31,7 @@ describe('useGovernance', () => {
   it('logs curated project mapping on vote', async () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const { result } = renderHook(() => useGovernance('voter-1', 0.9));
-    const proposalId = result.current.proposals[0].id;
+    const proposalId = result.current.proposals[0]!.id;
     await act(async () => {
       await result.current.submitVote({ proposalId, amount: 1, direction: 'for' });
     });
@@ -49,7 +49,7 @@ describe('useGovernance', () => {
   it('hydrates stored votes for the same voter', async () => {
     const voterId = 'voter-2';
     const { result } = renderHook(() => useGovernance(voterId, 0.95));
-    const proposalId = result.current.proposals[0].id;
+    const proposalId = result.current.proposals[0]!.id;
     await act(async () => {
       await result.current.submitVote({ proposalId, amount: 3, direction: 'against' });
     });
@@ -71,7 +71,7 @@ describe('useGovernance', () => {
     await act(async () => {
       rerender();
     });
-    const proposalId = result.current.proposals[0].id;
+    const proposalId = result.current.proposals[0]!.id;
     await act(async () => {
       await result.current.submitVote({ proposalId, amount: 2, direction: 'for' });
     });
@@ -85,7 +85,7 @@ describe('useGovernance', () => {
   it('isolates lastAction per voter', async () => {
     const { result: voterA } = renderHook(() => useGovernance('voter-A', 0.95));
     await act(async () => {
-      await voterA.current.submitVote({ proposalId: voterA.current.proposals[0].id, amount: 1, direction: 'for' });
+      await voterA.current.submitVote({ proposalId: voterA.current.proposals[0]!.id, amount: 1, direction: 'for' });
     });
     expect(voterA.current.lastAction).toContain('Vote recorded');
 
@@ -96,7 +96,6 @@ describe('useGovernance', () => {
   it('survives storage errors gracefully', async () => {
     const originalXp = useXpLedger.getState;
     // stub XP ledger to avoid storage writes during this test
-    // @ts-expect-error override for test
     useXpLedger.getState = () =>
       ({
         setActiveNullifier: () => {},
@@ -115,14 +114,13 @@ describe('useGovernance', () => {
       expect(result.current.votedDirections).toEqual({});
 
       await act(async () => {
-        await result.current.submitVote({ proposalId: result.current.proposals[0].id, amount: 1, direction: 'for' });
+        await result.current.submitVote({ proposalId: result.current.proposals[0]!.id, amount: 1, direction: 'for' });
       });
-      expect(result.current.proposals[0].votesFor).toBeGreaterThan(12);
+      expect(result.current.proposals[0]!.votesFor).toBeGreaterThan(12);
     } finally {
       getItemSpy.mockRestore();
       setItemSpy.mockRestore();
       // restore xp
-      // @ts-expect-error restore
       useXpLedger.getState = originalXp;
     }
   });
