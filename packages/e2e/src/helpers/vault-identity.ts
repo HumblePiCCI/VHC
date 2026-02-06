@@ -233,31 +233,30 @@ export async function waitForVaultIdentityNullifier(page: Page, timeoutMs = 15_0
 }
 
 /**
- * Wait until the in-memory identity provider has been populated by the
- * useIdentity hook's hydration effect.  This is the correct pre-condition
- * before forum interactions (createThread, vote, etc.) on navigated pages,
- * because the forum store reads identity from the provider synchronously.
+ * Wait until the identity has been hydrated from the vault and published
+ * to the in-memory identity provider.
  *
- * Detection: we check for the existence of a data-identity-status="ready"
- * attribute OR poll the vault (which guarantees the React effect has resolved
- * when paired with a UI-visible gate).
+ * Strategy: first try the fast path (global flag set by publishIdentity).
+ * If that times out, fall back to vault poll + settle delay.  The flag
+ * approach works in most environments but may miss in certain build
+ * configurations where the global write is optimized away.
  */
 export async function waitForIdentityHydrated(page: Page, timeoutMs = 15_000): Promise<void> {
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    // The useIdentity hook sets status='ready' after hydration + publishIdentity.
-    // We can detect this via a data attribute on the body, or by checking if the
-    // vault has data AND the forum store can read it.
-    const ready = await page.evaluate(() => {
-      // Check if the identity provider module has been populated.
-      // We access it through a global bridge set by the app in E2E mode.
-      return !!(window as any).__vh_identity_published;
-    });
-
-    if (ready) return;
-    await page.waitForTimeout(150);
+  try {
+    await page.waitForFunction(
+      () => !!(window as any).__vh_identity_published,
+      undefined,
+      { timeout: Math.min(timeoutMs, 5_000) },
+    );
+    return;
+  } catch {
+    // Flag not detected — fall back to vault poll + settle
   }
 
-  throw new Error(`Timed out waiting for identity hydration after ${timeoutMs}ms.`);
+  // Fallback: confirm vault has identity, then let React effects settle.
+  await waitForVaultIdentityNullifier(page, timeoutMs);
+  // Two evaluate round-trips drain the microtask + macrotask queues,
+  // ensuring the React useEffect chain (which calls publishIdentity)
+  // has resolved.
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
 }

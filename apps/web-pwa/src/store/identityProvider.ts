@@ -36,8 +36,10 @@ export function publishIdentity(identity: {
     },
   };
   // E2E bridge: signal that identity is hydrated so Playwright can await it.
-  if (typeof globalThis !== 'undefined') {
-    (globalThis as any).__vh_identity_published = true;
+  const g = typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null;
+  if (g) (g as any).__vh_identity_published = true;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('vh:identity-published'));
   }
 }
 
@@ -49,7 +51,6 @@ export function getPublishedIdentity(): PublicIdentitySnapshot | null {
 /** Clear published identity (for tests or sign-out). */
 export function clearPublishedIdentity(): void {
   current = null;
-  if (typeof globalThis !== 'undefined') {
-    (globalThis as any).__vh_identity_published = false;
-  }
+  const g = typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null;
+  if (g) (g as any).__vh_identity_published = false;
 }
