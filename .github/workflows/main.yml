@@ -29,6 +29,9 @@ jobs:
       - name: Lint (LOC & Rules)
         run: pnpm lint
 
+      - name: Build (for cross-package types)
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
