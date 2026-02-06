@@ -174,9 +174,9 @@ const ComingSoonModal: React.FC<{ action: ActionType; onClose: () => void }> = (
       }
       if (e.key === 'Tab' && modalRef.current) {
         const focusables = modalRef.current.querySelectorAll<HTMLElement>('button');
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+        const first = focusables.item(0);
+        const last = focusables.item(focusables.length - 1);
+        if (!first || !last) return;
         if (e.shiftKey) {
           if (document.activeElement === first) {
             e.preventDefault();

@@ -8,12 +8,13 @@ import { CommunityReactionSummary } from '../CommunityReactionSummary';
 import { EngagementIcons } from '../../EngagementIcons';
 import { useSentimentState } from '../../../hooks/useSentimentState';
 import { useViewTracking } from '../../../hooks/useViewTracking';
+import type { HermesComment } from '@vh/types';
 
 interface Props {
   threadId: string;
 }
 
-const EMPTY_COMMENTS: readonly any[] = [];
+const EMPTY_COMMENTS: HermesComment[] = [];
 const borderlessButton =
   'inline-flex items-center gap-2 rounded-lg px-4 py-2 shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500';
 

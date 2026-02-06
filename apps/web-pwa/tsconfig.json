@@ -3,10 +3,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
+    "skipLibCheck": true,
     "types": ["vite/client"],
     "baseUrl": "./",
     "paths": {
@@ -14,5 +15,11 @@
     }
   },
   "include": ["src", "vite.config.ts"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/__tests__/**"
+  ]
 }

@@ -104,13 +104,17 @@ export const SlideToPost: React.FC<Props> = ({ value, onChange, onCommit, disabl
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (disabled) return;
+    const touch = e.touches.item(0);
+    if (!touch) return;
     setIsDragging(true);
-    setValue(getPositionFromClientX(e.touches[0].clientX));
+    setValue(getPositionFromClientX(touch.clientX));
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
-    setValue(getPositionFromClientX(e.touches[0].clientX));
+    const touch = e.touches.item(0);
+    if (!touch) return;
+    setValue(getPositionFromClientX(touch.clientX));
   };
 
   const onTouchEnd = () => {

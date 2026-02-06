@@ -33,6 +33,18 @@ interface ClaimStatus {
   nullifier: string;
 }
 
+interface RvuReadContract {
+  balanceOf(account: string): Promise<bigint>;
+}
+
+interface UbeReadContract {
+  getClaimStatus(account: string): Promise<[boolean, bigint, bigint, bigint, string]>;
+}
+
+interface UbeWriteContract extends UbeReadContract {
+  claim(): Promise<{ wait: () => Promise<unknown> }>;
+}
+
 export function useWallet() {
   const e2e = isE2EMode();
   const [account, setAccount] = useState<string | null>(null);
@@ -94,18 +106,12 @@ export function useWallet() {
     setLoading(true);
     try {
       const readProvider = provider ?? new JsonRpcProvider(RPC_URL);
-      const rvu = new Contract(RVU_ADDRESS, RVU_ABI, readProvider);
-      const rawBalance = (await rvu.balanceOf(account)) as bigint;
+      const rvu = new Contract(RVU_ADDRESS, RVU_ABI, readProvider) as unknown as RvuReadContract;
+      const rawBalance = await rvu.balanceOf(account);
       setBalance(rawBalance);
 
-      const ube = new Contract(UBE_ADDRESS, UBE_ABI, readProvider);
-      const status = (await ube.getClaimStatus(account)) as [
-        boolean,
-        bigint,
-        bigint,
-        bigint,
-        string
-      ];
+      const ube = new Contract(UBE_ADDRESS, UBE_ABI, readProvider) as unknown as UbeReadContract;
+      const status = await ube.getClaimStatus(account);
       setClaimStatus({
         eligible: status[0],
         nextClaimAt: Number(status[1]),
@@ -152,7 +158,7 @@ export function useWallet() {
     setClaiming(true);
     try {
       const signer = await provider.getSigner();
-      const ube = new Contract(UBE_ADDRESS, UBE_ABI, signer);
+      const ube = new Contract(UBE_ADDRESS, UBE_ABI, signer) as unknown as UbeWriteContract;
       const tx = await ube.claim();
       await tx.wait();
       await refresh();

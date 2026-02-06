@@ -224,7 +224,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
           <button
             className="px-3 py-2 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-teal-500"
             onClick={() =>
-              router.navigate({ to: '/hermes/forum', search: { sourceAnalysisId: item.id, title: item.title } as any })
+              router.navigate({ to: '/hermes', search: { sourceAnalysisId: item.id, title: item.title } as any })
             }
           >
             Create thread

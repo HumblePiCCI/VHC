@@ -54,6 +54,9 @@ importers:
       '@vh/gun-client':
         specifier: workspace:*
         version: link:../../packages/gun-client
+      '@vh/identity-vault':
+        specifier: workspace:*
+        version: link:../../packages/identity-vault
       '@vh/types':
         specifier: workspace:*
         version: link:../../packages/types
