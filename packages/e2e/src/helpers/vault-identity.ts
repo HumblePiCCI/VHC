@@ -113,9 +113,9 @@ export async function readVaultIdentity(page: Page): Promise<VaultIdentity | nul
       }
 
       const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv },
+        { name: 'AES-GCM', iv: iv as unknown as BufferSource },
         rawMasterKey,
-        ciphertext,
+        ciphertext as ArrayBuffer,
       );
 
       const json = new TextDecoder().decode(decrypted);

@@ -155,12 +155,24 @@ importers:
 
   packages/contracts:
     devDependencies:
+      '@nomicfoundation/hardhat-chai-matchers':
+        specifier: ^2.1.0
+        version: 2.1.0(@nomicfoundation/hardhat-ethers@3.1.2(ethers@6.15.0)(hardhat@2.27.0(ts-node@10.9.2(@types/node@20.17.19)(typescript@5.9.3))(typescript@5.9.3)))(chai@4.5.0)(ethers@6.15.0)(hardhat@2.27.0(ts-node@10.9.2(@types/node@20.17.19)(typescript@5.9.3))(typescript@5.9.3))
+      '@nomicfoundation/hardhat-ethers':
+        specifier: ^3.1.2
+        version: 3.1.2(ethers@6.15.0)(hardhat@2.27.0(ts-node@10.9.2(@types/node@20.17.19)(typescript@5.9.3))(typescript@5.9.3))
       '@nomicfoundation/hardhat-toolbox':
         specifier: ^6.1.0
         version: 6.1.0(kwxxzchaxhfcg3irsizpogb3p4)
       '@openzeppelin/contracts':
         specifier: 5.0.2
         version: 5.0.2
+      '@types/chai':
+        specifier: ^4.3.20
+        version: 4.3.20
+      '@types/mocha':
+        specifier: ^10.0.10
+        version: 10.0.10
       '@types/node':
         specifier: 20.17.19
         version: 20.17.19
@@ -170,6 +182,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
+      ethers:
+        specifier: ^6.13.4
+        version: 6.15.0
       hardhat:
         specifier: ^2.27.0
         version: 2.27.0(ts-node@10.9.2(@types/node@20.17.19)(typescript@5.9.3))(typescript@5.9.3)
