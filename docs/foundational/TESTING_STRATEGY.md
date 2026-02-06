@@ -9,6 +9,15 @@ VENN-HERMES is a decentralized, multi-user application with E2E encrypted messag
 3. **Sync**: Does data propagate correctly across the mesh?
 4. **Security**: Is encryption actually protecting data?
 
+## Typecheck Workflow Snapshot (Current)
+
+- Repo-wide entry point: `pnpm typecheck` (Issue #11 complete).
+- Coverage extension work completed in recent sprints:
+  - Issue #15: extended typecheck coverage across remaining packages.
+  - Issue #18: resolved web-pwa typecheck error backlog.
+  - Issue #24: added `apps/web-pwa/tsconfig.test.json` for test-file typechecking (`pnpm --filter @vh/web-pwa typecheck:test`).
+- Active follow-up: Issue #27 (fresh-checkout `pnpm typecheck` currently requires prior build artifacts).
+
 ---
 
 ## Test Layers
@@ -177,50 +186,51 @@ await page.exposeFunction('__VH_MOCK_MESH_PUT__', (scope, key, value) => sharedM
 ## CI/CD Pipeline
 
 ```yaml
-name: Test Suite
+name: CI (excerpt)
 
 on: [push, pull_request]
 
 jobs:
-  unit:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - run: pnpm install
-      - run: pnpm test:unit
-  
-  integration:
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm typecheck
+
+  test:
     runs-on: ubuntu-latest
+    needs: quality
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - run: pnpm install
-      - run: pnpm test:integration
-  
-  e2e-single:
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:quick
+
+  e2e:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - run: pnpm install
-      - run: pnpm exec playwright install chromium
-      - run: pnpm test --filter @vh/e2e
-  
-  e2e-multi:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    services:
-      gun-relay:
-        image: gundb/gun
-        ports:
-          - 9780:8765
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v2
-      - run: pnpm install
-      - run: pnpm exec playwright install chromium
-      - run: VITE_GUN_PEERS='["http://localhost:9780/gun"]' pnpm test --filter @vh/e2e -- --grep @multi-user
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vh/e2e exec playwright install --with-deps
+      - run: pnpm test:e2e
 ```
 
 ---

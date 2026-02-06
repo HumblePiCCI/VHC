@@ -12,11 +12,11 @@ Each path is described from the user’s point of view and then mapped to concre
 
 - `System_Architecture.md`
 - `docs/specs/spec-identity-trust-constituency.md`
-- `docs/specs/docs/specs/spec-civic-sentiment.md`
+- `docs/specs/spec-civic-sentiment.md`
 - `docs/specs/spec-rvu-economics-v0.md`
 - `docs/specs/canonical-analysis-v1.md`
 - `docs/foundational/AI_ENGINE_CONTRACT.md`
-- `docs/specs/docs/specs/spec-data-topology-privacy-v0.md`
+- `docs/specs/spec-data-topology-privacy-v0.md`
 
 ---
 
