@@ -19,7 +19,7 @@
  *   });
  */
 
-import { test as base, type Page, type BrowserContext } from '@playwright/test';
+import { test as base, type Page, type BrowserContext, type ConsoleMessage } from '@playwright/test';
 
 /**
  * Shared mesh store that simulates Gun relay sync between contexts.
@@ -95,14 +95,14 @@ async function createUser(
   const page = await context.newPage();
   
   // Add console logging for debugging
-  page.on('console', (msg) => {
+  page.on('console', (msg: ConsoleMessage) => {
     const text = msg.text();
     if (msg.type() === 'error' || text.includes('[vh:')) {
       console.log(`[${name}] ${text}`);
     }
   });
   
-  page.on('pageerror', (err) => {
+  page.on('pageerror', (err: Error) => {
     console.error(`[${name}] PAGE ERROR: ${err.message}`);
   });
 

@@ -9,6 +9,6 @@
     "types": ["node", "chai", "mocha", "hardhat"],
     "outDir": "dist"
   },
-  "include": ["hardhat.config.ts", "scripts", "test", "contracts"],
+  "include": ["hardhat.config.ts", "scripts", "test", "contracts", "typechain-types"],
   "files": ["./hardhat.config.ts"]
 }
