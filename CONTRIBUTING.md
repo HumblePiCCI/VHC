@@ -21,6 +21,7 @@ pnpm vh dev
 ```
 
 ## Tests & CI
+- Typecheck: `pnpm typecheck`
 - Quick tests: `pnpm test:quick`
 - Dependency graph check: `pnpm deps:check`
 - CI mirrors these steps (see `.github/workflows/main.yml`).

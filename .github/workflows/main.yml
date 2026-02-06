@@ -29,6 +29,9 @@ jobs:
       - name: Lint (LOC & Rules)
         run: pnpm lint
 
+      - name: Typecheck
+        run: pnpm typecheck
+
       - name: Circular Dependency Check
         run: pnpm deps:check
 
