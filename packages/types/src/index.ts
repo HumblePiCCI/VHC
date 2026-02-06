@@ -1,11 +1,6 @@
 import { z } from 'zod';
 
-export interface AttestationPayload {
-  platform: 'ios' | 'android' | 'web';
-  integrityToken: string;
-  deviceKey: string;
-  nonce: string;
-}
+export type { AttestationPayload } from './attestation';
 
 export interface VerificationResult {
   success: boolean;
@@ -87,6 +82,8 @@ export const SentimentSignalSchema = z.object({
   constituency_proof: ConstituencyProofSchema,
   emitted_at: z.number().int().nonnegative()
 });
+
+export type { IdentityRecord, DevicePair } from './identity';
 
 export type HermesMessageType = 'text' | 'image' | 'file';
 export type HermesChannelType = 'dm';
