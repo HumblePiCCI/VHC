@@ -42,7 +42,7 @@ async function ensureMigrated(): Promise<void> {
   if (!migrationPromise) {
     migrationPromise = migrateLegacyLocalStorage().then(() => undefined);
   }
-  return migrationPromise;
+  return migrationPromise ?? Promise.resolve();
 }
 
 async function loadIdentityFromVault(): Promise<IdentityRecord | null> {
@@ -52,7 +52,7 @@ async function loadIdentityFromVault(): Promise<IdentityRecord | null> {
 }
 
 async function persistIdentity(record: IdentityRecord): Promise<void> {
-  await vaultSave(record as Identity);
+  await vaultSave(record as unknown as Identity);
   // Publish identity for downstream consumers.
   publishIdentity(record);
 }

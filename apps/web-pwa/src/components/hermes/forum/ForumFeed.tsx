@@ -14,14 +14,20 @@ export const ForumFeed: React.FC<ForumFeedProps> = ({ sourceAnalysisId, defaultT
   const [sort, setSort] = useState<'hot' | 'new' | 'top'>('hot');
   const [showNewThread, setShowNewThread] = useState(false);
 
-  const sortedThreads = useMemo(() => {
-    return loadThreads(sort);
-  }, [loadThreads, sort, threads]);
+  const sortedThreads = useMemo(() => loadThreads(sort), [loadThreads, sort, threads]);
 
-  const [resolved, setResolved] = useState<ReturnType<typeof loadThreads> | null>(null);
+  const [resolved, setResolved] = useState<Awaited<ReturnType<typeof loadThreads>> | null>(null);
 
   React.useEffect(() => {
-    sortedThreads.then(setResolved);
+    let canceled = false;
+    void sortedThreads.then((items) => {
+      if (!canceled) {
+        setResolved(items);
+      }
+    });
+    return () => {
+      canceled = true;
+    };
   }, [sortedThreads]);
 
   return (

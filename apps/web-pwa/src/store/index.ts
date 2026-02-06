@@ -96,16 +96,25 @@ const sharedMeshOps = {
       // Fallback to localStorage
       const key = '__VH_MESH_STORE__';
       try {
-        const store = JSON.parse(localStorage.getItem(key) || '{}');
+        const store = JSON.parse(localStorage.getItem(key) || '{}') as Record<string, unknown>;
         const parts = path.split('/');
-        let current = store;
+        let current: Record<string, unknown> = store;
         for (let i = 0; i < parts.length - 1; i++) {
-          current[parts[i]] = current[parts[i]] ?? {};
-          current = current[parts[i]];
+          const part = parts[i];
+          if (!part) continue;
+          const existing = current[part];
+          if (!existing || typeof existing !== 'object') {
+            current[part] = {};
+          }
+          current = current[part] as Record<string, unknown>;
         }
-        current[parts[parts.length - 1]] = value;
+        const leaf = parts[parts.length - 1];
+        if (!leaf) return;
+        current[leaf] = value;
         localStorage.setItem(key, JSON.stringify(store));
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   },
   
@@ -241,7 +250,6 @@ function createMockClient(): VennClient {
     } as any,
     chat: { send: async () => { } } as any,
     outbox: { enqueue: async () => { } } as any,
-    createSession: async () => ({ token: 'mock-token', trustScore: 1, nullifier: 'mock-nullifier' }),
     mesh,
     sessionReady: true,
     markSessionReady: () => { },

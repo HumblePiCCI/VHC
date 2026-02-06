@@ -100,8 +100,9 @@ function loadCached(): { items: FeedItem[]; page: number } {
     let maxPage = 1;
     for (const item of deduped) {
       const match = item.id.match(/-p(\d+)-/);
-      if (match) {
-        maxPage = Math.max(maxPage, parseInt(match[1], 10));
+      const pageValue = match?.[1];
+      if (pageValue) {
+        maxPage = Math.max(maxPage, parseInt(pageValue, 10));
       }
     }
     return { items: deduped, page: maxPage };

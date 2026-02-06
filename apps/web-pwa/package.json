@@ -17,6 +17,7 @@
     "@vh/contracts": "workspace:*",
     "@vh/data-model": "workspace:*",
     "@vh/gun-client": "workspace:*",
+    "@vh/identity-vault": "workspace:*",
     "@vh/types": "workspace:*",
     "@vh/ui": "workspace:*",
     "dompurify": "^3.3.0",

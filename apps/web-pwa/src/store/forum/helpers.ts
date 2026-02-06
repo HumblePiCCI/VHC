@@ -24,8 +24,9 @@ export function ensureClient(resolveClient: () => VennClient | null): VennClient
 }
 
 /** Remove undefined values before writing to Gun */
-export function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
-  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+export function stripUndefined<T extends object>(obj: T): T {
+  const entries = Object.entries(obj as Record<string, unknown>).filter(([, v]) => v !== undefined);
+  return Object.fromEntries(entries) as T;
 }
 
 /** Serialize thread for Gun storage (handles undefined + arrays) */

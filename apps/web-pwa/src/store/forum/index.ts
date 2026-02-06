@@ -93,8 +93,10 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
           resolve();
         });
       });
-      getForumDateIndexChain(client).get(withScore.id).put({ timestamp: withScore.timestamp });
-      tags.forEach((tag) => getForumTagIndexChain(client, tag.toLowerCase()).get(withScore.id).put(true));
+      getForumDateIndexChain(client).get(withScore.id).put({ timestamp: String(withScore.timestamp) });
+      tags.forEach((tag) =>
+        getForumTagIndexChain(client, tag.toLowerCase()).get(withScore.id).put({ indexed: '1' })
+      );
       set((state) => addThread(state, withScore));
       const tagsLower = tags.map((t) => t.toLowerCase());
       if (tagsLower.some((t) => t.includes('project') || t.includes('proposal'))) {
@@ -235,39 +237,46 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
         subscribedThreads.add(threadId);
         const commentsChain = getForumCommentsChain(client, threadId);
         console.debug('[vh:forum] subscribing to comments for thread:', threadId);
-        commentsChain.map().on((data: unknown, key: string) => {
-          console.debug('[vh:forum] comment callback:', { key, dataType: typeof data, hasData: !!data });
-          if (!data || typeof data !== 'object') {
-            console.debug('[vh:forum] skipping comment: not an object');
-            return;
-          }
-          const obj = data as Record<string, unknown>;
-          if (!obj.id || !obj.schemaVersion || !obj.threadId) {
-            console.debug('[vh:forum] skipping comment: missing required fields', {
-              hasId: !!obj.id, hasSchema: !!obj.schemaVersion, hasThreadId: !!obj.threadId,
-              keys: Object.keys(obj).filter((k) => k !== '_')
-            });
-            return;
-          }
-          if (isCommentSeen(key)) {
-            console.debug('[vh:forum] skipping comment: already seen', key);
-            return;
-          }
-          const { _, ...cleanObj } = obj as Record<string, unknown> & { _?: unknown };
-          const result = HermesCommentSchema.safeParse(cleanObj);
-          if (result.success) {
-            markCommentSeen(key);
-            const normalized = migrateCommentToV1(result.data as HermesCommentHydratable);
-            console.info('[vh:forum] Hydrated comment:', normalized.id);
-            const withLegacyType: HermesComment = {
-              ...normalized,
-              type: normalized.stance === 'counter' ? 'counterpoint' : 'reply'
-            };
-            set((s) => addComment(s, withLegacyType));
-          } else {
-            console.debug('[vh:forum] Comment validation failed, will retry:', key, result.error.issues);
-          }
-        });
+        const mapped = commentsChain.map?.();
+        if (mapped?.on) {
+          mapped.on((data: unknown, key?: string) => {
+            console.debug('[vh:forum] comment callback:', { key, dataType: typeof data, hasData: !!data });
+            if (!data || typeof data !== 'object') {
+              console.debug('[vh:forum] skipping comment: not an object');
+              return;
+            }
+            const obj = data as Record<string, unknown>;
+            if (!obj.id || !obj.schemaVersion || !obj.threadId) {
+              console.debug('[vh:forum] skipping comment: missing required fields', {
+                hasId: !!obj.id,
+                hasSchema: !!obj.schemaVersion,
+                hasThreadId: !!obj.threadId,
+                keys: Object.keys(obj).filter((k) => k !== '_')
+              });
+              return;
+            }
+            const resolvedKey = key ?? (typeof obj.id === 'string' ? obj.id : undefined);
+            if (!resolvedKey) return;
+            if (isCommentSeen(resolvedKey)) {
+              console.debug('[vh:forum] skipping comment: already seen', resolvedKey);
+              return;
+            }
+            const { _, ...cleanObj } = obj as Record<string, unknown> & { _?: unknown };
+            const result = HermesCommentSchema.safeParse(cleanObj);
+            if (result.success) {
+              markCommentSeen(resolvedKey);
+              const normalized = migrateCommentToV1(result.data as HermesCommentHydratable);
+              console.info('[vh:forum] Hydrated comment:', normalized.id);
+              const withLegacyType: HermesComment = {
+                ...normalized,
+                type: normalized.stance === 'counter' ? 'counterpoint' : 'reply'
+              };
+              set((s) => addComment(s, withLegacyType));
+            } else {
+              console.debug('[vh:forum] Comment validation failed, will retry:', resolvedKey, result.error.issues);
+            }
+          });
+        }
       }
       return (get().comments.get(threadId) ?? []).slice().sort((a, b) => a.timestamp - b.timestamp);
     },

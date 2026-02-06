@@ -278,6 +278,7 @@ export function createMockChatStore() {
     channels: new Map(),
     messages: new Map(),
     statuses: new Map(),
+    messageStats: new Map(),
     contacts: new Map(),
     async getOrCreateChannel(peerIdentityKey: string, peerEpub?: string, peerDevicePub?: string) {
       const channelId = `mock-${peerIdentityKey}`;

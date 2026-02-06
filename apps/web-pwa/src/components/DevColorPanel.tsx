@@ -14,9 +14,10 @@ interface ColorConfig {
 function hexToHsl(hex: string): { h: number; s: number; l: number } {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return { h: 0, s: 50, l: 50 };
-  let r = parseInt(result[1], 16) / 255;
-  let g = parseInt(result[2], 16) / 255;
-  let b = parseInt(result[3], 16) / 255;
+  const [, rHex = '00', gHex = '00', bHex = '00'] = result;
+  let r = parseInt(rHex, 16) / 255;
+  let g = parseInt(gHex, 16) / 255;
+  let b = parseInt(bHex, 16) / 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   let h = 0, s = 0;
   const l = (max + min) / 2;
@@ -63,10 +64,11 @@ function parseColor(color: string): { hex: string; alpha: number } {
     );
     const match = comma ?? space;
     if (match) {
-      const r = parseInt(match[1]).toString(16).padStart(2, '0');
-      const g = parseInt(match[2]).toString(16).padStart(2, '0');
-      const b = parseInt(match[3]).toString(16).padStart(2, '0');
-      return { hex: `#${r}${g}${b}`, alpha: match[4] ? parseFloat(match[4]) : 1 };
+      const [, rRaw = '0', gRaw = '0', bRaw = '0', alphaRaw] = match;
+      const r = parseInt(rRaw).toString(16).padStart(2, '0');
+      const g = parseInt(gRaw).toString(16).padStart(2, '0');
+      const b = parseInt(bRaw).toString(16).padStart(2, '0');
+      return { hex: `#${r}${g}${b}`, alpha: alphaRaw ? parseFloat(alphaRaw) : 1 };
     }
   }
 
@@ -243,9 +245,10 @@ export const DevColorPanel: React.FC = () => {
       const regex = /var\(\s*(--[a-zA-Z0-9-_]+)\s*(?:,[^)]+)?\)/g;
       let match: RegExpExecArray | null = null;
       while ((match = regex.exec(text))) {
-        if (seen.has(match[1])) continue;
-        seen.add(match[1]);
-        vars.push(match[1]);
+        const found = match[1];
+        if (!found || seen.has(found)) continue;
+        seen.add(found);
+        vars.push(found);
       }
       return vars;
     };
@@ -307,6 +310,7 @@ export const DevColorPanel: React.FC = () => {
 
       setInspectedVars(matched);
       const primary = matched[0];
+      if (!primary) return;
       const config = configByVar.get(primary);
       if (config) {
         setActiveCategory(config.category);
@@ -365,7 +369,10 @@ export const DevColorPanel: React.FC = () => {
         index.set(key, groups.length);
         groups.push({ key, title, items: [config] });
       } else {
-        groups[existing].items.push(config);
+        const targetGroup = groups[existing];
+        if (targetGroup) {
+          targetGroup.items.push(config);
+        }
       }
     }
 
@@ -375,7 +382,14 @@ export const DevColorPanel: React.FC = () => {
   const updateColor = (cssVar: string, value: string) => {
     const mode = isDark ? 'dark' : 'light';
     setColors((prev) => {
-      const updated = { ...prev, [cssVar]: { ...prev[cssVar], [mode]: value } };
+      const config = configByVar.get(cssVar);
+      const current =
+        prev[cssVar] ??
+        {
+          light: config?.defaultLight ?? '',
+          dark: config?.defaultDark ?? ''
+        };
+      const updated = { ...prev, [cssVar]: { ...current, [mode]: value } };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
@@ -555,6 +569,7 @@ ${darkSection}      }
                   className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   onClick={() => {
                     const first = group.items[0];
+                    if (!first) return;
                     setActiveCategory(first.category);
                     setSearch('');
                     setJumpToVar(first.cssVar);

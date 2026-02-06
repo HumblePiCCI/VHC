@@ -40,11 +40,11 @@ export function createMockForumStore() {
         score: 0
       };
       const cleanThread = stripUndefined(thread);
-      const nextThreads = new Map(get().threads).set(cleanThread.id, cleanThread as HermesThread);
+      const nextThreads = new Map(get().threads).set(cleanThread.id, cleanThread);
       set((state) => ({ ...state, threads: nextThreads }));
-      const threadForMesh = serializeThreadForGun(cleanThread as HermesThread);
+      const threadForMesh = serializeThreadForGun(cleanThread);
       mesh?.write(`vh/forum/threads/${cleanThread.id}`, threadForMesh);
-      return cleanThread as HermesThread;
+      return cleanThread;
     },
     async createComment(threadId, content, stanceInput, parentId, targetId) {
       ensureIdentity();

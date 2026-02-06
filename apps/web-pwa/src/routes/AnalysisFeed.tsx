@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { Button } from '@vh/ui';
 import type { AnalysisResult } from '../../../../packages/ai-engine/src/prompts';
 import { getOrGenerate, type CanonicalAnalysis } from '../../../../packages/ai-engine/src/analysis';
+import type { VennClient } from '@vh/gun-client';
 import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
 
@@ -36,7 +37,7 @@ async function getFromFeed(urlHash: string, feed: CanonicalAnalysis[]) {
   return existing ?? null;
 }
 
-function createGunStore(client: ReturnType<typeof useAppStore>['client'] | null) {
+function createGunStore(client: VennClient | null) {
   const mesh = (client as any)?.mesh ?? (client as any)?.gun ?? null;
   if (!mesh?.get) return null;
   const analyses = mesh.get('analyses');
@@ -91,7 +92,6 @@ export const AnalysisFeed: React.FC = () => {
                   summary: `Local analysis for ${targetUrl}`,
                   biases: ['Local-first'],
                   counterpoints: ['None'],
-                  sentimentScore: 0,
                   bias_claim_quote: [],
                   justify_bias_claim: [],
                   confidence: 0.6
