@@ -21,9 +21,7 @@ export interface UseColorPanelResult {
   controlRefs: MutableRefObject<Record<string, HTMLDivElement | null>>;
   configByVar: Map<string, ColorConfig>;
   categories: string[];
-  normalizedQuery: string;
   showSearchResults: boolean;
-  visibleConfigs: ColorConfig[];
   groupedConfigs: GroupedConfigs;
   updateColor: (cssVar: string, value: string) => void;
   resetColors: () => void;
@@ -337,9 +335,7 @@ ${darkSection}      }
     controlRefs,
     configByVar,
     categories,
-    normalizedQuery,
     showSearchResults,
-    visibleConfigs,
     groupedConfigs,
     updateColor,
     resetColors,

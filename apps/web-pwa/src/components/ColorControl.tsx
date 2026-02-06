@@ -5,7 +5,6 @@ import { buildColor, hexToHsl, hslToHex, parseColor, type ColorConfig } from './
 interface ColorControlProps {
   config: ColorConfig;
   currentValue: string;
-  isDark: boolean;
   highlighted: boolean;
   onUpdate: (cssVar: string, value: string) => void;
   controlRef: (el: HTMLDivElement | null) => void;

@@ -166,7 +166,6 @@ export const DevColorPanel: React.FC = () => {
                   key={config.cssVar}
                   config={config}
                   currentValue={currentValue}
-                  isDark={isDark}
                   highlighted={highlighted}
                   onUpdate={updateColor}
                   controlRef={(el) => {
