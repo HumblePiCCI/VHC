@@ -139,8 +139,12 @@ describe('useIdentity', () => {
     expect(result.current.identity?.session.scaledTrustScore).toBe(7510);
     expect(result.current.identity?.devicePair?.epub).toBe('epub');
 
-    // AC3: must NOT be in localStorage
-    expect(localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
+    // AC3: dual-write — localStorage gets a copy for downstream consumers
+    // (forum store, etc.) during the migration period.
+    const lsRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    expect(lsRaw).not.toBeNull();
+    const lsParsed = JSON.parse(lsRaw!);
+    expect(lsParsed.session.nullifier).toBe('stable-nullifier');
 
     // Must be in vault
     const fromVault = await vaultLoad();

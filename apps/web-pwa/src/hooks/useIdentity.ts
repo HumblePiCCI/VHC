@@ -51,8 +51,19 @@ async function loadIdentityFromVault(): Promise<IdentityRecord | null> {
   return raw as IdentityRecord | null;
 }
 
+const LEGACY_IDENTITY_KEY = 'vh_identity';
+
 async function persistIdentity(record: IdentityRecord): Promise<void> {
   await vaultSave(record as Identity);
+  // Dual-write to localStorage so downstream consumers (forum store, etc.)
+  // that still read localStorage continue to work during the migration period.
+  try {
+    if (typeof globalThis.localStorage !== 'undefined') {
+      globalThis.localStorage.setItem(LEGACY_IDENTITY_KEY, JSON.stringify(record));
+    }
+  } catch {
+    // Best-effort — localStorage may be unavailable (SSR, quota exceeded)
+  }
 }
 
 function emitIdentityChanged(record: IdentityRecord) {
