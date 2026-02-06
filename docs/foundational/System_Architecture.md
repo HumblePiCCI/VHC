@@ -301,7 +301,7 @@ Rules:
 * Legacy key `vh_identity` is migration-only input (read once, then deleted) and is **not** an active persistence layer.
 * `vh:identity-published` is a hydration signal `CustomEvent` with no identity payload.
 
-See `docs/specs/docs/specs/spec-data-topology-privacy-v0.md` for the canonical Season 0 topology and invariants.
+See `docs/specs/spec-data-topology-privacy-v0.md` for the canonical Season 0 topology and invariants.
 
 ## 5. Unified Development Roadmap
 
@@ -442,7 +442,7 @@ Invariants:
 * `AggregateSentiment` is a deterministic function of the stream of SentimentSignal events.
 * `constituency_proof` MUST be derived from a valid RegionProof: `district_hash = publicSignals[0]`, `nullifier = publicSignals[1]` (same UniquenessNullifier as identity), `merkle_root = publicSignals[2]`.
 
-See `docs/specs/docs/specs/spec-civic-sentiment.md` for the normative contract across client, mesh, and chain.
+See `docs/specs/spec-civic-sentiment.md` for the normative contract across client, mesh, and chain.
 
 -----
 
@@ -547,13 +547,13 @@ cd core
 pnpm i
 
 # 3. Start Local Universe (Docker: Gun, MinIO, Anvil)
-vh bootstrap up
+pnpm vh bootstrap up
 
 # 4. Initialize Keys & Contracts
-vh bootstrap init --deploy-contracts
+pnpm vh bootstrap init --deploy-contracts
 
 # 5. Run the Client (PWA + Edge AI)
-pnpm --filter apps/web-pwa dev
+pnpm --filter @vh/web-pwa dev
 ```
 
 -----

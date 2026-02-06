@@ -2,6 +2,16 @@
 
 Applies across sprints. Extracted from Sprint 3.5.
 
+### Implementation Layout (Issue #22 complete)
+
+`apps/web-pwa/src/components/` now uses a 5-file split for the panel:
+
+- `DevColorPanel.tsx` (panel shell + rendering)
+- `ColorControl.tsx` (per-variable control UI)
+- `colorConfigs.ts` (canonical variable catalog)
+- `colorUtils.ts` (color parsing/format helpers)
+- `useColorPanel.ts` (state/actions, inspect/search/export logic)
+
 ### Controlled CSS Variables (57 total)
 
 **Page Backgrounds (6):**
@@ -93,7 +103,7 @@ Each color has three sliders:
 ### How to Use
 
 1. Click the **🎨 button** (bottom-right, dev mode only)
-2. Select category tab (Page, VENN Cards, HERMES Cards, Thread List, etc.)
+2. Select a top-level category tab (`Global`, `VENN`, `Forum`, `Controls`, `Icons`, `Messaging`) and then tune grouped variables within that tab
 3. Adjust colors via:
    - Color picker (hue)
    - Saturation/Lightness/Opacity sliders
@@ -118,4 +128,4 @@ Each color has three sliders:
 4. Replace the entire `plugins: [...]` section with the copied code
 5. Restart dev server
 
-**Status:** Ready for manual color tuning
+**Status:** Ready for manual color tuning (split refactor landed in #22)

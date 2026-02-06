@@ -23,19 +23,29 @@
 
 ---
 
-## Recently Merged (PR #10, commit `813558c`)
+## Recently Completed (Issues #11, #12, #15, #18, #22, #23, #24)
 
-- ✅ Identity persistence migrated to encrypted IndexedDB vault (`vh-vault` database, `vault` object store) with a per-device master key.
-- ✅ Legacy `vh_identity` path is migration-only (read once, then deleted); migration clobber guard prevents stale local data from overwriting an existing vault identity.
-- ✅ Identity hydration bridge hardened: `vh:identity-published` is signal-only (no identity payload), eliminating DOM event data leakage.
-- ✅ Master-key race hardening landed via atomic IndexedDB `add` semantics for key initialization.
+- ✅ **Issue #11** — Added root `pnpm typecheck` script.
+- ✅ **Issue #12** — Landed defensive-copy semantics for `getFullIdentity()` plus race test harness coverage.
+- ✅ **Issue #15** — Extended typecheck coverage to remaining packages.
+- ✅ **Issue #18** — Fixed ~100 web-pwa typecheck errors.
+- ✅ **Issue #22** — Split `DevColorPanel.tsx` into 5 focused files in `apps/web-pwa/src/components/`:
+  - `DevColorPanel.tsx`
+  - `ColorControl.tsx`
+  - `colorConfigs.ts`
+  - `colorUtils.ts`
+  - `useColorPanel.ts`
+- ✅ **Issue #23** — Aligned `Identity` / `IdentityRecord` types across packages.
+- ✅ **Issue #24** — Added `apps/web-pwa/tsconfig.test.json` for test-file typechecking.
 
 ---
 
 ## Active Follow-ups
 
-- **Issue #11** — add a repo-level `typecheck` script (open).
-- **Issue #12** — defensive-copy hardening + test harness docs follow-up (open).
+- **Issue #27** — infra: fresh-checkout `pnpm typecheck` requires prior build artifacts (open).
+- **Issue #19** — fix contracts and e2e typecheck errors (open).
+- **Issue #6** — harden xpLedger/profile localStorage for SSR (open).
+- **Issue #4** — SMOKE: agent loop end-to-end (open).
 
 ---
 
@@ -480,11 +490,11 @@ const router = new EngineRouter(mockEngine, undefined, 'local-only');
 - `docs/specs/canonical-analysis-v1.md` — Analysis schema contract (implemented)
 - `docs/specs/canonical-analysis-v2.md` — Quorum synthesis contract (planned)
 - `docs/foundational/AI_ENGINE_CONTRACT.md` — AI engine pipeline contract (pipeline implemented, engine mocked)
-- `docs/specs/docs/specs/spec-civic-sentiment.md` — Eye/Lightbulb/Sentiment spec (implemented locally)
+- `docs/specs/spec-civic-sentiment.md` — Eye/Lightbulb/Sentiment spec (implemented locally)
 - `docs/specs/spec-xp-ledger-v0.md` — XP ledger spec (fully implemented)
 - `docs/specs/spec-identity-trust-constituency.md` — Identity contract (partially implemented)
 - `docs/specs/spec-rvu-economics-v0.md` — RVU/UBE/QF economics (contracts ready, undeployed)
-- `docs/specs/docs/specs/spec-data-topology-privacy-v0.md` — Data placement rules (implemented)
+- `docs/specs/spec-data-topology-privacy-v0.md` — Data placement rules (implemented)
 - `docs/specs/spec-hermes-messaging-v0.md` — Messaging spec (implemented)
 - `docs/specs/spec-hermes-forum-v0.md` — Forum spec (implemented)
 
@@ -499,5 +509,5 @@ const router = new EngineRouter(mockEngine, undefined, 'local-only');
 
 ### Developer Resources
 - `CONTRIBUTING.md` — Engineering standards (enforced)
-- `docs/Hero_Paths.md` — Canonical user journeys
+- `docs/foundational/Hero_Paths.md` — Canonical user journeys
 - `docs/sprints/MANUAL_TEST_CHECKLIST_SPRINT3.md` — Manual testing guide

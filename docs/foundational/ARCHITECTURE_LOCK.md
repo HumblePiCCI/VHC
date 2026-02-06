@@ -22,6 +22,7 @@ This document summarizes the non-negotiable guardrails for the TRINITY Bio-Econo
     - **Pinning**: Root `package.json` must use `pnpm.overrides` to force a single version of `@types/node` and other conflicting globals.
     - **Leaf Isolation**: Pure data/logic packages (`types`, `crdt`) must strictly limit global types in `tsconfig.json` (e.g., `"types": []` or `"types": ["node"]`) to prevent pollution from test runners.
 - **Lockstep Updates**: Adding or changing workspace packages requires regenerating `pnpm-lock.yaml` with `pnpm install`; choose published versions only. CI uses `--frozen-lockfile` and will fail otherwise.
+- **Typecheck Entry Point**: Repo-wide typechecking runs via root `pnpm typecheck` (workspace orchestrated).
 
 ### 2.2 Testing Discipline - 100% Line/Branch coverage required
 - **Source-Based Testing**: Unit tests (`test:quick`) run against `src/`, not `dist/`.
@@ -36,8 +37,8 @@ This document summarizes the non-negotiable guardrails for the TRINITY Bio-Econo
     - *Impl*: `vite.config.ts` uses `define: { 'process.env': {}, global: 'window' }` to satisfy strict browser environments without polyfilling Node core.
 
 ### 2.3 Build Hygiene
-- **Strict Exclusion**: Production builds (`tsc`) must exclude test files.
-    - *Impl*: `tsconfig.json` excludes `src/**/*.test.ts`.
+- **Strict Exclusion**: Production builds (`tsc`) must exclude test files, while test files have their own explicit typecheck path.
+    - *Impl*: `apps/web-pwa/tsconfig.json` excludes `src/**/*.test.ts(x)` and `apps/web-pwa/tsconfig.test.json` handles test-file typechecking (`vitest/globals`).
 - **Browser-Safe Dependencies**: Packages consumed by the web app must avoid Node core modules (e.g., `crypto`, `node:` imports) and expose browser-safe entrypoints. Use pure JS implementations for hashing/utility functions or ship explicit browser bundles to prevent bundler externalization errors.
 - **Bundle Budget**:
     - **Initial Load**: Critical-path bundles must be < **1 MiB gzip**.

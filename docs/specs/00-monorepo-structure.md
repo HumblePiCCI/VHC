@@ -16,6 +16,7 @@ Use this section to avoid spec drift confusion:
 | Packages | Core packages exist (`types`, `crypto`, `crdt`, `data-model`, `gun-client`, `ai-engine`, `contracts`, `e2e`, `ui`) plus `identity-vault` and `zk-circuits` | Preserve strict package boundaries while expanding toward full architecture |
 | Services | Limited service set (`attestation-verifier`, `bridge-stub`) | Full relay/turn/object-store/aggregation/certificate service mesh |
 | Infra & tooling | `infra/docker`, `infra/relay`, and `tools/*` are present; some CLI/infrastructure pieces remain partial | Full `infra` + CLI orchestration model described below |
+| Typecheck workflow | Root `pnpm typecheck` exists, package coverage was expanded, and web-pwa test files are covered via `tsconfig.test.json` (`pnpm --filter @vh/web-pwa typecheck:test`) | Fresh-checkout `pnpm typecheck` should succeed without requiring prebuilt artifacts (tracked by Issue #27) |
 
 When this file and the current repo tree differ, treat this document as the **target plan**. For present-state truth, rely on `docs/foundational/STATUS.md` and the checked-in filesystem.
 
@@ -66,7 +67,7 @@ The repository is managed via `pnpm workspaces`.
 
 **Action Items**
 - [ ] Root `pnpm-workspace.yaml` includes every workspace path shown above.
-- [ ] `README` explains how `vh bootstrap up` wires `infra/docker` and `services/*`.
+- [ ] `README` explains how `pnpm vh bootstrap up` wires `infra/docker` and `services/*`.
 - [ ] LOC caps and module rules (Section 3) referenced from `CONTRIBUTING.md`.
 
 ## 2. Bootstrapping & Toolchain
@@ -88,10 +89,10 @@ The repository is managed via `pnpm workspaces`.
 - **Storage**: `packages/gun-client` provides encrypted IndexedDB adapters, hydration barriers, graph pruning, and the offline outbox.
 
 ### 2.4 Tooling & CLI
-- **vh CLI** orchestrates secrets, Docker stack, dev servers, and CI wrappers:
-    - `vh bootstrap init|up|check|join`
-    - `vh dev`, `vh test:quick`
-- **Scripts**: `pnpm test:quick`, `pnpm test:workflow`, and `pnpm test:e2e` are wired to the commands above.
+- **vh CLI** orchestrates secrets, Docker stack, dev servers, and CI wrappers (invoked via root script):
+    - `pnpm vh bootstrap init|up|check|join`
+    - `pnpm vh dev`
+- **Scripts**: `pnpm test:quick`, `pnpm test:workflow`, `pnpm test:e2e`, and `pnpm typecheck` are wired at workspace root.
 
 ## 3. Package Boundaries & Rules
 
@@ -157,9 +158,9 @@ Dependencies must flow **downwards**. Circular dependencies are strictly forbidd
 - **Security Tests**: Negative tests for crypto envelopes and attestation verification are mandatory.
 
 ### 6.2 CI/CD Enforcement
-- GitHub Actions workflow (`.github/workflows/main.yml`) runs `pnpm test:quick`, lint, LOC enforcement, circular dependency checks (`madge`/`dpdm`), Lighthouse budgets, and bundle-size gating (PWA ≤ 1 MiB gz).
+- GitHub Actions workflow (`.github/workflows/main.yml`) runs `pnpm lint`, `pnpm typecheck`, `pnpm test:quick`, LOC enforcement, circular dependency checks (`madge`/`dpdm`), Lighthouse budgets, and bundle-size gating (PWA ≤ 1 MiB gz).
 - `pnpm test:workflow` mirrors full CI locally via `act`.
-- `vh test:quick` is the developer-friendly wrapper; CI still executes raw pnpm commands for transparency.
+- `pnpm test:quick` is the developer-friendly local entry point; CI still executes explicit root pnpm commands for transparency.
 
 ## 7. Infrastructure & Services
 
@@ -174,18 +175,18 @@ Defined in `infra/docker/docker-compose.yml`:
 - **ca** issuing internal certificates.
 
 ### 7.2 vh CLI Integration
-- `vh bootstrap init` generates secrets for MinIO, TURN, JWT, and TLS CA.
-- `vh bootstrap up` orchestrates Docker Compose services (reverse proxy, relays, TURN, MinIO, aggregators).
-- `vh bootstrap check` validates HTTPS, WebSocket, TURN, and MinIO health.
-- `vh dev` runs the Docker stack plus the PWA for local development.
+- `pnpm vh bootstrap init` generates secrets for MinIO, TURN, JWT, and TLS CA.
+- `pnpm vh bootstrap up` orchestrates Docker Compose services (reverse proxy, relays, TURN, MinIO, aggregators).
+- `pnpm vh bootstrap check` validates HTTPS, WebSocket, TURN, and MinIO health.
+- `pnpm vh dev` runs the Docker stack plus the PWA for local development.
 
 ### 7.3 Configuration & Secrets
 - Shared TypeScript configs live in `/config/` and are symlinked or referenced by each package.
 - Environment-specific values stay inside `config/*.env.example` and are consumed exclusively through the CLI.
-- Secrets are never committed; `vh bootstrap init` writes them to `.env.local` files ignored by git.
+- Secrets are never committed; `pnpm vh bootstrap init` writes them to `.env.local` files ignored by git.
 
 ## 8. Milestone Alignment
-- **Milestone A (Home Server Bring-Up):** Satisfied when `vh bootstrap check` passes and Docker stack mirrors §7.1.
+- **Milestone A (Home Server Bring-Up):** Satisfied when `pnpm vh bootstrap check` passes and Docker stack mirrors §7.1.
 - **Milestone B (Communication Vertical):** Requires `packages/gun-client`, `packages/crypto`, and `apps/web-pwa` scaffolds to exchange encrypted DMs online/offline.
 - **Milestone C (Headlines/Sentiment):** Builds upon `services/aggregator-headlines` and HRW logic in `packages/crdt`.
 - **Milestone F (Hardening):** Enforced by CI gates, LOC caps, Lighthouse budgets, and documented risk mitigations (Lamport overflow, TURN costs, AI drift).
