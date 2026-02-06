@@ -3,10 +3,10 @@ import type { HermesMessage } from '@vh/types';
 import type { VennClient } from '@vh/gun-client';
 import type { ChatState, ContactRecord, IdentityRecord, MessageStatus } from './types';
 import { SEEN_TTL_MS, SEEN_CLEANUP_THRESHOLD } from './types';
-import { loadIdentity } from './persistence';
+import { getFullIdentity } from '../identityProvider';
 
 export function ensureIdentity(): IdentityRecord {
-  const record = loadIdentity();
+  const record = getFullIdentity<IdentityRecord>();
   if (!record || !record.session?.nullifier) {
     throw new Error('Identity not ready');
   }

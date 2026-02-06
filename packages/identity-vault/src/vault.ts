@@ -26,16 +26,47 @@ async function getMasterKey(db: IDBDatabase): Promise<CryptoKey | null> {
   return key ?? null;
 }
 
+/** Attempt to add the master key only if absent (IDB add is insert-only). */
+async function addMasterKey(db: IDBDatabase, key: CryptoKey): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(KEYS_STORE, 'readwrite');
+    const store = tx.objectStore(KEYS_STORE);
+    const request = store.add(key, MASTER_KEY);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function isConstraintError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: unknown }).name === 'ConstraintError'
+  );
+}
+
 /**
  * Ensure a master CryptoKey exists; create one if needed.
+ *
+ * Uses insert-only semantics to avoid TOCTOU races across tabs.
  */
 async function ensureMasterKey(db: IDBDatabase): Promise<CryptoKey> {
   const existing = await getMasterKey(db);
   if (existing) return existing;
 
-  const key = await generateMasterKey();
-  await idbPut(db, KEYS_STORE, MASTER_KEY, key);
-  return key;
+  const candidate = await generateMasterKey();
+
+  try {
+    await addMasterKey(db, candidate);
+    return candidate;
+  } catch (error) {
+    if (!isConstraintError(error)) throw error;
+
+    const raced = await getMasterKey(db);
+    if (raced) return raced;
+    throw error;
+  }
 }
 
 /** Open the vault DB, returning null on failure. */

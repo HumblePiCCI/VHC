@@ -233,27 +233,34 @@ export async function waitForVaultIdentityNullifier(page: Page, timeoutMs = 15_0
 }
 
 /**
- * Wait until localStorage has the identity key synced from the vault hydration.
- * This ensures downstream consumers (forum store) can read identity synchronously.
+ * Wait until the identity has been hydrated from the vault and published
+ * to the in-memory identity provider.
+ *
+ * Strategy: first try the fast path (global flag set by publishIdentity).
+ * If that times out, fall back to vault poll + settle delay.  The flag
+ * approach works in most environments but may miss in certain build
+ * configurations where the global write is optimized away.
  */
-export async function waitForLocalStorageIdentity(page: Page, timeoutMs = 15_000): Promise<void> {
+export async function waitForIdentityHydrated(page: Page, timeoutMs = 15_000): Promise<void> {
   const startedAt = Date.now();
+  const flagTimeout = Math.min(timeoutMs, 5_000);
 
-  while (Date.now() - startedAt < timeoutMs) {
-    const hasIdentity = await page.evaluate(() => {
-      try {
-        const raw = localStorage.getItem('vh_identity');
-        if (!raw) return false;
-        const parsed = JSON.parse(raw);
-        return typeof parsed?.session?.nullifier === 'string' && parsed.session.nullifier.length > 0;
-      } catch {
-        return false;
-      }
-    });
-
-    if (hasIdentity) return;
-    await page.waitForTimeout(200);
+  try {
+    await page.waitForFunction(
+      () => !!(window as any).__vh_identity_published,
+      undefined,
+      { timeout: flagTimeout },
+    );
+    return;
+  } catch {
+    // Flag not detected — fall back to vault poll + settle
   }
 
-  throw new Error(`Timed out waiting for localStorage identity sync after ${timeoutMs}ms.`);
+  // Fallback: confirm vault has identity, then let React effects settle.
+  const elapsed = Date.now() - startedAt;
+  const remaining = Math.max(timeoutMs - elapsed, 1_000);
+  await waitForVaultIdentityNullifier(page, remaining);
+  // A short delay drains the microtask + macrotask queues, ensuring
+  // the React useEffect chain (which calls publishIdentity) has resolved.
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
 }

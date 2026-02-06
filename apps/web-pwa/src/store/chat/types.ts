@@ -1,7 +1,6 @@
 import type { HermesChannel, HermesMessage, HermesMessageType, HermesPayload, DirectoryEntry } from '@vh/types';
 import type { VennClient } from '@vh/gun-client';
 
-export const IDENTITY_STORAGE_KEY = 'vh_identity';
 export const CHANNELS_KEY_PREFIX = 'vh_channels:';
 export const CONTACTS_KEY_PREFIX = 'vh_contacts:';
 export const SEEN_TTL_MS = 60_000;

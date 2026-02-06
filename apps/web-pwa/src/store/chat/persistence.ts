@@ -1,16 +1,20 @@
 import type { HermesChannel } from '@vh/types';
 import type { IdentityRecord, ContactRecord, ChatState } from './types';
-import { IDENTITY_STORAGE_KEY, CHANNELS_KEY_PREFIX, CONTACTS_KEY_PREFIX } from './types';
-import { getIdentityStorage } from '../identityStorage';
+import { CHANNELS_KEY_PREFIX, CONTACTS_KEY_PREFIX } from './types';
+import { getFullIdentity } from '../identityProvider';
 
+/**
+ * Load identity for chat operations from the in-memory identity provider.
+ *
+ * This returns the full record when available (including device keypairs),
+ * without writing secrets to localStorage.
+ */
 export function loadIdentity(): IdentityRecord | null {
-  const storage = getIdentityStorage();
-  try {
-    const raw = storage.getItem(IDENTITY_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as IdentityRecord) : null;
-  } catch {
+  const record = getFullIdentity<IdentityRecord>();
+  if (!record || !record.session?.nullifier) {
     return null;
   }
+  return record;
 }
 
 export function tryGetIdentityNullifier(): string | null {

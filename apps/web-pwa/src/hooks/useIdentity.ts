@@ -9,13 +9,13 @@ import {
   migrateLegacyLocalStorage,
 } from '@vh/identity-vault';
 import type { Identity } from '@vh/identity-vault';
+import { publishIdentity } from '../store/identityProvider';
 
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 const DEV_MODE = (import.meta as any).env?.DEV === true || (import.meta as any).env?.MODE === 'development';
 const ATTESTATION_URL =
   (import.meta as any).env?.VITE_ATTESTATION_URL ?? 'http://localhost:3000/verify';
 const VERIFIER_TIMEOUT_MS = Number((import.meta as any).env?.VITE_ATTESTATION_TIMEOUT_MS) || 2000;
-export const IDENTITY_CHANGED_EVENT = 'vh_identity_changed';
 
 export type IdentityStatus = 'hydrating' | 'anonymous' | 'creating' | 'ready' | 'error';
 
@@ -51,29 +51,10 @@ async function loadIdentityFromVault(): Promise<IdentityRecord | null> {
   return raw as IdentityRecord | null;
 }
 
-const LEGACY_IDENTITY_KEY = 'vh_identity';
-
-/** Best-effort sync to localStorage for downstream consumers. */
-function syncToLocalStorage(record: IdentityRecord): void {
-  try {
-    if (typeof globalThis.localStorage !== 'undefined') {
-      globalThis.localStorage.setItem(LEGACY_IDENTITY_KEY, JSON.stringify(record));
-    }
-  } catch {
-    // localStorage may be unavailable (SSR, quota exceeded)
-  }
-}
-
 async function persistIdentity(record: IdentityRecord): Promise<void> {
   await vaultSave(record as Identity);
-  // Dual-write to localStorage so downstream consumers (forum store, etc.)
-  // that still read localStorage continue to work during the migration period.
-  syncToLocalStorage(record);
-}
-
-function emitIdentityChanged(record: IdentityRecord) {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(IDENTITY_CHANGED_EVENT, { detail: record }));
+  // Publish identity for downstream consumers.
+  publishIdentity(record);
 }
 
 function randomToken(): string {
@@ -104,10 +85,8 @@ export function useIdentity() {
       if (loaded) {
         setIdentity(loaded);
         setStatus('ready');
-        // Sync to localStorage so downstream consumers (forum store, etc.)
-        // can read it synchronously. The migration may have deleted the
-        // localStorage copy, so we re-establish it here.
-        syncToLocalStorage(loaded);
+        // Publish identity for downstream consumers.
+        publishIdentity(loaded);
       } else {
         setStatus('anonymous');
       }
@@ -189,7 +168,6 @@ export function useIdentity() {
           console.warn('[vh:identity] Directory publish failed:', err);
         }
       }
-      emitIdentityChanged(record);
       setIdentity(record);
       setStatus('ready');
       setError(undefined);
@@ -216,7 +194,6 @@ export function useIdentity() {
       linkedDevices: [...(identity.linkedDevices ?? []), newDevice]
     };
     await persistIdentity(updated);
-    emitIdentityChanged(updated);
     setIdentity(updated);
     return newDevice;
   }, [identity]);
@@ -228,7 +205,6 @@ export function useIdentity() {
     const code = `link-${randomToken()}`;
     const updated: IdentityRecord = { ...identity, pendingLinkCode: code };
     await persistIdentity(updated);
-    emitIdentityChanged(updated);
     setIdentity(updated);
     return code;
   }, [identity]);
@@ -244,7 +220,6 @@ export function useIdentity() {
       const linked = [...(identity.linkedDevices ?? []), `linked-${randomToken()}`];
       const updated: IdentityRecord = { ...identity, linkedDevices: linked, pendingLinkCode: undefined };
       await persistIdentity(updated);
-      emitIdentityChanged(updated);
       setIdentity(updated);
       return linked;
     },
@@ -260,7 +235,6 @@ export function useIdentity() {
       if (!identity) throw new Error('Identity not ready');
       const updated: IdentityRecord = { ...identity, handle: nextHandle.trim() };
       await persistIdentity(updated);
-      emitIdentityChanged(updated);
       setIdentity(updated);
       return updated;
     },
@@ -305,7 +279,3 @@ function clampScaledTrustScore(value: number): number {
   return value;
 }
 
-/** Reset migration guard — for testing only. */
-export function _resetMigrationForTest(): void {
-  migrationPromise = null;
-}
