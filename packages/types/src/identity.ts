@@ -1,4 +1,4 @@
-import type { AttestationPayload } from './index';
+import type { AttestationPayload } from './attestation';
 
 /** SEA keypair for GunDB device authentication and encryption. */
 export interface DevicePair {

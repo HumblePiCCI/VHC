@@ -1,11 +1,6 @@
 import { z } from 'zod';
 
-export interface AttestationPayload {
-  platform: 'ios' | 'android' | 'web';
-  integrityToken: string;
-  deviceKey: string;
-  nonce: string;
-}
+export type { AttestationPayload } from './attestation';
 
 export interface VerificationResult {
   success: boolean;
