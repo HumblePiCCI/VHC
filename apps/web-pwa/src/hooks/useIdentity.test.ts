@@ -37,10 +37,6 @@ function deleteDatabase(name: string): Promise<void> {
 
 async function loadHook(e2eMode = false) {
   vi.resetModules();
-  // Reset migration guard
-  const mod = await import('./useIdentity');
-  mod._resetMigrationForTest();
-
   vi.stubGlobal('import.meta', {
     env: {
       VITE_E2E_MODE: e2eMode ? 'true' : 'false',
@@ -48,7 +44,6 @@ async function loadHook(e2eMode = false) {
     }
   });
 
-  // Re-import to pick up fresh env
   const freshMod = await import('./useIdentity');
   return freshMod.useIdentity;
 }
@@ -110,15 +105,8 @@ describe('useIdentity', () => {
     expect(result.current.identity?.handle).toBe('legacy_user');
     expect(result.current.identity?.session.nullifier).toBe('legacy-null');
 
-    // Legacy key has redacted copy (re-synced after hydration)
-    const lsAfterMigration = localStorage.getItem(LEGACY_STORAGE_KEY);
-    expect(lsAfterMigration).not.toBeNull();
-    const lsParsed = JSON.parse(lsAfterMigration!);
-    expect(lsParsed.handle).toBe('legacy_user');
-    // Must NOT contain private keys
-    expect(lsParsed.devicePair?.priv).toBeUndefined();
-    expect(lsParsed.devicePair?.epriv).toBeUndefined();
-    expect(lsParsed.session?.token).toBeUndefined();
+    // Legacy key is cleaned up after migration (no localStorage identity cache)
+    expect(localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
 
     // Vault must have the identity
     const fromVault = await vaultLoad();
@@ -146,18 +134,8 @@ describe('useIdentity', () => {
     expect(result.current.identity?.session.scaledTrustScore).toBe(7510);
     expect(result.current.identity?.devicePair?.epub).toBe('epub');
 
-    // AC3: localStorage has redacted snapshot (no secrets)
-    const lsRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
-    expect(lsRaw).not.toBeNull();
-    const lsParsed = JSON.parse(lsRaw!);
-    expect(lsParsed.session.nullifier).toBe('stable-nullifier');
-    // Public keys present
-    expect(lsParsed.devicePair?.pub).toBe('pub');
-    expect(lsParsed.devicePair?.epub).toBe('epub');
-    // Private keys MUST NOT be present
-    expect(lsParsed.devicePair?.priv).toBeUndefined();
-    expect(lsParsed.devicePair?.epriv).toBeUndefined();
-    expect(lsParsed.session.token).toBeUndefined();
+    // AC3: localStorage does not contain any identity snapshot
+    expect(localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
 
     // Must be in vault
     const fromVault = await vaultLoad();

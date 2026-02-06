@@ -5,7 +5,7 @@
 import { isVaultAvailable } from './env';
 import { LEGACY_STORAGE_KEY, isValidIdentity } from './types';
 import type { Identity } from './types';
-import { saveIdentity } from './vault';
+import { loadIdentity, saveIdentity } from './vault';
 
 /**
  * Migrate identity from plaintext localStorage to the encrypted vault.
@@ -17,6 +17,17 @@ import { saveIdentity } from './vault';
 export async function migrateLegacyLocalStorage(): Promise<'noop' | 'migrated' | 'invalid'> {
   // If vault is unavailable, don't destroy source data
   if (!isVaultAvailable()) {
+    return 'noop';
+  }
+
+  // If vault already has identity, legacy localStorage is stale cache data.
+  const existing = await loadIdentity();
+  if (existing !== null) {
+    try {
+      globalThis.localStorage?.removeItem(LEGACY_STORAGE_KEY);
+    } catch {
+      // Best-effort removal
+    }
     return 'noop';
   }
 

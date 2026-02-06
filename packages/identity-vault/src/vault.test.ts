@@ -135,6 +135,41 @@ describe('T-4: Migration noop', () => {
     const result = await migrateLegacyLocalStorage();
     expect(result).toBe('noop');
   });
+
+  it('returns "noop" and does not clobber vault when identity already exists', async () => {
+    const vaultIdentity: Identity = {
+      ...TEST_IDENTITY,
+      linkedDevices: ['device-1'],
+      devicePair: { pub: 'pub', priv: 'priv', epub: 'epub', epriv: 'epriv' },
+      session: { token: 'session-token', nullifier: 'vault-null', trustScore: 1 },
+    };
+    const redactedLegacy = {
+      id: 'legacy-id',
+      session: { nullifier: 'legacy-null', trustScore: 0.5 },
+      devicePair: { pub: 'legacy-pub', epub: 'legacy-epub' },
+    };
+
+    await saveIdentity(vaultIdentity);
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(redactedLegacy));
+
+    const result = await migrateLegacyLocalStorage();
+    expect(result).toBe('noop');
+    expect(await loadIdentity()).toEqual(vaultIdentity);
+    expect(localStorage.getItem(LEGACY_STORAGE_KEY)).toBeNull();
+  });
+
+  it('returns "noop" when legacy removal throws while vault identity already exists', async () => {
+    await saveIdentity(TEST_IDENTITY);
+    localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify({ stale: true }));
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('SecurityError');
+    });
+
+    const result = await migrateLegacyLocalStorage();
+
+    expect(result).toBe('noop');
+    expect(await loadIdentity()).toEqual(TEST_IDENTITY);
+  });
 });
 
 describe('T-5: Migration invalid', () => {

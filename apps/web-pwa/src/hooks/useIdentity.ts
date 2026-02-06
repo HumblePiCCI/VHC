@@ -16,7 +16,6 @@ const DEV_MODE = (import.meta as any).env?.DEV === true || (import.meta as any).
 const ATTESTATION_URL =
   (import.meta as any).env?.VITE_ATTESTATION_URL ?? 'http://localhost:3000/verify';
 const VERIFIER_TIMEOUT_MS = Number((import.meta as any).env?.VITE_ATTESTATION_TIMEOUT_MS) || 2000;
-export const IDENTITY_CHANGED_EVENT = 'vh_identity_changed';
 
 export type IdentityStatus = 'hydrating' | 'anonymous' | 'creating' | 'ready' | 'error';
 
@@ -52,52 +51,10 @@ async function loadIdentityFromVault(): Promise<IdentityRecord | null> {
   return raw as IdentityRecord | null;
 }
 
-const LEGACY_IDENTITY_KEY = 'vh_identity';
-
-/**
- * Write a REDACTED identity snapshot to localStorage for downstream
- * consumers (chat store, etc.) that still read it synchronously.
- *
- * SECURITY: only public fields are written — no private keys, no tokens.
- * Private keys (priv, epriv) and session tokens are structurally excluded.
- */
-function syncRedactedToLocalStorage(record: IdentityRecord): void {
-  try {
-    if (typeof globalThis.localStorage === 'undefined') return;
-    const redacted: Record<string, unknown> = {
-      id: record.id,
-      createdAt: record.createdAt,
-      handle: record.handle,
-      session: {
-        nullifier: record.session.nullifier,
-        trustScore: record.session.trustScore,
-        scaledTrustScore: record.session.scaledTrustScore,
-      },
-    };
-    if (record.devicePair) {
-      // Only public keys — priv and epriv are NEVER written.
-      redacted.devicePair = {
-        pub: record.devicePair.pub,
-        epub: record.devicePair.epub,
-      };
-    }
-    globalThis.localStorage.setItem(LEGACY_IDENTITY_KEY, JSON.stringify(redacted));
-  } catch {
-    // Best-effort — localStorage may be unavailable
-  }
-}
-
 async function persistIdentity(record: IdentityRecord): Promise<void> {
   await vaultSave(record as Identity);
-  // Publish public identity snapshot for downstream consumers (forum store).
+  // Publish identity for downstream consumers.
   publishIdentity(record);
-  // Write redacted snapshot to localStorage for chat store compat.
-  syncRedactedToLocalStorage(record);
-}
-
-function emitIdentityChanged(record: IdentityRecord) {
-  if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent(IDENTITY_CHANGED_EVENT, { detail: record }));
 }
 
 function randomToken(): string {
@@ -128,10 +85,8 @@ export function useIdentity() {
       if (loaded) {
         setIdentity(loaded);
         setStatus('ready');
-        // Publish public snapshot for downstream consumers (forum store).
+        // Publish identity for downstream consumers.
         publishIdentity(loaded);
-        // Sync redacted copy to localStorage for chat store.
-        syncRedactedToLocalStorage(loaded);
       } else {
         setStatus('anonymous');
       }
@@ -213,7 +168,6 @@ export function useIdentity() {
           console.warn('[vh:identity] Directory publish failed:', err);
         }
       }
-      emitIdentityChanged(record);
       setIdentity(record);
       setStatus('ready');
       setError(undefined);
@@ -240,7 +194,6 @@ export function useIdentity() {
       linkedDevices: [...(identity.linkedDevices ?? []), newDevice]
     };
     await persistIdentity(updated);
-    emitIdentityChanged(updated);
     setIdentity(updated);
     return newDevice;
   }, [identity]);
@@ -252,7 +205,6 @@ export function useIdentity() {
     const code = `link-${randomToken()}`;
     const updated: IdentityRecord = { ...identity, pendingLinkCode: code };
     await persistIdentity(updated);
-    emitIdentityChanged(updated);
     setIdentity(updated);
     return code;
   }, [identity]);
@@ -268,7 +220,6 @@ export function useIdentity() {
       const linked = [...(identity.linkedDevices ?? []), `linked-${randomToken()}`];
       const updated: IdentityRecord = { ...identity, linkedDevices: linked, pendingLinkCode: undefined };
       await persistIdentity(updated);
-      emitIdentityChanged(updated);
       setIdentity(updated);
       return linked;
     },
@@ -284,7 +235,6 @@ export function useIdentity() {
       if (!identity) throw new Error('Identity not ready');
       const updated: IdentityRecord = { ...identity, handle: nextHandle.trim() };
       await persistIdentity(updated);
-      emitIdentityChanged(updated);
       setIdentity(updated);
       return updated;
     },
@@ -329,7 +279,3 @@ function clampScaledTrustScore(value: number): number {
   return value;
 }
 
-/** Reset migration guard — for testing only. */
-export function _resetMigrationForTest(): void {
-  migrationPromise = null;
-}

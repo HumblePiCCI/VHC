@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getHermesChatChain, getHermesInboxChain, getHermesOutboxChain } from '@vh/gun-client';
 import { createRealChatStore } from './hermesMessaging';
+import { publishIdentity, clearPublishedIdentity } from './identityProvider';
 import { useXpLedger } from './xpLedger';
 
 const inboxWrites: any[] = [];
@@ -74,6 +75,7 @@ const memoryStorage = () => {
 
 beforeEach(() => {
   (globalThis as any).localStorage = memoryStorage();
+  clearPublishedIdentity();
   signMock.mockClear();
   signMock.mockResolvedValue('signed');
   lookupMock.mockReset();
@@ -122,15 +124,17 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  clearPublishedIdentity();
   vi.useRealTimers();
 });
 
 describe('hermesMessaging store', () => {
   const setIdentity = (nullifier: string, trustScore = 1) =>
-    (globalThis as any).localStorage.setItem(
-      'vh_identity',
-      JSON.stringify({ session: { nullifier, trustScore }, attestation: { deviceKey: nullifier }, devicePair })
-    );
+    publishIdentity({
+      session: { nullifier, trustScore, scaledTrustScore: Math.round(trustScore * 10000) },
+      attestation: { deviceKey: nullifier },
+      devicePair,
+    });
 
   it('sendMessage writes encrypted payload to inbox/outbox/chat', async () => {
     setIdentity('alice');

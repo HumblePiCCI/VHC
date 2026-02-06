@@ -19,15 +19,19 @@ export interface PublicIdentitySnapshot {
 }
 
 let current: PublicIdentitySnapshot | null = null;
+let fullRecord: Record<string, unknown> | null = null;
 
 /**
  * Publish the hydrated identity (called from useIdentity after vault load
- * or createIdentity).  Only the public fields needed by downstream
- * consumers are stored — no private keys or tokens.
+ * or createIdentity).
+ *
+ * - fullRecord: full in-memory identity for same-process consumers
+ * - current: public-only snapshot for untrusted downstream consumers
  */
-export function publishIdentity(identity: {
+export function publishIdentity<T extends {
   session: { nullifier: string; trustScore: number; scaledTrustScore: number };
-}): void {
+}>(identity: T): void {
+  fullRecord = identity as unknown as Record<string, unknown>;
   current = {
     session: {
       nullifier: identity.session.nullifier,
@@ -36,8 +40,8 @@ export function publishIdentity(identity: {
     },
   };
   // E2E bridge: signal that identity is hydrated so Playwright can await it.
-  const g = typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null;
-  if (g) (g as any).__vh_identity_published = true;
+  const g = typeof window !== 'undefined' ? window : globalThis;
+  (g as any).__vh_identity_published = true;
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('vh:identity-published'));
   }
@@ -49,9 +53,18 @@ export function getPublishedIdentity(): PublicIdentitySnapshot | null {
   return { session: { ...current.session } };
 }
 
+/**
+ * Read the full in-memory identity record for same-process consumers that
+ * require private fields (e.g. chat encryption keys).
+ */
+export function getFullIdentity<T = Record<string, unknown>>(): T | null {
+  return fullRecord as T | null;
+}
+
 /** Clear published identity (for tests or sign-out). */
 export function clearPublishedIdentity(): void {
   current = null;
-  const g = typeof window !== 'undefined' ? window : typeof globalThis !== 'undefined' ? globalThis : null;
-  if (g) (g as any).__vh_identity_published = false;
+  fullRecord = null;
+  const g = typeof window !== 'undefined' ? window : globalThis;
+  (g as any).__vh_identity_published = false;
 }
