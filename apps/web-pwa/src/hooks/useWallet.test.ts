@@ -86,7 +86,6 @@ async function loadHook(envOverrides: Record<string, string>, e2eMode: boolean, 
   vi.resetModules();
   const originalProcess = (globalThis as any).process;
   if (options.noProcess) {
-    // @ts-expect-error override for branch coverage
     (globalThis as any).process = undefined;
   }
   const env = options.skipEnv ? { ...envOverrides } : { ...baseEnv, ...envOverrides };
@@ -120,18 +119,18 @@ async function loadHook(envOverrides: Record<string, string>, e2eMode: boolean, 
 
 async function getEthersMocks() {
   const mod = await import('ethers');
-  // @ts-expect-error __mocks is added in the test mock above
-  return mod.__mocks as typeof ethersHoist;
+  return (mod as typeof mod & { __mocks: typeof ethersHoist }).__mocks;
 }
 
 async function getWalletTestHelpers() {
   const mod = await import('./useWallet');
-  // @ts-expect-error test helpers are injected only in test mode
-  return mod.__walletTest as {
-    setAccount: (value: string | null) => void;
-    setProvider: (value: unknown) => void;
-    setBalance: (value: bigint | null) => void;
-  };
+  return (mod as typeof mod & {
+    __walletTest: {
+      setAccount: (value: string | null) => void;
+      setProvider: (value: unknown) => void;
+      setBalance: (value: bigint | null) => void;
+    };
+  }).__walletTest;
 }
 
 beforeEach(() => {
@@ -279,10 +278,9 @@ describe('useWallet', () => {
 
   it('formats balance fallback when parseFloat is NaN', async () => {
     const useWallet = await loadHook({}, false);
-    const { formatUnits } = await import('ethers');
-    const originalFormatUnits = formatUnits;
-    // @ts-expect-error override for test
-    (await import('ethers')).formatUnits = () => 'not-a-number';
+    const ethersMod = await import('ethers');
+    const originalFormatUnits = ethersMod.formatUnits;
+    (ethersMod as any).formatUnits = () => 'not-a-number';
     const walletHelpers = await getWalletTestHelpers();
     const { result } = renderHook(() => useWallet());
 
@@ -291,8 +289,7 @@ describe('useWallet', () => {
     });
 
     await waitFor(() => expect(result.current.formattedBalance).toBe('not-a-number'));
-    // @ts-expect-error restore original
-    (await import('ethers')).formatUnits = originalFormatUnits;
+    (ethersMod as any).formatUnits = originalFormatUnits;
   });
 
   it('handles missing process object when resolving env', async () => {

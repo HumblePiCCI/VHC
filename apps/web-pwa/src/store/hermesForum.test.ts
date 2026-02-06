@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HermesThread } from '@vh/types';
 import { createForumStore } from './hermesForum';
 import { useXpLedger } from './xpLedger';
 import { publishIdentity, clearPublishedIdentity } from './identityProvider';
@@ -65,7 +66,7 @@ const {
 });
 
 vi.mock('@vh/gun-client', async (orig) => {
-  const actual = await orig();
+  const actual = (await orig()) as Record<string, unknown>;
   return {
     ...actual,
     getForumThreadChain: vi.fn(() => threadChain),
@@ -218,7 +219,7 @@ describe('hermesForum store', () => {
     setIdentity('sorter');
     const now = 1_000;
     const store = createForumStore({ resolveClient: () => ({} as any), randomId: () => 'thread', now: () => now });
-    const build = (id: string, upvotes: number, downvotes: number, timestamp: number) => ({
+    const build = (id: string, upvotes: number, downvotes: number, timestamp: number): HermesThread => ({
       id,
       schemaVersion: 'hermes-thread-v0',
       title: id,
@@ -239,7 +240,7 @@ describe('hermesForum store', () => {
       )
     }));
     const hot = await store.getState().loadThreads('hot');
-    expect(hot[0].id).toBe('hot-high');
+    expect(hot[0]!.id).toBe('hot-high');
 
     store.setState((state) => ({
       ...state,
@@ -248,7 +249,7 @@ describe('hermesForum store', () => {
       )
     }));
     const newest = await store.getState().loadThreads('new');
-    expect(newest[0].id).toBe('new-latest');
+    expect(newest[0]!.id).toBe('new-latest');
 
     store.setState((state) => ({
       ...state,
@@ -257,7 +258,7 @@ describe('hermesForum store', () => {
       )
     }));
     const top = await store.getState().loadThreads('top');
-    expect(top[0].id).toBe('top-high');
+    expect(top[0]!.id).toBe('top-high');
   });
 
   it('persists votes to storage and rehydrates them', async () => {

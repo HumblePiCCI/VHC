@@ -41,7 +41,7 @@ describe('SlideToPost', () => {
 
     fireEvent.mouseDown(track, { clientX: 50 }); // ~13%
 
-    const nextValue = onChange.mock.calls[0][0];
+    const nextValue = onChange.mock.calls[0]![0];
     expect(nextValue).toBeGreaterThanOrEqual(0);
     expect(nextValue).toBeLessThanOrEqual(30);
   });
@@ -59,7 +59,7 @@ describe('SlideToPost', () => {
     fireEvent.mouseDown(track, { clientX: 50 }); // ~13%
     fireEvent.mouseUp(document);
 
-    expect(onCommit).toHaveBeenCalledWith(onChange.mock.calls[0][0]);
+    expect(onCommit).toHaveBeenCalledWith(onChange.mock.calls[0]![0]);
   });
 
   it('calls onChange with a right-side value when clicked on right', () => {
@@ -73,7 +73,7 @@ describe('SlideToPost', () => {
 
     fireEvent.mouseDown(track, { clientX: 330 }); // ~86%
 
-    const nextValue = onChange.mock.calls[0][0];
+    const nextValue = onChange.mock.calls[0]![0];
     expect(nextValue).toBeGreaterThanOrEqual(70);
     expect(nextValue).toBeLessThanOrEqual(100);
   });

@@ -53,7 +53,7 @@ describe('HeadlineCard', () => {
 
     // Sentiment click should not collapse the card
     const [agreeFrame] = screen.getAllByLabelText('Agree frame');
-    fireEvent.click(agreeFrame);
+    fireEvent.click(agreeFrame!);
     expect(screen.getByText(/Frame view/)).toBeInTheDocument();
   });
 });

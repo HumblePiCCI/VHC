@@ -17,7 +17,7 @@ describe('VoteControl', () => {
   it('submits vote with direction', () => {
     const onSubmit = vi.fn();
     render(<VoteControl onSubmit={onSubmit} />);
-    fireEvent.click(screen.getAllByTestId('vote-against')[0]);
+    fireEvent.click(screen.getAllByTestId('vote-against')[0]!);
     screen.getAllByTestId('submit-vote').forEach((btn) => fireEvent.click(btn));
     expect(onSubmit).toHaveBeenCalled();
   });
