@@ -158,7 +158,7 @@ export const AnalysisFeed: React.FC = () => {
 
         void getOrGenerate(targetUrl, analysisStore, generate)
           .then((result) => {
-            if (!result.reused && nullifier) {
+            if (!result.reused && nullifier && result.analysis) {
               useXpLedger.getState().consumeAction('analyses/day', 1, topicId);
             }
             let notice: string | undefined;

@@ -265,7 +265,7 @@ describe('AnalysisFeed', () => {
       submitUrl(targetUrl);
 
       await waitFor(() => expect(screen.getByText('Analysis unavailable')).toBeInTheDocument());
-      expect(mockConsumeAction).toHaveBeenCalledWith('analyses/day', 1, hashUrl(targetUrl));
+      expect(mockConsumeAction).not.toHaveBeenCalled();
     } finally {
       getOrGenerateSpy.mockRestore();
     }
