@@ -93,6 +93,7 @@ function loadAllStoredVotes(): Record<string, StoredVotes> {
     const sessionMap = readStoreMap(typeof sessionStorage !== 'undefined' ? sessionStorage : undefined);
     const localMap = readStoreMap(typeof localStorage !== 'undefined' ? localStorage : undefined);
     return { ...localMap, ...sessionMap };
+  /* v8 ignore next 3 -- defensive outer catch; inner readers already guard parse/storage errors */
   } catch {
     return {};
   }
@@ -103,7 +104,7 @@ function loadStoredVotes(voterId: string): StoredVotes {
   const sessionFallback = readFromStorage(typeof sessionStorage !== 'undefined' ? sessionStorage : undefined, storageKey(voterId));
   const localFallback = readFromStorage(typeof localStorage !== 'undefined' ? localStorage : undefined, storageKey(voterId));
   const mergedFallback = mergeVoteStores(localFallback, sessionFallback);
-  return combinedMap[voterId] ?? mergedFallback ?? {};
+  return combinedMap[voterId] ?? mergedFallback ?? /* v8 ignore next -- mergeVoteStores always returns an object */ {};
 }
 
 function persistStoredVotes(voterId: string, votes: StoredVotes) {
@@ -221,7 +222,7 @@ export const useGovernanceStore = create<GovernanceStore>((set, get) => ({
 
     const curated = CURATED_PROJECTS[proposalId];
     if (curated) {
-      const title = proposalTitle ?? curated.title ?? proposalId;
+      const title = proposalTitle ?? curated.title ?? /* v8 ignore next -- curated titles are always defined in Season 0 mapping */ proposalId;
       console.info(
         `[Season 0] Vote recorded locally for "${title}" (On-chain ID: ${curated.onChainId}). No RVU transaction sent.`
       );
