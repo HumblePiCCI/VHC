@@ -23,7 +23,7 @@
 
 ---
 
-## Recently Completed (Issues #3, #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #44, #46, #50, #53, #56, #59, #61, #63, #66, #68, #69, #70, #71, #72, #73, #77, #80, #87, #90, #98, #106)
+## Recently Completed (Issues #3, #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #44, #46, #47, #50, #53, #56, #59, #61, #63, #66, #68, #69, #70, #71, #72, #73, #77, #80, #87, #90, #98, #106)
 
 - ✅ **Issue #3** — Chief token smoke test: validated agent loop smoke test infrastructure.
 - ✅ **Issue #11** — Added root `pnpm typecheck` script.
@@ -45,6 +45,7 @@
 - ✅ **Issue #4** — SMOKE: agent loop end-to-end smoke test — validated full ritual (spec → impl → QA → maint → merge) with a docs-only PR (PR #41, merged 2026-02-06).
 - ✅ **Issue #40** — Migrated all remaining bare `localStorage` calls to `safeStorage` utility (13 files), added ESLint `no-restricted-globals` rule to prevent regressions (PR #42, merged 2026-02-06).
 - ✅ **Issue #44** — CSP meta tag + secure storage policy enforcement: added restrictive `<meta>` CSP to `index.html`, extracted inline E2E script to `public/e2e-init.js`, created `docs/specs/secure-storage-policy.md` (3-tier model: Vault/safeStorage/Ephemeral), added CSP test + storage audit test. All existing tests pass, 100% coverage maintained (PR #45, merged 2026-02-07).
+- ✅ **Issue #47** — CSP header hardening documentation: created `docs/foundational/CSP_HEADER_MIGRATION.md` (current posture, meta-tag limitations with W3C/MDN sources, 3-phase migration playbook with Report-Only, Permissions-Policy guidance, decision log), added CSP guardrail to `ARCHITECTURE_LOCK.md` §2.4, added inline HTML comment in `index.html` pointing to migration doc. Docs-only, no runtime changes. All gates green, 100% coverage maintained.
 - ✅ **Issue #46** — Added canonical delegation/familiar type foundations: `FamiliarRecord`, `DelegationGrant`, `OnBehalfOfAssertion` interfaces + Zod schemas, `DelegationTier`/`DelegationScope` types, `TIER_SCOPES` constant (PR #48, merged 2026-02-07).
 - ✅ **Issue #50** — Added participation governor type foundations: `BudgetActionKey` (8-key string literal union), `BudgetLimit`/`DailyUsage`/`NullifierBudget` interfaces + Zod schemas, `BUDGET_ACTION_KEYS` runtime tuple, `SEASON_0_BUDGET_DEFAULTS` constant. Full test suite with 100% coverage (PR #51, merged 2026-02-07).
 - ✅ **Issue #53** — Added participation governor runtime utilities: `initializeNullifierBudget`, `rolloverBudgetIfNeeded`, `canConsumeBudget`, `consumeBudget` pure functions + `BudgetCheckResult` interface. 52 tests, 100% coverage (PR #54, merged 2026-02-07).
@@ -72,9 +73,9 @@
 
 | Issue | Title | Priority |
 |-------|-------|----------|
-| #47 | CSP header hardening & documentation (Shoulds from #44) | Should |
+| _None_ | — | — |
 
-Next work: remaining budget enforcement slices (moderation, civic_actions) and above follow-up (#47). All Season 0 budget keys are now wired (`shares/day` was the last one, completed in #106).
+Next work: remaining budget enforcement slices (moderation, civic_actions). All Season 0 budget keys are now wired (`shares/day` was the last one, completed in #106), and CSP documentation follow-up (#47) is complete.
 
 ---
 
@@ -87,7 +88,7 @@ Next work: remaining budget enforcement slices (moderation, civic_actions) and a
 | **Sprint 2** (Civic Nervous System) | ✅ Complete | ⚠️ 85% Complete | AI engine mocked; no WebLLM/remote; Engine router exists but unused |
 | **Sprint 3** (Communication) | ✅ Complete | ✅ Complete | Messaging E2EE working; Forum working; XP integrated |
 | **Sprint 3.5** (UI Refinement) | ✅ Complete | ✅ Complete | Stance-based threading; design unification |
-| **Sprint 4** (Agentic Foundation) | ⚪ Planning | 🟡 In Progress | Delegation types + participation governor types, runtime utils, forum, governance vote, sentiment vote, analyses & shares enforcement wiring landed; all 8 Season 0 budget keys now wired (#106 completed shares/day, the last one); budget denial UX hardened (#69); consume-on-null fix (#98); TOCTOU budget hardening (#68); unified topics fully landed (schema + derivation + Feed↔Forum integration, PRs #78/#81); ProposalList cleanup landed (#61); remaining budget enforcement (moderation/civic_actions) pending; only out-of-scope follow-up remains (#47 CSP) |
+| **Sprint 4** (Agentic Foundation) | ⚪ Planning | 🟡 In Progress | Delegation types + participation governor types, runtime utils, forum, governance vote, sentiment vote, analyses & shares enforcement wiring landed; all 8 Season 0 budget keys now wired (#106 completed shares/day, the last one); budget denial UX hardened (#69); consume-on-null fix (#98); TOCTOU budget hardening (#68); unified topics fully landed (schema + derivation + Feed↔Forum integration, PRs #78/#81); ProposalList cleanup landed (#61); CSP documentation follow-up landed (#47); remaining budget enforcement (moderation/civic_actions) pending |
 | **Sprint 5** (Bridge + Docs) | ⚪ Planning | ⚪ Not Started | Docs updated for Civic Action Kit (facilitation model); no code yet (`docs/sprints/05-sprint-the-bridge.md`) |
 
 ---
