@@ -23,7 +23,7 @@
 
 ---
 
-## Recently Completed (Issues #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #46, #50, #53, #56, #59, #63, #66)
+## Recently Completed (Issues #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #46, #50, #53, #56, #59, #63, #66, #70)
 
 - ✅ **Issue #11** — Added root `pnpm typecheck` script.
 - ✅ **Issue #12** — Landed defensive-copy semantics for `getFullIdentity()` plus race test harness coverage.
@@ -50,6 +50,7 @@
 - ✅ **Issue #59** — Wired `governance_votes/day` budget enforcement into `useGovernanceStore.submitVote`: check-before/consume-after pattern via `canPerformAction`/`consumeAction`, `setActiveNullifier` called unconditionally for all votes. 5 new tests, 587 total, 100% coverage maintained (PR #60, merged 2026-02-07).
 - ✅ **Issue #63** — Wired `sentiment_votes/day` budget enforcement into `useSentimentState.setAgreement`: check-before/consume-after pattern via `canPerformAction`/`consumeAction`, `setActiveNullifier` called before budget check. Season 0 limit: 200 sentiment votes/day per nullifier. 100% coverage maintained (PR #64, merged 2026-02-07).
 - ✅ **Issue #66** — Wired `analyses/day` budget enforcement into `AnalysisFeed.tsx`: check-before/consume-after pattern via `canPerformAction`/`consumeAction`, budget checked before `getOrGenerate`, consumed only when result is fresh (not reused) and nullifier is present. Season 0 limits: 25 analyses/day per nullifier, max 5/topic. 9 new test cases, 604 total, 100% coverage maintained (PR #67, merged 2026-02-07).
+- ✅ **Issue #70** — Hardened budget localStorage validation: added `validateBudgetOrNull` using `NullifierBudgetSchema.safeParse` at the restore boundary, wrapped `ensureBudget` with try/catch fallback to `initializeNullifierBudget`. 22 new tests, 623 total, 100% coverage maintained (PR #75, merged 2026-02-07).
 
 ---
 
@@ -427,7 +428,7 @@ const router = new EngineRouter(mockEngine, undefined, 'local-only');
 
 ## Test Coverage
 
-**Repo-wide (Vitest `pnpm test:quick`):** 604 tests (unit + component + integration).
+**Repo-wide (Vitest `pnpm test:quick`):** 623 tests (unit + component + integration).
 
 **Coverage (`pnpm test:coverage`, last validated 2026-02-07):**
 
