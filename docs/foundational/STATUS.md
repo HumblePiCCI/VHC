@@ -23,7 +23,7 @@
 
 ---
 
-## Recently Completed (Issues #3, #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #44, #46, #50, #53, #56, #59, #63, #66, #68, #69, #70, #71, #72, #73, #77, #80, #87, #90, #98, #106)
+## Recently Completed (Issues #3, #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #44, #46, #50, #53, #56, #59, #61, #63, #66, #68, #69, #70, #71, #72, #73, #77, #80, #87, #90, #98, #106)
 
 - ✅ **Issue #3** — Chief token smoke test: validated agent loop smoke test infrastructure.
 - ✅ **Issue #11** — Added root `pnpm typecheck` script.
@@ -56,6 +56,7 @@
 - ✅ **Issue #98** — Gated `consumeAction('analyses/day')` on non-null analysis result. Prevents phantom budget debit when `getOrGenerate` returns null analysis. 1 LOC fix + 1 test assertion correction. 721 tests, 100% coverage maintained (PR #102, merged 2026-02-07).
 - ✅ **Issue #68** — TOCTOU budget hardening: added synchronous `useRef` guard in AnalysisFeed to prevent concurrent double-submit race, plus TOCTOU documentation comments at forum `consumeAction` call sites. 3 new concurrency tests (TC-1/TC-2/TC-3). 724 tests, 100% coverage maintained (PR #104, merged 2026-02-07).
 - ✅ **Issue #106** — Wired `shares/day` budget enforcement into AnalysisFeed: share button with `navigator.share` + clipboard fallback, check-before/consume-after pattern via `canPerformAction`/`consumeAction`. Season 0 limit: 10 shares/day per nullifier. Last dormant Season 0 budget key — all 8 budget keys now fully wired. 10 new tests, 734 tests total, 100% coverage maintained (PR #107, SHA `6306df5`, merged 2026-02-07).
+- ✅ **Issue #61** — Cleanup: removed redundant eager `setActiveNullifier` useEffect from `ProposalList.tsx` (−4 lines, dead `useXpLedger` import removed). Added comprehensive regression test suite for ProposalList (1→11 tests). 744 tests total, 100% coverage maintained (PR #109, SHA `99001fd`, merged 2026-02-07).
 - ✅ **Issue #70** — Hardened budget localStorage validation: added `validateBudgetOrNull` using `NullifierBudgetSchema.safeParse` at the restore boundary, wrapped `ensureBudget` with try/catch fallback to `initializeNullifierBudget`. 22 new tests, 623 total, 100% coverage maintained (PR #75, merged 2026-02-07).
 - ✅ **Issue #71** — Hardened `useGovernance.ts` branch coverage from 72% to 100%: added 26 focused tests covering early-return paths (no active identity, missing nullifier, empty proposals, duplicate vote dedup), governance vote budget enforcement (limit hit, budget consumed on success), proposal hydration edge cases (empty/populated stores, multiple proposals), and `initGovernance` sequencing. Minor source fix: early-return when `proposals` is empty in `hydrateProposals`. Removed stale `useGovernance.ts` from coverage exclusion in `vitest.config.ts`. 685 tests total, 100% coverage maintained (PR #86, merged 2026-02-07).
 - ✅ **Issue #72** — Budget test scaffolding dedup + code comments cleanup: deduped `today()`/`todayISO()` between `xpLedger.ts` and `xpLedgerBudget.ts`, extracted shared `createBudgetMock()` test helper in `test-utils/budgetMock.ts`, added intentionality comments for budget call sites in `useSentimentState.ts`, restored inline Map type docs in `xpLedger.ts`, exported `ANALYSIS_FEED_STORAGE_KEY` constant for test use. 6 files changed, net −16 lines. 711 tests, 100% coverage maintained (PR #94, merged 2026-02-07).
@@ -71,10 +72,9 @@
 
 | Issue | Title | Priority |
 |-------|-------|----------|
-| #61 | Cleanup: remove redundant setActiveNullifier in ProposalList.tsx useEffect | Nit |
 | #47 | CSP header hardening & documentation (Shoulds from #44) | Should |
 
-Next work: remaining budget enforcement slices (moderation, civic_actions) and above follow-ups (#61, #47). All Season 0 budget keys are now wired (`shares/day` was the last one, completed in #106).
+Next work: remaining budget enforcement slices (moderation, civic_actions) and above follow-up (#47). All Season 0 budget keys are now wired (`shares/day` was the last one, completed in #106).
 
 ---
 
@@ -87,7 +87,7 @@ Next work: remaining budget enforcement slices (moderation, civic_actions) and a
 | **Sprint 2** (Civic Nervous System) | ✅ Complete | ⚠️ 85% Complete | AI engine mocked; no WebLLM/remote; Engine router exists but unused |
 | **Sprint 3** (Communication) | ✅ Complete | ✅ Complete | Messaging E2EE working; Forum working; XP integrated |
 | **Sprint 3.5** (UI Refinement) | ✅ Complete | ✅ Complete | Stance-based threading; design unification |
-| **Sprint 4** (Agentic Foundation) | ⚪ Planning | 🟡 In Progress | Delegation types + participation governor types, runtime utils, forum, governance vote, sentiment vote, analyses & shares enforcement wiring landed; all 8 Season 0 budget keys now wired (#106 completed shares/day, the last one); budget denial UX hardened (#69); consume-on-null fix (#98); TOCTOU budget hardening (#68); unified topics fully landed (schema + derivation + Feed↔Forum integration, PRs #78/#81); remaining budget enforcement (moderation/civic_actions) pending; only out-of-scope follow-ups remain (#47 CSP, #61 ProposalList) |
+| **Sprint 4** (Agentic Foundation) | ⚪ Planning | 🟡 In Progress | Delegation types + participation governor types, runtime utils, forum, governance vote, sentiment vote, analyses & shares enforcement wiring landed; all 8 Season 0 budget keys now wired (#106 completed shares/day, the last one); budget denial UX hardened (#69); consume-on-null fix (#98); TOCTOU budget hardening (#68); unified topics fully landed (schema + derivation + Feed↔Forum integration, PRs #78/#81); ProposalList cleanup landed (#61); remaining budget enforcement (moderation/civic_actions) pending; only out-of-scope follow-up remains (#47 CSP) |
 | **Sprint 5** (Bridge + Docs) | ⚪ Planning | ⚪ Not Started | Docs updated for Civic Action Kit (facilitation model); no code yet (`docs/sprints/05-sprint-the-bridge.md`) |
 
 ---
@@ -445,7 +445,7 @@ const router = new EngineRouter(mockEngine, undefined, 'local-only');
 
 ## Test Coverage
 
-**Repo-wide (Vitest `pnpm test:quick`):** 734 tests (unit + component + integration).
+**Repo-wide (Vitest `pnpm test:quick`):** 744 tests (unit + component + integration).
 
 **Coverage (`pnpm test:coverage`, last validated 2026-02-07):**
 
