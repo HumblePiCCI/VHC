@@ -2,10 +2,11 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Button } from '@vh/ui';
 import type { AnalysisResult } from '../../../../packages/ai-engine/src/prompts';
-import { getOrGenerate, type CanonicalAnalysis } from '../../../../packages/ai-engine/src/analysis';
+import { getOrGenerate, hashUrl, type CanonicalAnalysis } from '../../../../packages/ai-engine/src/analysis';
 import type { VennClient } from '@vh/gun-client';
 import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
+import { useXpLedger } from '../store/xpLedger';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 const FEED_KEY = 'vh_canonical_analyses';
@@ -135,8 +136,26 @@ export const AnalysisFeed: React.FC = () => {
 
         void analysisStore.listRecent();
 
+        const topicId = hashUrl(targetUrl);
+        const nullifier = identity?.session?.nullifier;
+        if (nullifier) {
+          const xpLedger = useXpLedger.getState();
+          xpLedger.setActiveNullifier(nullifier);
+          const budgetCheck = xpLedger.canPerformAction('analyses/day', 1, topicId);
+          if (!budgetCheck.allowed) {
+            const reason = budgetCheck.reason ?? 'Daily limit reached for analyses/day';
+            setMessage(reason);
+            setBusy(false);
+            resolve({ analysis: {} as CanonicalAnalysis, notice: reason });
+            return;
+          }
+        }
+
         void getOrGenerate(targetUrl, analysisStore, generate)
           .then((result) => {
+            if (!result.reused && nullifier) {
+              useXpLedger.getState().consumeAction('analyses/day', 1, topicId);
+            }
             let notice: string | undefined;
             if (result.reused && reusedFromMesh) {
               notice = 'Analysis fetched from mesh.';
