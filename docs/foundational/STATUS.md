@@ -1,6 +1,6 @@
 # TRINITY Implementation Status
 
-**Last Updated:** 2026-02-06  
+**Last Updated:** 2026-02-07  
 **Version:** 0.2.0 (Sprint 3.5 Complete)  
 **Assessment:** Pre-production prototype
 
@@ -23,7 +23,7 @@
 
 ---
 
-## Recently Completed (Issues #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40)
+## Recently Completed (Issues #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #46)
 
 - ✅ **Issue #11** — Added root `pnpm typecheck` script.
 - ✅ **Issue #12** — Landed defensive-copy semantics for `getFullIdentity()` plus race test harness coverage.
@@ -43,6 +43,7 @@
 - ✅ **Issue #6** — SSR-hardened localStorage access: created `safeStorage.ts` utility with SSR-safe `safeGetItem`/`safeSetItem`/`safeRemoveItem`, applied to xpLedger and profile stores (PR #38, merged 2026-02-06).
 - ✅ **Issue #4** — SMOKE: agent loop end-to-end smoke test — validated full ritual (spec → impl → QA → maint → merge) with a docs-only PR (PR #41, merged 2026-02-06).
 - ✅ **Issue #40** — Migrated all remaining bare `localStorage` calls to `safeStorage` utility (13 files), added ESLint `no-restricted-globals` rule to prevent regressions (PR #42, merged 2026-02-06).
+- ✅ **Issue #46** — Added canonical delegation/familiar type foundations: `FamiliarRecord`, `DelegationGrant`, `OnBehalfOfAssertion` interfaces + Zod schemas, `DelegationTier`/`DelegationScope` types, `TIER_SCOPES` constant (PR #48, merged 2026-02-07).
 
 ---
 
@@ -61,7 +62,7 @@ None — all tracked issues resolved. Next work: Sprint 4 planning.
 | **Sprint 2** (Civic Nervous System) | ✅ Complete | ⚠️ 85% Complete | AI engine mocked; no WebLLM/remote; Engine router exists but unused |
 | **Sprint 3** (Communication) | ✅ Complete | ✅ Complete | Messaging E2EE working; Forum working; XP integrated |
 | **Sprint 3.5** (UI Refinement) | ✅ Complete | ✅ Complete | Stance-based threading; design unification |
-| **Sprint 4** (Agentic Foundation) | ⚪ Planning | ⚪ Not Started | Safety baseline + unified topics + analysis robustness (`docs/sprints/04-sprint-agentic-foundation.md`) |
+| **Sprint 4** (Agentic Foundation) | ⚪ Planning | 🟡 In Progress | Delegation types landed; runtime delegation + governors + unified topics pending |
 | **Sprint 5** (Bridge + Docs) | ⚪ Planning | ⚪ Not Started | Docs updated for Civic Action Kit (facilitation model); no code yet (`docs/sprints/05-sprint-the-bridge.md`) |
 
 ---
@@ -75,7 +76,7 @@ None — all tracked issues resolved. Next work: Sprint 4 planning.
 | AI_ENGINE_CONTRACT + Sprint 2 | Remote/local engines + policy routing (remote-first etc.) | EngineRouter exists, but worker uses mock local-only engine; no RemoteApiEngine/LocalMlEngine | `packages/ai-engine/src/engines.ts` + `packages/ai-engine/src/worker.ts` |
 | Hero_Paths / Sentiment Spec | Constituency proofs + district aggregates | SentimentSignal emission requires constituency proof; no RegionProof generation or aggregates | `apps/web-pwa/src/hooks/useSentimentState.ts:76-100` |
 | Sprint 5 Bridge Plan | Civic Action Kit facilitation (reports + native intents) | Bridge is stubbed; facilitation features not implemented | `services/bridge-stub/index.ts` + `docs/sprints/05-sprint-the-bridge.md` |
-| Agentic Familiars (Delegation) | Delegation grants + OBO assertions | Not implemented | No familiar runtime or delegation types in app state |
+| Agentic Familiars (Delegation) | Delegation grants + OBO assertions | 🟡 Types + Zod schemas defined; runtime not implemented | `packages/types/src/delegation.ts` (PR #48); no familiar runtime yet |
 | Participation Governors | Action/analysis budgets per principal | Not implemented | No per-nullifier budget counters |
 | Unified Topics Model | Headlines ↔ threads share `topicId` + proposal threads | Not implemented | Thread schema lacks `topicId`/`proposal` extension |
 | Topic Reanalysis Epochs | Frame/Reframe table updates after N posts via reanalysis | Not implemented | No reanalysis loop or digest types in app state |
@@ -90,7 +91,7 @@ The following tasks are required to align the codebase with the updated specs (a
 
 | Task | Spec Reference | Files to Modify |
 |------|----------------|-----------------|
-| Define `FamiliarRecord`, `DelegationGrant`, `OnBehalfOfAssertion` types | `spec-identity-trust-constituency.md` §6 | `packages/types/src/index.ts`, `packages/data-model/` |
+| ✅ ~~Define `FamiliarRecord`, `DelegationGrant`, `OnBehalfOfAssertion` types~~ | `spec-identity-trust-constituency.md` §6 | Done — `packages/types/src/delegation.ts` (PR #48) |
 | Implement tiered scopes (Suggest/Act/High-Impact) with Tier 3 human-approval | `spec-identity-trust-constituency.md` §6 | New: `apps/web-pwa/src/hooks/useFamiliar.ts` |
 | Implement delegation grant creation/revocation | `spec-identity-trust-constituency.md` §6 | New: familiar management UI + store |
 
@@ -182,11 +183,11 @@ fn verify_web(payload, mock_mode) -> f32 {
 
 ### Agentic Familiars (Delegation)
 
-**Status:** ⚪ **Planned** — Not implemented
+**Status:** 🟡 **Types Defined** — Runtime not implemented
 
 | Feature | Implementation | Evidence |
 |---------|----------------|----------|
-| Delegation grants / OBO assertions | ❌ Not implemented | No delegation types in app state |
+| Delegation grants / OBO assertions | 🟡 Types + schemas defined | `packages/types/src/delegation.ts` (PR #48) |
 | Familiar runtime modes (suggest/act/high-impact) | ❌ Not implemented | No familiar orchestration layer |
 | Action/compute budgets per nullifier | ❌ Not implemented | No per-nullifier budget counters |
 
@@ -417,18 +418,18 @@ const router = new EngineRouter(mockEngine, undefined, 'local-only');
 
 ## Test Coverage
 
-**Repo-wide (Vitest `pnpm test:quick`):** 67 test files, 416 tests (unit + component + integration).
+**Repo-wide (Vitest `pnpm test:quick`):** 68 test files, 430 tests (unit + component + integration).
 
-**Coverage (`pnpm test:coverage`, last validated 2026-02-06):**
+**Coverage (`pnpm test:coverage`, last validated 2026-02-07):**
 
 | Metric | Value |
 |--------|-------|
-| Statements | 100% (1336/1336) |
-| Branches | 100% (418/418) |
-| Functions | 100% (117/117) |
-| Lines | 100% (1336/1336) |
+| Statements | 100% |
+| Branches | 100% |
+| Functions | 100% |
+| Lines | 100% |
 
-> Note: Coverage totals may vary slightly as files are added/modified. Gate enforces 100% on all metrics.
+> Note: Coverage totals vary as files are added/modified. Gate enforces 100% on all metrics. Exact counts available from CI.
 
 ✅ **Coverage gate (100% threshold) passes.**
 
@@ -520,7 +521,7 @@ const router = new EngineRouter(mockEngine, undefined, 'local-only');
 - `docs/sprints/02-sprint-2-advanced-features.md` — ⚠️ 85% (AI engine gap)
 - `docs/sprints/03-sprint-3-the-agora.md` — ✅ Complete
 - `docs/sprints/03.5-sprint-3.5-ui-refinement.md` — ✅ Complete
-- `docs/sprints/04-sprint-agentic-foundation.md` — ⚪ Planning (not started)
+- `docs/sprints/04-sprint-agentic-foundation.md` — 🟡 In Progress (delegation types landed)
 - `docs/sprints/05-sprint-the-bridge.md` — ⚪ Planning (not started)
 
 ### Developer Resources
