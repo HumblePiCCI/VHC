@@ -25,16 +25,8 @@ export const BUDGET_ACTION_KEYS = [
   'shares/day',
 ] as const satisfies readonly BudgetActionKey[];
 
-export const BudgetActionKeySchema = z.enum([
-  'posts/day',
-  'comments/day',
-  'sentiment_votes/day',
-  'governance_votes/day',
-  'moderation/day',
-  'analyses/day',
-  'civic_actions/day',
-  'shares/day',
-]);
+/** Derived from BUDGET_ACTION_KEYS to avoid triple-listing action keys. */
+export const BudgetActionKeySchema = z.enum(BUDGET_ACTION_KEYS);
 
 // ─── Budget Limit ──────────────────────────────────────────────
 
