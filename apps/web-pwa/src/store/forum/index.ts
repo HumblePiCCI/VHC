@@ -146,7 +146,7 @@ export function createForumStore(overrides?: Partial<ForumDeps>) {
         timestamp: deps.now(),
         stance,
         targetId: targetId ?? undefined,
-        via: via ?? undefined,
+        via,
         upvotes: 0,
         downvotes: 0
       });

@@ -34,7 +34,8 @@ export function serializeThreadForGun(thread: HermesThread): Record<string, unkn
   const clean = stripUndefined(thread);
   return {
     ...clean,
-    tags: JSON.stringify(clean.tags)
+    tags: JSON.stringify(clean.tags),
+    // TODO: serialize nested proposal for Gun when elevation is implemented (see #77 maint S1)
   };
 }
 
