@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const INDEX_HTML_PATH = resolve(process.cwd(), 'apps/web-pwa/index.html');
+const INDEX_HTML_PATH = resolve(fileURLToPath(import.meta.url), '../../index.html');
 const REQUIRED_DIRECTIVES = [
   'default-src',
   'script-src',
@@ -47,6 +48,7 @@ describe('index.html content security policy', () => {
 
     const scriptSrc = directives.get('script-src') ?? '';
     const styleSrc = directives.get('style-src') ?? '';
+    const connectSrc = directives.get('connect-src') ?? '';
 
     expect(scriptSrc).toContain("'self'");
     expect(scriptSrc).not.toContain("'unsafe-inline'");
@@ -57,5 +59,10 @@ describe('index.html content security policy', () => {
       .map(([name]) => name);
 
     expect(directivesWithUnsafeInline).toEqual(['style-src']);
+
+    expect(connectSrc).toBe("'self'");
+    expect(connectSrc).not.toContain('ws:');
+    expect(connectSrc).not.toContain('wss:');
+    expect(connectSrc).not.toContain('100.75.18.26');
   });
 });
