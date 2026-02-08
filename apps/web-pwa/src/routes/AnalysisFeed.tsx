@@ -1,8 +1,13 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Button } from '@vh/ui';
-import type { AnalysisResult } from '../../../../packages/ai-engine/src/prompts';
-import { getOrGenerate, hashUrl, type CanonicalAnalysis } from '../../../../packages/ai-engine/src/analysis';
+import {
+  getOrGenerate,
+  hashUrl,
+  type CanonicalAnalysis,
+  type GenerateResult
+} from '../../../../packages/ai-engine/src/analysis';
+import { createAnalysisPipeline } from '../../../../packages/ai-engine/src/pipeline';
 import type { VennClient } from '@vh/gun-client';
 import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
@@ -82,6 +87,7 @@ export const AnalysisFeed: React.FC = () => {
 
   const store = useMemo(() => loadFeed(), []);
   const gunStore = useMemo(() => createGunStore(client), [client]);
+  const pipeline = useMemo(() => createAnalysisPipeline(), []);
 
   const sortedFeed = useMemo(
     () => [...feed].sort((a, b) => b.timestamp - a.timestamp).slice(0, 10),
@@ -94,21 +100,14 @@ export const AnalysisFeed: React.FC = () => {
       isRunningRef.current = true;
       setBusy(true);
       return new Promise<{ analysis: CanonicalAnalysis | null; notice?: string }>((resolve, reject) => {
-        const generate = async (): Promise<AnalysisResult> =>
-          new Promise((res) =>
-            setTimeout(
-              () =>
-                res({
-                  summary: `Local analysis for ${targetUrl}`,
-                  biases: ['Local-first'],
-                  counterpoints: ['None'],
-                  bias_claim_quote: [],
-                  justify_bias_claim: [],
-                  confidence: 0.6
-                }),
-              80
-            )
-          );
+        const generate = async (articleText: string): Promise<GenerateResult> => {
+          const result = await pipeline(articleText);
+          return {
+            analysis: result.analysis,
+            engine: result.engine,
+            warnings: result.warnings
+          };
+        };
 
         let reusedFromMesh = false;
         let reusedFromLocal = false;
@@ -191,7 +190,7 @@ export const AnalysisFeed: React.FC = () => {
           });
       });
     },
-    [feed, gunStore, identity, store]
+    [feed, gunStore, identity, pipeline, store]
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
