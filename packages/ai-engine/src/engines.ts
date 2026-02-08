@@ -1,3 +1,5 @@
+import { LocalMlEngine } from './localMlEngine';
+
 export interface JsonCompletionEngine {
   name: string;
   kind: 'local' | 'remote';
@@ -91,15 +93,19 @@ export function createMockEngine(): JsonCompletionEngine {
 }
 
 export function isE2EMode(): boolean {
-  return (import.meta as any).env?.VITE_E2E_MODE === 'true' || false;
+  const viteE2EMode = (import.meta as any).env?.VITE_E2E_MODE;
+  const nodeE2EMode = typeof process !== 'undefined' ? process.env?.VITE_E2E_MODE : undefined;
+  return viteE2EMode === 'true' || nodeE2EMode === 'true';
 }
 
 /**
  * Returns the default engine for the current runtime context.
  * In E2E/test mode: returns mock engine.
- * In browser: returns mock engine (callers should use createAnalysisPipeline
- * with an explicit LocalMlEngine for real inference).
+ * Otherwise: returns the real local WebLLM engine.
  */
 export function createDefaultEngine(): JsonCompletionEngine {
-  return createMockEngine();
+  if (isE2EMode()) {
+    return createMockEngine();
+  }
+  return new LocalMlEngine();
 }
