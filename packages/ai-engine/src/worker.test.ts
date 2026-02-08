@@ -1,73 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const posts: any[] = [];
-globalThis.self = globalThis as any;
-globalThis.postMessage = (data: any) => {
+(globalThis as any).self = globalThis;
+(globalThis as any).postMessage = (data: unknown) => {
   posts.push(data);
 };
 
 const loadWorker = () => import('./worker');
 
-const successMocks = () => {
+function setupWorkerMocks() {
+  const pipelineRun = vi.fn();
+  const createDefaultEngine = vi.fn().mockReturnValue({
+    name: 'mock-local-engine',
+    kind: 'local',
+    modelName: 'mock-local-v1',
+    generate: vi.fn()
+  });
+
+  const createAnalysisPipeline = vi.fn().mockReturnValue(pipelineRun);
+
   vi.doMock('./engines', () => ({
-    EngineRouter: vi.fn().mockImplementation(() => ({
-      generate: vi.fn().mockResolvedValue({
-        text: JSON.stringify({
-          final_refined: {
-            summary: 'Mock summary',
-            bias_claim_quote: ['quote'],
-            justify_bias_claim: ['justification'],
-            biases: ['bias'],
-            counterpoints: ['counter'],
-            sentimentScore: 0.5,
-            confidence: 0.9
-          }
-        }),
-        engine: 'mock-engine'
-      })
-    }))
+    createDefaultEngine
   }));
 
-  vi.doMock('./prompts', () => ({
-    buildPrompt: vi.fn().mockReturnValue('Mock Prompt')
+  vi.doMock('./pipeline', () => ({
+    createAnalysisPipeline
   }));
 
-  vi.doMock('./schema', () => ({
-    parseAnalysisResponse: vi.fn().mockReturnValue({
-      summary: 'Mock summary',
-      bias_claim_quote: ['quote'],
-      justify_bias_claim: ['justification'],
-      biases: ['bias'],
-      counterpoints: ['counter'],
-      sentimentScore: 0.5,
-      confidence: 0.9
-    })
-  }));
-
-  vi.doMock('./validation', () => ({
-    validateAnalysisAgainstSource: vi.fn().mockReturnValue([])
-  }));
-};
-
-const failingEngineMock = () => {
-  vi.doMock('./engines', () => ({
-    EngineRouter: vi.fn().mockImplementation(() => ({
-      generate: vi.fn().mockRejectedValue(new Error('Engine failed'))
-    }))
-  }));
-
-  vi.doMock('./prompts', () => ({
-    buildPrompt: vi.fn().mockReturnValue('Mock Prompt')
-  }));
-
-  vi.doMock('./schema', () => ({
-    parseAnalysisResponse: vi.fn().mockReturnValue({})
-  }));
-
-  vi.doMock('./validation', () => ({
-    validateAnalysisAgainstSource: vi.fn().mockReturnValue([])
-  }));
-};
+  return {
+    pipelineRun,
+    createDefaultEngine,
+    createAnalysisPipeline
+  };
+}
 
 describe('worker', () => {
   beforeEach(() => {
@@ -76,44 +41,76 @@ describe('worker', () => {
     vi.resetModules();
   });
 
-  it('handles ANALYZE message success', async () => {
-    successMocks();
+  it('handles ANALYZE success through pipeline', async () => {
+    const { pipelineRun, createAnalysisPipeline, createDefaultEngine } = setupWorkerMocks();
+    pipelineRun.mockResolvedValue({
+      analysis: {
+        summary: 'Mock summary',
+        bias_claim_quote: ['quote'],
+        justify_bias_claim: ['justification'],
+        biases: ['bias'],
+        counterpoints: ['counter'],
+        sentimentScore: 0.5,
+        confidence: 0.9
+      },
+      engine: {
+        id: 'mock-local-engine',
+        kind: 'local',
+        modelName: 'mock-local-v1'
+      },
+      warnings: []
+    });
+
     await loadWorker();
 
-    const msg = {
+    await (globalThis as any).onmessage({
+      data: {
+        id: '1',
+        type: 'ANALYZE',
+        payload: { articleText: 'text', urlHash: 'abc' }
+      }
+    });
+
+    expect(createDefaultEngine).toHaveBeenCalledTimes(1);
+    expect(createAnalysisPipeline).toHaveBeenCalledTimes(1);
+    expect(pipelineRun).toHaveBeenCalledWith('text');
+    expect(posts).toContainEqual({
       id: '1',
-      type: 'ANALYZE',
-      payload: { articleText: 'text', urlHash: 'abc' }
-    };
-
-    await (globalThis as any).onmessage({ data: msg });
-
-    // Allow async worker processing to complete
-    await new Promise(resolve => setTimeout(resolve, 0));
-
-    expect(posts.some(p =>
-      p.type === 'SUCCESS' &&
-      p.id === '1' &&
-      p.payload.engine === 'mock-engine'
-    )).toBe(true);
+      type: 'SUCCESS',
+      payload: {
+        analysis: {
+          summary: 'Mock summary',
+          bias_claim_quote: ['quote'],
+          justify_bias_claim: ['justification'],
+          biases: ['bias'],
+          counterpoints: ['counter'],
+          sentimentScore: 0.5,
+          confidence: 0.9
+        },
+        engine: 'mock-local-engine',
+        warnings: []
+      }
+    });
   });
 
-  it('handles ANALYZE message failure', async () => {
-    failingEngineMock();
+  it('handles ANALYZE failures from pipeline', async () => {
+    const { pipelineRun } = setupWorkerMocks();
+    pipelineRun.mockRejectedValue(new Error('Engine failed'));
+
     await loadWorker();
 
-    const msg = {
+    await (globalThis as any).onmessage({
+      data: {
+        id: '2',
+        type: 'ANALYZE',
+        payload: { articleText: 'text', urlHash: 'abc' }
+      }
+    });
+
+    expect(posts).toContainEqual({
       id: '2',
-      type: 'ANALYZE',
-      payload: { articleText: 'text', urlHash: 'abc' }
-    };
-
-    await (globalThis as any).onmessage({ data: msg });
-
-    expect(posts.some(p =>
-      p.type === 'ERROR' &&
-      p.id === '2' &&
-      p.payload.message === 'Engine failed'
-    )).toBe(true);
+      type: 'ERROR',
+      payload: { message: 'Engine failed' }
+    });
   });
 });

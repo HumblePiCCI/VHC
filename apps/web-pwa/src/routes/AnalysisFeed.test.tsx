@@ -120,6 +120,7 @@ describe('AnalysisFeed', () => {
   it('hydrates feed from existing local storage entries', () => {
     const existing = [
       {
+        schemaVersion: 'canonical-analysis-v1',
         url: 'https://cached.com',
         urlHash: hashUrl('https://cached.com'),
         summary: 'cached summary',
@@ -153,6 +154,7 @@ describe('AnalysisFeed', () => {
     const sourceUrl = 'https://source.example/story';
     const existing = [
       {
+        schemaVersion: 'canonical-analysis-v1',
         url: sourceUrl,
         urlHash: hashUrl(sourceUrl),
         summary: 'summary title',
@@ -207,6 +209,7 @@ describe('AnalysisFeed', () => {
   it('fetches from mesh when available', async () => {
     const { chain, map } = createFakeGunChain();
     const record = {
+      schemaVersion: 'canonical-analysis-v1',
       url: 'https://example.com',
       urlHash: hashUrl('https://example.com'),
       summary: 'remote',
@@ -232,6 +235,7 @@ describe('AnalysisFeed', () => {
   it('uses gun fallback when mesh client is absent', async () => {
     const { chain, map } = createFakeGunChain();
     const record = {
+      schemaVersion: 'canonical-analysis-v1',
       url: 'https://gun.com',
       urlHash: hashUrl('https://gun.com'),
       summary: 'from gun',
@@ -368,7 +372,22 @@ describe('AnalysisFeed', () => {
       mockCanPerformAction.mockReturnValue({ allowed: false, reason });
       const getOrGenerateSpy = vi
         .spyOn(AnalysisModule, 'getOrGenerate')
-        .mockResolvedValue({ analysis: {} as any, reused: false });
+        .mockResolvedValue({
+          analysis: {
+            schemaVersion: 'canonical-analysis-v1',
+            url: targetUrl,
+            urlHash: hashUrl(targetUrl),
+            summary: 'blocked',
+            biases: ['b'],
+            counterpoints: ['c'],
+            sentimentScore: 0,
+            bias_claim_quote: [],
+            justify_bias_claim: [],
+            confidence: 0.5,
+            timestamp: Date.now()
+          },
+          reused: false
+        });
 
       try {
         const result = createBudgetDeniedResult(reason);
@@ -408,6 +427,7 @@ describe('AnalysisFeed', () => {
     it('T4: reused/cached path does not consume budget', async () => {
       const targetUrl = 'https://cached-budget.com';
       const existing = {
+        schemaVersion: 'canonical-analysis-v1',
         url: targetUrl,
         urlHash: hashUrl(targetUrl),
         summary: 'cached',
@@ -503,6 +523,7 @@ describe('AnalysisFeed', () => {
 
         resolveGenerate({
           analysis: {
+            schemaVersion: 'canonical-analysis-v1',
             url: targetUrl,
             urlHash: hashUrl(targetUrl),
             summary: 's',
@@ -651,16 +672,16 @@ describe('AnalysisFeed', () => {
       expect(result.notice).toBe('test reason');
     });
 
-    it('T9: generation error does not consume budget', async () => {
+    it('T9: engine failure does not consume budget', async () => {
       mockUseIdentity.mockReturnValue({ identity: { did: 'did:example', session: { nullifier: 'nul-error' } } });
       mockCanPerformAction.mockReturnValue({ allowed: true });
-      const getOrGenerateSpy = vi.spyOn(AnalysisModule, 'getOrGenerate').mockRejectedValue(new Error('generation failed'));
+      const getOrGenerateSpy = vi.spyOn(AnalysisModule, 'getOrGenerate').mockRejectedValue(new Error('engine failed'));
 
       try {
         render(<AnalysisFeed />);
         submitUrl('https://error.com');
 
-        await waitFor(() => expect(screen.getByText('generation failed')).toBeInTheDocument());
+        await waitFor(() => expect(screen.getByText('engine failed')).toBeInTheDocument());
         expect(mockConsumeAction).not.toHaveBeenCalled();
       } finally {
         getOrGenerateSpy.mockRestore();
@@ -670,6 +691,7 @@ describe('AnalysisFeed', () => {
 
   describe('shares/day budget enforcement', () => {
     const shareItem = {
+      schemaVersion: 'canonical-analysis-v1',
       url: 'https://share-test.com/article',
       urlHash: hashUrl('https://share-test.com/article'),
       summary: 'Test article summary',

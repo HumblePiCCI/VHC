@@ -1,9 +1,24 @@
-import type { AnalysisResult } from './prompts';
+import type { AnalysisResult } from './schema';
+
+export interface EngineMetadata {
+  id: string;
+  kind: 'remote' | 'local';
+  modelName: string;
+}
 
 export interface CanonicalAnalysis extends AnalysisResult {
+  schemaVersion: 'canonical-analysis-v1';
   url: string;
   urlHash: string;
   timestamp: number;
+  engine?: EngineMetadata;
+  warnings?: string[];
+}
+
+export interface GenerateResult {
+  analysis: AnalysisResult;
+  engine?: EngineMetadata;
+  warnings?: string[];
 }
 
 export interface AnalysisStore {
@@ -30,20 +45,25 @@ export function hashUrl(url: string): string {
 export async function getOrGenerate(
   url: string,
   store: AnalysisStore,
-  generate: (url: string) => Promise<AnalysisResult>
+  generate: (url: string) => Promise<GenerateResult>
 ): Promise<{ analysis: CanonicalAnalysis; reused: boolean }> {
   const urlHash = hashUrl(url);
   const existing = await store.getByHash(urlHash);
   if (existing) {
     return { analysis: existing, reused: true };
   }
+
   const result = await generate(url);
   const canonical: CanonicalAnalysis = {
-    ...result,
+    ...result.analysis,
+    schemaVersion: 'canonical-analysis-v1',
     url,
     urlHash,
-    timestamp: Date.now()
+    timestamp: Date.now(),
+    ...(result.engine ? { engine: result.engine } : {}),
+    ...(result.warnings ? { warnings: result.warnings } : {})
   };
+
   await store.save(canonical);
   return { analysis: canonical, reused: false };
 }
