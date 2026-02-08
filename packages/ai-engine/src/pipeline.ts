@@ -79,7 +79,11 @@ export function createAnalysisPipeline(
     const { text, engine } = await runtime.router.generate(prompt);
     const analysis = parseAnalysisResponse(text);
     const warnings = validateAnalysisAgainstSource(articleText, analysis).map((warning) => warning.message);
-    const successfulEngine = runtime.candidates.find((candidate) => candidate.name === engine) as JsonCompletionEngine;
+    const successfulEngine = runtime.candidates.find((candidate) => candidate.name === engine);
+    /* v8 ignore next 3 -- defensive guard: router always returns a candidate name */
+    if (!successfulEngine) {
+      throw new Error(`Pipeline: engine '${engine}' not found in candidates`);
+    }
 
     return {
       analysis,
