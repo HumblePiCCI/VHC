@@ -15,7 +15,7 @@
 |-------|--------|------------------|
 | **LUMA (Identity)** | 🔴 Stubbed | ❌ No |
 | **GWC (Economics)** | 🟡 Contracts ready, undeployed | ⚠️ Partial |
-| **VENN (Analysis)** | 🟡 Pipeline exercised end-to-end, engine still mock | ❌ No |
+| **VENN (Analysis)** | 🟡 Pipeline end-to-end, LocalMlEngine wired (WebGPU) | ❌ No |
 | **HERMES Messaging** | 🟢 Implemented | ⚠️ Partial |
 | **HERMES Forum** | 🟢 Implemented | ⚠️ Partial |
 | **HERMES Docs** | ⚪ Planned (Sprint 5) | ❌ No |
@@ -23,7 +23,7 @@
 
 ---
 
-## Recently Completed (Issues #3, #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #44, #46, #47, #50, #53, #56, #59, #61, #63, #66, #68, #69, #70, #71, #72, #73, #77, #80, #87, #90, #98, #106, #112, #115, #120)
+## Recently Completed (Issues #3, #4, #6, #11, #12, #15, #18, #19, #22, #23, #24, #27, #33, #40, #44, #46, #47, #50, #53, #56, #59, #61, #63, #66, #68, #69, #70, #71, #72, #73, #77, #80, #87, #90, #98, #106, #112, #115, #120, #126)
 
 - ✅ **Issue #3** — Chief token smoke test: validated agent loop smoke test infrastructure.
 - ✅ **Issue #11** — Added root `pnpm typecheck` script.
@@ -69,6 +69,7 @@
 - ✅ **Issue #112** — CSP doc coherence pass: reconciled `report-uri` deprecation wording with fallback recommendation in `CSP_HEADER_MIGRATION.md`, tightened `style-src 'unsafe-inline'` rationale in `ARCHITECTURE_LOCK.md` (CSS-in-JS → Tailwind utility-class injection), annotated multi-line header example, added `connect-src` forward-reference for Gun relay peers. Docs-only, no runtime changes.
 - ✅ **Issue #115** — TOCTOU hardening for `shares/day` in AnalysisFeed share flow: added synchronous guard to prevent concurrent double-consume race in share budget enforcement, mirroring the pattern established in #68 for analysis requests. 7 new tests, 751 tests total, 100% coverage maintained (PR #116, SHA `662b7fa`, merged 2026-02-08).
 - ✅ **Issue #120** — VENN De-Mock: routed analysis generation through `ai-engine` pipeline end-to-end. Removed inline mock generator from `AnalysisFeed.tsx`; UI now calls `createAnalysisPipeline()` (new `pipeline.ts`) which exercises the full `buildPrompt → EngineRouter → parse → validate` chain. Mock engine moved from `worker.ts` inline to `createDefaultEngine()` in `engines.ts` (engine-layer default, not UI-level bypass). `CanonicalAnalysis` type aligned with v1 contract: added `schemaVersion: 'canonical-analysis-v1'`, `engine?`, `warnings?` fields. `EngineUnavailableError` typed error added, EngineRouter fallback logic improved for all policy modes. 10 new tests, 761 tests total, 100% coverage maintained (PR #121, SHA `b5c922d`, merged 2026-02-08).
+- ✅ **Issue #126** — WebLLM LocalMlEngine: added `LocalMlEngine` class with lazy WebGPU initialization and `EngineUnavailableError` safe failure path. Wired AnalysisFeed to use `LocalMlEngine` when not in E2E mode (explicit opt-in for real inference). Refactored `createDefaultEngine()` → extracted `createMockEngine()` + `isE2EMode()` helper. `createDefaultEngine()` remains mock for safe fallback; consumers explicitly opt into `LocalMlEngine`. 7 new localMlEngine tests + updated engine/AnalysisFeed tests. `localMlEngine.ts` coverage-exempt (browser-only WebGPU boundary). 773 tests total, 100% coverage maintained (PR #127, SHA `35229c7`, merged 2026-02-08).
 
 ---
 
@@ -86,10 +87,10 @@ Next work: planned backlog slices for remaining budget enforcement (moderation, 
 |--------|------------|---------------|----------|
 | **Sprint 0** (Foundation) | ✅ Archived | ✅ Complete | None — monorepo, CLI, CI, core packages done |
 | **Sprint 1** (Core Bedrock) | ✅ Archived | ⚠️ 90% Complete | Testnet deployment never done (localhost only); attestation is stub |
-| **Sprint 2** (Civic Nervous System) | ✅ Complete | ⚠️ 90% Complete | Pipeline exercised end-to-end via `createAnalysisPipeline`; EngineRouter active; engine implementation still mock (`createDefaultEngine`); no WebLLM/remote wired |
+| **Sprint 2** (Civic Nervous System) | ✅ Complete | ⚠️ 95% Complete | Pipeline exercised end-to-end via `createAnalysisPipeline`; EngineRouter active; `LocalMlEngine` (WebLLM) wired in AnalysisFeed for non-E2E mode (#126); remote engine not wired |
 | **Sprint 3** (Communication) | ✅ Complete | ✅ Complete | Messaging E2EE working; Forum working; XP integrated |
 | **Sprint 3.5** (UI Refinement) | ✅ Complete | ✅ Complete | Stance-based threading; design unification |
-| **Sprint 4** (Agentic Foundation) | ⚪ Planning | 🟡 In Progress | Delegation types + participation governor types, runtime utils, forum, governance vote, sentiment vote, analyses & shares enforcement wiring landed; budget model defines 8 keys and 6 are currently enforced in runtime flows (`shares/day` added in #106); budget denial UX hardened (#69); consume-on-null fix (#98); TOCTOU budget hardening (#68, #115); unified topics fully landed (schema + derivation + Feed↔Forum integration, PRs #78/#81); ProposalList cleanup landed (#61); CSP documentation follow-up landed (#47); VENN pipeline de-mocked — analysis generation now routes through `ai-engine` pipeline end-to-end, mock moved to engine-layer default (#120); remaining budget enforcement (moderation/civic_actions) is backlog-scoped (no active issue currently filed) |
+| **Sprint 4** (Agentic Foundation) | ⚪ Planning | 🟡 In Progress | Delegation types + participation governor types, runtime utils, forum, governance vote, sentiment vote, analyses & shares enforcement wiring landed; budget model defines 8 keys and 6 are currently enforced in runtime flows (`shares/day` added in #106); budget denial UX hardened (#69); consume-on-null fix (#98); TOCTOU budget hardening (#68, #115); unified topics fully landed (schema + derivation + Feed↔Forum integration, PRs #78/#81); ProposalList cleanup landed (#61); CSP documentation follow-up landed (#47); VENN pipeline de-mocked — analysis generation now routes through `ai-engine` pipeline end-to-end, mock moved to engine-layer default (#120); WebLLM `LocalMlEngine` wired into AnalysisFeed for non-E2E mode (#126); remaining budget enforcement (moderation/civic_actions) is backlog-scoped (no active issue currently filed) |
 | **Sprint 5** (Bridge + Docs) | ⚪ Planning | ⚪ Not Started | Docs updated for Civic Action Kit (facilitation model); no code yet (`docs/sprints/05-sprint-the-bridge.md`) |
 
 ---
@@ -283,9 +284,9 @@ packages/contracts/deployments/
 | First-to-file lookup | ✅ Implemented | `analysis.ts` — `getOrGenerate()` with v1 contract compliance |
 | Analysis pipeline | ✅ Implemented | `pipeline.ts` — `createAnalysisPipeline()`: buildPrompt → EngineRouter → parse → validate |
 | Engine router | ✅ Exercised | `engines.ts` — `EngineRouter` active with fallback logic for all policy modes |
-| AI engine (WebLLM) | ❌ Not integrated | Interface exists, no `LocalMlEngine` wired |
+| AI engine (WebLLM) | ✅ Wired (non-E2E) | `localMlEngine.ts` — `LocalMlEngine` class with lazy WebGPU init; wired into AnalysisFeed when `!isE2EMode()` (#126) |
 | AI engine (Remote) | ❌ Not wired | Interface exists, no `RemoteApiEngine` wired |
-| Mock engine | ⚠️ Engine-layer default | `engines.ts` — `createDefaultEngine()` (mock response at engine layer, not UI bypass) |
+| Mock engine | ⚠️ E2E/fallback only | `engines.ts` — `createMockEngine()` used via `createDefaultEngine()` as safe fallback; AnalysisFeed uses `LocalMlEngine` in non-E2E mode (#126) |
 
 **Sprint 2 AI Engine Contract Status:**
 - ✅ `AI_ENGINE_CONTRACT.md` spec written
@@ -296,7 +297,9 @@ packages/contracts/deployments/
 - ✅ Worker uses `createAnalysisPipeline(createDefaultEngine())` — pipeline is real, engine is mock
 - ✅ `CanonicalAnalysis` aligned with v1 contract: `schemaVersion`, `engine?`, `warnings?`
 - ✅ Tests cover policy behaviors, fallbacks, and pipeline end-to-end
-- ⚠️ **Engine implementation is still mock** — `createDefaultEngine()` returns hardcoded response; no WebLLM or remote API wired
+- ✅ `LocalMlEngine` class wired — lazy WebGPU init, `EngineUnavailableError` safe failure, used by AnalysisFeed in non-E2E mode (#126)
+- ⚠️ **Default engine fallback is still mock** — `createDefaultEngine()` returns `createMockEngine()` for safe fallback; consumers must explicitly opt into `LocalMlEngine`
+- ⚠️ **Remote API engine not wired** — no `RemoteApiEngine` implementation
 
 **Current AI Architecture (pipeline exercised, engine mocked):**
 ```typescript
@@ -462,7 +465,7 @@ const runPipeline = createAnalysisPipeline(createDefaultEngine());
 
 ## Test Coverage
 
-**Repo-wide (Vitest `pnpm test:quick`):** 761 tests (unit + component + integration).
+**Repo-wide (Vitest `pnpm test:quick`):** 773 tests (unit + component + integration).
 
 **Coverage (`pnpm test:coverage`, last validated 2026-02-08):**
 
