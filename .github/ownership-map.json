@@ -36,6 +36,7 @@
     "branchPrefix": "team-d/",
     "paths": [
       "packages/types/src/delegation*.ts",
+      "packages/types/src/index.ts",
       "apps/web-pwa/src/store/delegation/**",
       "apps/web-pwa/src/hooks/useFamiliar.ts",
       "apps/web-pwa/src/components/hermes/FamiliarControlPanel.tsx"
