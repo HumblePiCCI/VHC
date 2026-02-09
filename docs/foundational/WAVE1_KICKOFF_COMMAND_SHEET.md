@@ -82,13 +82,17 @@ pnpm test:coverage
 # Local ownership gate (same logic as CI)
 node tools/scripts/check-ownership-scope.mjs
 
+# Prepare PR body from template and fill checklist items before create
+cp .github/pull_request_template.md /tmp/w1-pr-body.md
+"${EDITOR:-vi}" /tmp/w1-pr-body.md
+
 # Push and open PR to integration branch
 git push -u origin team-a/A-1-schemas
 gh pr create \
   --base integration/wave-1 \
   --head team-a/A-1-schemas \
   --title "A-1: add synthesis schema contracts" \
-  --body-file .github/pull_request_template.md
+  --body-file /tmp/w1-pr-body.md
 ```
 
 ## 3) Chief merge gate for each PR
@@ -127,12 +131,17 @@ gh pr list --base integration/wave-1 --state merged --limit 200 \
 # Core checkpoint suite
 pnpm typecheck
 pnpm lint
+pnpm lint:loc
 pnpm test:quick
 pnpm test:e2e
 pnpm bundle:check
 
 # Topology/privacy baseline (public vs sensitive path constraints)
 pnpm test:quick -- packages/gun-client/src/topology.test.ts
+
+# Feature-flag validation sweep (run once V2 stores/UI are landed in readiness matrix)
+VITE_FEED_V2_ENABLED=false VITE_TOPIC_SYNTHESIS_V2_ENABLED=false pnpm test:e2e
+VITE_FEED_V2_ENABLED=true VITE_TOPIC_SYNTHESIS_V2_ENABLED=true pnpm test:e2e
 ```
 
 Record checkpoint report:
@@ -161,9 +170,14 @@ git pull --ff-only origin integration/wave-1
 
 pnpm typecheck
 pnpm lint
+pnpm lint:loc
 pnpm test:quick
 pnpm test:e2e
 pnpm bundle:check
+
+# Final flag-state confirmation
+VITE_FEED_V2_ENABLED=false VITE_TOPIC_SYNTHESIS_V2_ENABLED=false pnpm test:e2e
+VITE_FEED_V2_ENABLED=true VITE_TOPIC_SYNTHESIS_V2_ENABLED=true pnpm test:e2e
 
 # Confirm no open PRs still targeting integration branch
 gh pr list --base integration/wave-1 --state open
