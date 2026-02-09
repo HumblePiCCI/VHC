@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${SKIP_OWNERSHIP_SCOPE:-}" == "1" ]]; then
+  echo "[pre-push] SKIP_OWNERSHIP_SCOPE=1 set; skipping ownership check."
+  exit 0
+fi
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [[ "$branch" == "HEAD" ]]; then
+  echo "[pre-push] Detached HEAD; skipping ownership check."
+  exit 0
+fi
+
+# Allow direct pushes only to coordination branches and team branches.
+allowed_branch_regex='^(team-a/|team-b/|team-c/|team-d/|team-e/|coord/|main$|integration/wave-)'
+if [[ ! "$branch" =~ $allowed_branch_regex ]]; then
+  echo "[pre-push] Branch '$branch' is not allowed for agent workflow."
+  echo "[pre-push] Use one of: team-a/*, team-b/*, team-c/*, team-d/*, team-e/*, coord/*"
+  echo "[pre-push] Set SKIP_OWNERSHIP_SCOPE=1 only for explicit emergency override."
+  exit 1
+fi
+
+# `main` and integration branch pushes are governed by branch protection on remote.
+if [[ "$branch" == "main" || "$branch" =~ ^integration/wave- ]]; then
+  echo "[pre-push] Branch '$branch' allowed; skipping local ownership scope check."
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+echo "[pre-push] Running ownership scope check for '$branch'..."
+node "$repo_root/tools/scripts/check-ownership-scope.mjs"
