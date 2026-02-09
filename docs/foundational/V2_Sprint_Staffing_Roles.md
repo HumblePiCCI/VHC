@@ -27,6 +27,8 @@ These are non-negotiable for every agent regardless of role.
 - Branch naming is mandatory: `team-a/*` through `team-e/*`, or `coord/*` for coordinator-approved cross-team work.
 - File ownership is enforced by the `Ownership Scope` CI gate reading `.github/ownership-map.json`.
 - Before pushing, verify your changes are within your team's owned paths. CI will reject out-of-scope files.
+- Install local enforcement in every agent worktree: run `pnpm hooks:install` once to activate `.githooks/pre-push`.
+- PRs must use the repository PR template checklist (`.github/pull_request_template.md`) and complete branch/ownership items.
 
 ### Feature flags
 

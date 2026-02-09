@@ -17,7 +17,8 @@
     "test:workflow": "act -j build-and-test",
     "deps:check": "madge --circular --extensions ts,tsx .",
     "lint:loc": "./tools/scripts/check-loc.sh",
-    "bundle:check": "node tools/scripts/check-bundle-size.mjs"
+    "bundle:check": "node tools/scripts/check-bundle-size.mjs",
+    "hooks:install": "bash tools/scripts/install-git-hooks.sh"
   },
   "pnpm": {
     "overrides": {
