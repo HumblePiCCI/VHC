@@ -38,8 +38,12 @@
       "packages/types/src/delegation*.ts",
       "packages/types/src/index*.ts",
       "apps/web-pwa/src/store/delegation/**",
+      "apps/web-pwa/src/store/xpLedgerBudget*.ts",
       "apps/web-pwa/src/hooks/useFamiliar*.ts",
-      "apps/web-pwa/src/components/hermes/FamiliarControlPanel*.tsx"
+      "apps/web-pwa/src/components/hermes/FamiliarControlPanel*.tsx",
+      "apps/web-pwa/src/components/hermes/CommunityReactionSummary*.tsx",
+      "apps/web-pwa/src/components/hermes/forum/VoteControl*.tsx",
+      ".github/ownership-map.json"
     ]
   },
   "team-e": {
