@@ -5,10 +5,10 @@ import FeedShell from './feed/FeedShell';
 import HeadlineCard from './HeadlineCard';
 
 function isFeedV2Enabled(): boolean {
-  return (
-    (import.meta as unknown as { env?: { VITE_FEED_V2_ENABLED?: string } })
-      .env?.VITE_FEED_V2_ENABLED === 'true'
-  );
+  const viteValue = (import.meta as unknown as { env?: { VITE_FEED_V2_ENABLED?: string } })
+    .env?.VITE_FEED_V2_ENABLED;
+  const nodeValue = typeof process !== 'undefined' ? process.env?.VITE_FEED_V2_ENABLED : undefined;
+  return (nodeValue ?? viteValue) === 'true';
 }
 
 const LegacyFeedList: React.FC = () => {

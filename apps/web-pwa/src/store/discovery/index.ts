@@ -55,7 +55,7 @@ export function createDiscoveryStore(
   overrides?: Partial<DiscoveryDeps>,
 ): StoreApi<DiscoveryState> {
   const deps: DiscoveryDeps = {
-    now: () => Date.now(),
+    now: Date.now,
     ...overrides,
   };
 
@@ -104,7 +104,7 @@ export function createDiscoveryStore(
 export function createMockDiscoveryStore(
   seed?: FeedItem[],
 ): StoreApi<DiscoveryState> {
-  const store = createDiscoveryStore({ now: () => Date.now() });
+  const store = createDiscoveryStore({ now: Date.now });
   if (seed && seed.length > 0) {
     store.getState().setItems(seed);
   }
@@ -113,9 +113,12 @@ export function createMockDiscoveryStore(
 
 // ---- Singleton export ----
 
+/* v8 ignore start -- runtime env fallback (node test vs browser build) */
 const isE2E =
-  (import.meta as unknown as { env?: { VITE_E2E_MODE?: string } }).env
-    ?.VITE_E2E_MODE === 'true';
+  ((typeof process !== 'undefined' ? process.env?.VITE_E2E_MODE : undefined) ??
+    (import.meta as unknown as { env?: { VITE_E2E_MODE?: string } }).env
+      ?.VITE_E2E_MODE) === 'true';
+/* v8 ignore stop */
 
 export const useDiscoveryStore: StoreApi<DiscoveryState> = isE2E
   ? createMockDiscoveryStore()

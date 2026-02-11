@@ -1,7 +1,10 @@
+/* @vitest-environment jsdom */
+
+import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import type { FeedItem, RankingConfig } from '@vh/data-model';
 import { DEFAULT_RANKING_CONFIG } from '@vh/data-model';
-import { createDiscoveryStore, createMockDiscoveryStore, composeFeed } from './index';
+import { createDiscoveryStore, createMockDiscoveryStore, composeFeed, useDiscoveryStore } from './index';
 import type { DiscoveryState } from './types';
 import type { StoreApi } from 'zustand';
 
@@ -324,10 +327,12 @@ describe('privacy', () => {
 describe('useDiscoveryFeed hook (unit-level)', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_FEED_V2_ENABLED', 'false');
+    useDiscoveryStore.getState().reset();
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it('composeFeed re-export is functional', () => {
@@ -350,23 +355,91 @@ describe('useDiscoveryFeed hook (unit-level)', () => {
   });
 
   it('hook returns noop result when flag is off', async () => {
-    vi.stubEnv('VITE_FEED_V2_ENABLED', 'false');
     const { useDiscoveryFeed } = await import('../../hooks/useDiscoveryFeed');
-    const result = useDiscoveryFeed();
-    expect(result.feed).toHaveLength(0);
-    expect(result.filter).toBe('ALL');
-    expect(result.sortMode).toBe('LATEST');
-    expect(result.loading).toBe(false);
-    expect(result.error).toBeNull();
-    expect(typeof result.setFilter).toBe('function');
-    expect(typeof result.setSortMode).toBe('function');
+    const { result, unmount } = renderHook(() => useDiscoveryFeed());
+
+    expect(result.current.feed).toHaveLength(0);
+    expect(result.current.filter).toBe('ALL');
+    expect(result.current.sortMode).toBe('LATEST');
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(typeof result.current.setFilter).toBe('function');
+    expect(typeof result.current.setSortMode).toBe('function');
+
+    unmount();
   });
 
   it('noop actions do not throw', async () => {
-    vi.stubEnv('VITE_FEED_V2_ENABLED', 'false');
     const { useDiscoveryFeed } = await import('../../hooks/useDiscoveryFeed');
-    const result = useDiscoveryFeed();
-    result.setFilter('NEWS');
-    result.setSortMode('HOTTEST');
+    const { result, unmount } = renderHook(() => useDiscoveryFeed());
+
+    act(() => {
+      result.current.setFilter('NEWS');
+      result.current.setSortMode('HOTTEST');
+    });
+
+    unmount();
+  });
+
+  it('treats an unset flag as disabled (node env fallback path)', async () => {
+    vi.unstubAllEnvs();
+    delete process.env.VITE_FEED_V2_ENABLED;
+
+    const { useDiscoveryFeed } = await import('../../hooks/useDiscoveryFeed');
+    const { result, unmount } = renderHook(() => useDiscoveryFeed());
+
+    expect(result.current.feed).toHaveLength(0);
+    expect(result.current.filter).toBe('ALL');
+
+    unmount();
+  });
+
+  it('hook returns composed data when flag is on', async () => {
+    vi.stubEnv('VITE_FEED_V2_ENABLED', 'true');
+    useDiscoveryStore.getState().setItems([
+      makeFeedItem({ topic_id: 'n1', kind: 'NEWS_STORY', latest_activity_at: NOW }),
+      makeFeedItem({ topic_id: 't1', kind: 'USER_TOPIC', latest_activity_at: NOW - HOUR_MS }),
+    ]);
+
+    const { useDiscoveryFeed } = await import('../../hooks/useDiscoveryFeed');
+    const { result, unmount } = renderHook(() => useDiscoveryFeed());
+
+    expect(result.current.feed).toHaveLength(2);
+    expect(result.current.filter).toBe('ALL');
+
+    act(() => {
+      result.current.setFilter('NEWS');
+      result.current.setSortMode('LATEST');
+    });
+
+    expect(result.current.filter).toBe('NEWS');
+    expect(result.current.sortMode).toBe('LATEST');
+    expect(result.current.feed).toHaveLength(1);
+    expect(result.current.feed[0]?.kind).toBe('NEWS_STORY');
+
+    unmount();
+  });
+
+  it('hook module is importable', async () => {
+    const mod = await import('../../hooks/useDiscoveryFeed');
+    expect(typeof mod.useDiscoveryFeed).toBe('function');
+  });
+});
+
+describe('discovery singleton bootstrap', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('boots singleton through mock branch when E2E mode is true', async () => {
+    vi.stubEnv('VITE_E2E_MODE', 'true');
+    vi.resetModules();
+
+    const mod = await import('./index');
+
+    expect(mod.useDiscoveryStore.getState().items).toEqual([]);
+    mod.useDiscoveryStore.getState().setItems([makeFeedItem({ topic_id: 'boot-1' })]);
+    expect(mod.useDiscoveryStore.getState().items[0]?.topic_id).toBe('boot-1');
   });
 });

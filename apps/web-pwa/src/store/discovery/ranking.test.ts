@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FeedItem, RankingConfig } from '@vh/data-model';
+import type { FeedItem, RankingConfig, SortMode } from '@vh/data-model';
 import { DEFAULT_RANKING_CONFIG } from '@vh/data-model';
 import {
   freshnessDecay,
@@ -250,6 +250,20 @@ describe('sortItems', () => {
     const result = sortItems([b, a], 'MY_ACTIVITY', CONFIG, NOW);
     expect(result[0].topic_id).toBe('alpha');
     expect(result[1].topic_id).toBe('beta');
+  });
+
+  it('MY_ACTIVITY falls back to tiebreaker when both scores are missing', () => {
+    const a = makeFeedItem({ topic_id: 'alpha', my_activity_score: undefined });
+    const b = makeFeedItem({ topic_id: 'beta', my_activity_score: undefined });
+    const result = sortItems([b, a], 'MY_ACTIVITY', CONFIG, NOW);
+    expect(result[0].topic_id).toBe('alpha');
+    expect(result[1].topic_id).toBe('beta');
+  });
+
+  it('throws on unknown sort mode', () => {
+    expect(() =>
+      sortItems([makeFeedItem()], 'UNKNOWN' as unknown as SortMode, CONFIG, NOW),
+    ).toThrow('Unknown sort mode: UNKNOWN');
   });
 
   it('does not mutate the input array', () => {
