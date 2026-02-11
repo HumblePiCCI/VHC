@@ -33,11 +33,12 @@ function isFeedV2Enabled(): boolean {
   const viteValue = (
     import.meta as unknown as { env?: { VITE_FEED_V2_ENABLED?: string } }
   ).env?.VITE_FEED_V2_ENABLED;
-  /* v8 ignore next 1 -- browser runtime may not expose process */
+  /* v8 ignore next 4 -- browser runtime may not expose process */
   const nodeValue =
     typeof process !== 'undefined'
       ? process.env?.VITE_FEED_V2_ENABLED
       : undefined;
+  /* v8 ignore next 1 -- ?? fallback to viteValue only reachable in-browser (no process.env) */
   return (nodeValue ?? viteValue) === 'true';
 }
 
