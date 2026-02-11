@@ -34,6 +34,7 @@ These two agents are review/planning authorities only. They do not execute imple
 Every CE pass must start from a packet containing:
 - Director report (latest)
 - current branch/PR/check status
+- current context usage snapshot for Coordinator and both CE sessions
 - relevant source docs/specs for the decision
 - explicit question to resolve
 
@@ -53,14 +54,28 @@ Every CE pass must use this exact structure:
 ### Recommended next prompt
 - [exact prompt text or "approve partner draft as-is"]
 
+### Context Guard
+- coordinator_context: [percent]
+- ce_context: [percent]
+- rotation_required: [yes/no]
+
 ### Status
-- NEEDS_PARTNER_REVIEW | AGREED | ESCALATE_TO_CEO
+- NEEDS_PARTNER_REVIEW | AGREED | ESCALATE_TO_CEO | HOLDING_FOR_ROTATION
 ```
 
 ### Convergence cap
 
 - Maximum: 2 rounds per CE agent per decision.
 - If unresolved after round 2, escalate to CEO with option tradeoffs.
+
+### Session context thresholds (mandatory)
+
+- Warning: >=70% context usage
+- Mandatory rotate before new Director-bound dispatch: >=80%
+- Freeze new work (handoff-only): >=90%
+
+These thresholds are enforced by CE gate for Coordinator and CE agents only.
+Chiefs are responsible for monitoring their standing impl/chief agents and rotating before the 80% threshold.
 
 ### Escalation trigger
 
@@ -158,9 +173,10 @@ Keep execution aligned with canonical contracts and prevent procedural drift bet
 ## 5) Reconciliation Rules
 
 1. `ce-codex` and `ce-opus` each publish pass output using the fixed schema.
-2. If both statuses are `AGREED`, issue single final prompt to Director.
-3. If one is `NEEDS_PARTNER_REVIEW`, run one additional pass.
-4. If still unresolved after second pass, issue CEO escalation packet.
+2. If either pass marks `rotation_required=yes`, status is `HOLDING_FOR_ROTATION` and no Director-bound prompt may be issued.
+3. If both statuses are `AGREED`, issue single final prompt to Director.
+4. If one is `NEEDS_PARTNER_REVIEW`, run one additional pass.
+5. If still unresolved after second pass, issue CEO escalation packet.
 
 No free-form debate transcripts in final handoff.
 
