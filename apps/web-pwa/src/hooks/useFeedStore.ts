@@ -34,10 +34,10 @@ interface FeedState {
 const STORAGE_KEY = 'vh_feed_cache_v2'; // Bumped to clear corrupted caches
 
 function isFeedV2Enabled(): boolean {
-  return (
-    (import.meta as unknown as { env?: { VITE_FEED_V2_ENABLED?: string } })
-      .env?.VITE_FEED_V2_ENABLED === 'true'
-  );
+  const viteValue = (import.meta as unknown as { env?: { VITE_FEED_V2_ENABLED?: string } })
+    .env?.VITE_FEED_V2_ENABLED;
+  const nodeValue = typeof process !== 'undefined' ? process.env?.VITE_FEED_V2_ENABLED : undefined;
+  return (nodeValue ?? viteValue) === 'true';
 }
 
 // Deduplicate items by ID (keep first occurrence)

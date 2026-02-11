@@ -62,10 +62,13 @@ function upsertTopicState(
 }
 
 function isSynthesisV2Enabled(): boolean {
-  return (
-    (import.meta as unknown as { env?: { VITE_TOPIC_SYNTHESIS_V2_ENABLED?: string } })
-      .env?.VITE_TOPIC_SYNTHESIS_V2_ENABLED === 'true'
-  );
+  const viteValue = (import.meta as unknown as { env?: { VITE_TOPIC_SYNTHESIS_V2_ENABLED?: string } })
+    .env?.VITE_TOPIC_SYNTHESIS_V2_ENABLED;
+  /* v8 ignore next 3 -- browser runtime may not expose process */
+  const nodeValue = typeof process !== 'undefined'
+    ? process.env?.VITE_TOPIC_SYNTHESIS_V2_ENABLED
+    : undefined;
+  return (nodeValue ?? viteValue) === 'true';
 }
 
 export function createSynthesisStore(overrides?: Partial<InternalDeps>): StoreApi<SynthesisState> {
@@ -240,9 +243,12 @@ export function createMockSynthesisStore(seedSynthesis: TopicSynthesisV2[] = [])
   return store;
 }
 
+/* v8 ignore start -- runtime env fallback (node test vs browser build) */
 const isE2E =
-  (import.meta as unknown as { env?: { VITE_E2E_MODE?: string } }).env
-    ?.VITE_E2E_MODE === 'true';
+  ((typeof process !== 'undefined' ? process.env?.VITE_E2E_MODE : undefined) ??
+    (import.meta as unknown as { env?: { VITE_E2E_MODE?: string } }).env
+      ?.VITE_E2E_MODE) === 'true';
+/* v8 ignore stop */
 
 /* v8 ignore start -- environment branch depends on Vite import.meta at module-eval time */
 export const useSynthesisStore: StoreApi<SynthesisState> = isSynthesisV2Enabled()

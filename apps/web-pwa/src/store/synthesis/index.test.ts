@@ -303,4 +303,23 @@ describe('synthesis store', () => {
     expect(store.getState().getTopicState('topic-1').loading).toBe(false);
   });
 
+  it('module bootstrap uses E2E mock singleton branch when env is enabled', async () => {
+    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'true');
+    vi.stubEnv('VITE_E2E_MODE', 'true');
+    vi.resetModules();
+
+    const mod = await import('./index');
+
+    expect(mod.useSynthesisStore.getState().enabled).toBe(true);
+  });
+
+  it('module bootstrap remains importable with default runtime globals', async () => {
+    vi.resetModules();
+
+    const mod = await import('./index');
+    const store = mod.createSynthesisStore({ enabled: false, resolveClient: () => null });
+
+    expect(store.getState().enabled).toBe(false);
+  });
+
 });
