@@ -70,9 +70,7 @@
     "w2b": {
         "branchPrefix": "w2b/",
         "paths": [
-            "packages/crdt/**",
             "packages/data-model/src/schemas/hermes/docs*.ts",
-            "packages/data-model/src/schemas/hermes/forum*.ts",
             "packages/data-model/src/index*.ts",
             "packages/gun-client/src/docsAdapters*.ts",
             "packages/gun-client/src/index*.ts",
