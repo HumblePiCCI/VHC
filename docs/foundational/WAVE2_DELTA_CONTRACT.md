@@ -84,6 +84,14 @@ Rationale: Wave 1 manual relay of dual-review was effective but added latency an
 Policy: before declaring wave closeout or dispatching the next wave, run a formal doc audit (`ce-opus` for contract/policy coherence, `ce-codex` for execution fidelity) producing `docs/reports/WAVE<n>_DOC_AUDIT.md` with findings, drift matrix, fix list, and pass/fail status; no dispatch until `DOC_AUDIT_PASS`.
 Rationale: Wave 1 closeout revealed stale STATUS entries, missing doc artifacts on main, and branch-protection drift. A formal audit gate prevents recurrence.
 
+13. Session-context rotation guard is mandatory for standing agents.
+Policy: enforce context thresholds as hard guardrails:
+- Coordinator and CE agents: warning at >=70% context, mandatory rotation at >=80% before any new Director-bound prompt/dispatch, freeze new work at >=90% (handoff-only until respawn).
+- Standing impl/chief agents: same thresholds apply, but monitoring and enforcement are owned by the team Chief.
+- Per-PR agents (maint, per-issue QA/sidecars): exempt by design.
+Rationale: Wave 1 had multiple high-context failures and timeout/no-output runs that were operational, not technical, defects.
+Enforcement split: CE gate enforces thresholds for Coordinator/CE agents only. Chiefs are responsible for monitoring their standing impl agents' context usage and rotating before the 80% threshold.
+
 ---
 
 ## Exception Handling
