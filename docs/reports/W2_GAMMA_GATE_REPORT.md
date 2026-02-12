@@ -154,3 +154,68 @@ Gate 6   — Dispatch Packet Ready:      ⏳ PENDING (blocked by Gates 2–4)
 Gates 0, 0.5, 1, and 5 are clear. All policy updates codified and merge queue enabled.
 Remaining gates (2–4, 6) are pre-existing W2-Gamma implementation prerequisites
 (ownership, dependencies, spec alignment, dispatch packet) — not governance blockers.
+
+---
+
+## Appendix A — CE Dry-Run Artifact (Gate 1 Proof)
+
+**Decision question:** Should we retire the Policy 4 serialized fallback exception
+and switch to merge queue on `integration/wave-2`?
+
+### ce-codex (Codex 5.3) — CE Review Pass [1]
+
+**SoT Alignment:**
+- A: aligned — Policy 4 mandates merge queue; ruleset 12741087 active with merge_queue
+- B: aligned — Exception content resolved, serialized fallback retired
+- C: aligned — CE dual-review §5 requirements satisfied
+- D: silent — Exception-doc path normalization (non-blocking)
+
+**Findings:**
+- HIGH: Original platform constraint removed; keeping exception would be policy drift
+- MEDIUM: Documentation location drift for exception record (audit noise)
+- LOW: Canary merge-through-queue advisable for end-to-end proof
+
+**Context Guard:** coordinator=35%, ce=0%, rotation_required=no
+
+**Status: AGREED**
+
+**Evidence:** Verified ruleset 12741087 via API (merge_queue MERGE/ALLGREEN/30m,
+5 required checks), branch protected=true, 53/53 worktrees on CarbonCasteInc/VHC.
+
+---
+
+### ce-opus (Opus 4.6) — CE Review Pass [1]
+
+**SoT Alignment:**
+- A (Policy 4): aligned — retiring exception restores compliance with canonical policy
+- B (Policy 9): aligned — integration/wave-2 protected with required checks
+- C (Exception Handling): conflict (procedural) — retirement should be documented with same rigor as filing
+- D (Policy 11): aligned — this review is the CE gate
+
+**Findings:**
+- HIGH: WAVE2_POLICY4_EXCEPTION.md not found on disk in ce-opus worktree
+  (NOTE: false positive — file exists at `docs/reports/WAVE2_POLICY4_EXCEPTION.md`
+  on the coordinator branch; ce-opus worktree was on a different branch)
+- MEDIUM: Merge queue runtime validation gap — no PR has transited queue yet
+- MEDIUM: Required checks list should be cross-checked against ruleset config
+- LOW: 30min timeout is generous but acceptable
+
+**Context Guard:** coordinator=35%, ce=0%, rotation_required=no
+
+**Status: AGREED**
+
+---
+
+### Reconciliation
+
+- ce-codex: **AGREED**, rotation_required=no
+- ce-opus: **AGREED**, rotation_required=no
+- Per CE_DUAL_REVIEW_CONTRACTS.md §5 rule 3: both AGREED + no rotation →
+  **Coordinator dispatches immediately. No CEO wait required.**
+
+**Output-ordering compliance:** Both agents emitted the fixed-schema CE Review Pass
+as their primary output (ce-opus within first response, ce-codex within first response
+after verification tool calls). Schema preceded deep inspection appendix in both cases.
+This proves the output-ordering rule is functional.
+
+**Dispatch authority confirmed.**
