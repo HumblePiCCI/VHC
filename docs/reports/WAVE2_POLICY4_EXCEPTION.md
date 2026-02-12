@@ -10,14 +10,20 @@
 
 GitHub merge queue feature is **not available** on this repository.
 
+### Pre-transfer (historical)
 - **Owner:** HumblePiCCI (personal user account, GitHub Free plan)
 - **Repo:** HumblePiCCI/VHC (public)
-- **API evidence:**
-  - `requiresMergeQueue` field does not exist on `BranchProtectionRule` type
-  - `UpdateBranchProtectionRuleInput` does not accept `requiresMergeQueue` argument
-  - Rulesets API rejects `merge_queue` rule type (HTTP 422)
-  - `mergeQueue` GraphQL query returns `null` for `integration/wave-2`
 - **Root cause:** Merge queue requires GitHub Teams, Enterprise, or Organization-level plan
+
+### Post-transfer (2026-02-12 re-verification)
+- **Owner:** CarbonCasteInc (Organization)
+- **Repo:** CarbonCasteInc/VHC
+- **API evidence:**
+  - `mergeQueue` GraphQL query returns `null` for both `main` and `integration/wave-2`
+  - Org plan field returns `null` (likely free-tier org or plan not exposed via API)
+  - Rulesets API shows one active ruleset (`main`) with no `merge_queue` rule type
+  - Branch protection on `integration/wave-2` is `protected: true` (via branches API)
+- **Root cause:** Organization exists but merge queue is still not enabled (requires org-level plan upgrade or explicit admin enablement)
 
 ## Branch Protection in Place (Fallback Controls)
 
