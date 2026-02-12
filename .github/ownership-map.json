@@ -83,13 +83,15 @@
     },
     "w2g": {
         "branchPrefix": "w2g/",
+        "_note_shared": "apps/web-pwa/src/env.d.ts added per coordinator shared-file pre-approval (Policy 3) for VITE_ELEVATION_ENABLED typing",
         "paths": [
             "packages/data-model/src/schemas/hermes/elevation*.ts",
             "packages/data-model/src/schemas/hermes/notification*.ts",
             "packages/gun-client/src/bridgeAdapters*.ts",
             "apps/web-pwa/src/store/bridge/**",
             "apps/web-pwa/src/components/bridge/**",
-            "apps/web-pwa/src/store/linkedSocial/**"
+            "apps/web-pwa/src/store/linkedSocial/**",
+            "apps/web-pwa/src/env.d.ts"
         ]
     }
 }
