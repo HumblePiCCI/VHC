@@ -28,6 +28,14 @@ export {
 
 export type { SanitizedSocialCard } from './accountStore';
 
+// Social → Feed adapter
+export {
+  notificationToFeedItem,
+  getSocialFeedItems,
+  isLinkedSocialFeedEnabled,
+  _setFlagForTesting,
+} from './socialFeedAdapter';
+
 // Mock factories (for downstream consumers / tests)
 export {
   createMockNotification,
