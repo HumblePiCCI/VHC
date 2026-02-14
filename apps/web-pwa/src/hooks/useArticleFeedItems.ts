@@ -1,8 +1,7 @@
 /**
  * useArticleFeedItems — converts published HermesDocuments into FeedItem format.
  *
- * Feature-gated: only returns items when both VITE_FEED_V2_ENABLED
- * and VITE_HERMES_DOCS_ENABLED are true.
+ * Returns items when VITE_HERMES_DOCS_ENABLED is true.
  *
  * This hook bridges the hermesDocs store (w2b) with the discovery feed (team-c).
  */
@@ -27,33 +26,17 @@ export function docToFeedItem(doc: HermesDocument): FeedItem {
   };
 }
 
-/** Read the feed V2 feature flag. */
-function isFeedV2Enabled(): boolean {
-  /* v8 ignore next 2 -- browser runtime resolves import.meta differently */
-  const viteValue = (
-    import.meta as unknown as { env?: { VITE_FEED_V2_ENABLED?: string } }
-  ).env?.VITE_FEED_V2_ENABLED;
-  /* v8 ignore next 4 -- browser runtime may not expose process */
-  const nodeValue =
-    typeof process !== 'undefined'
-      ? process.env?.VITE_FEED_V2_ENABLED
-      : undefined;
-  /* v8 ignore next 1 -- ?? fallback to viteValue only reachable in-browser (no process.env) */
-  return (nodeValue ?? viteValue) === 'true';
-}
-
 const EMPTY_ITEMS: ReadonlyArray<FeedItem> = [];
 
 /**
  * Returns published articles as FeedItem[] for integration with the discovery feed.
- * Returns empty array when feature flags are off.
+ * Returns empty array when docs feature flag is off.
  */
 export function useArticleFeedItems(): ReadonlyArray<FeedItem> {
-  const feedEnabled = isFeedV2Enabled();
   const { enabled: docsEnabled, listPublished } = useDocsStore();
 
   return useMemo(() => {
-    if (!feedEnabled || !docsEnabled) return EMPTY_ITEMS;
+    if (!docsEnabled) return EMPTY_ITEMS;
     return listPublished().map(docToFeedItem);
-  }, [feedEnabled, docsEnabled, listPublished]);
+  }, [docsEnabled, listPublished]);
 }

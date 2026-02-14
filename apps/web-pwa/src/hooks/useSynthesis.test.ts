@@ -56,31 +56,16 @@ afterEach(() => {
 });
 
 describe('useSynthesis', () => {
-  it('returns noop result when feature flag is disabled', async () => {
-    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'false');
+  it('synthesis is always enabled (v2 is permanent)', async () => {
     vi.stubEnv('VITE_E2E_MODE', 'true');
 
     const { useSynthesis } = await import('./useSynthesis');
     const { result } = renderHook(() => useSynthesis('topic-1'));
 
-    expect(result.current).toEqual({
-      enabled: false,
-      topicId: null,
-      epoch: null,
-      synthesis: null,
-      hydrated: false,
-      loading: false,
-      error: null,
-      refresh: expect.any(Function)
-    });
-
-    await act(async () => {
-      await result.current.refresh();
-    });
+    expect(result.current.enabled).toBe(true);
   });
 
   it('returns empty topic state when topic id is missing', async () => {
-    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'true');
     vi.stubEnv('VITE_E2E_MODE', 'true');
 
     const { useSynthesisStore } = await import('../store/synthesis');
@@ -111,7 +96,6 @@ describe('useSynthesis', () => {
   });
 
   it('accepts undefined topic id without hydration side effects', async () => {
-    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'true');
     vi.stubEnv('VITE_E2E_MODE', 'true');
 
     const { useSynthesisStore } = await import('../store/synthesis');
@@ -139,7 +123,6 @@ describe('useSynthesis', () => {
   });
 
   it('hydrates + refreshes selected topic and exposes manual refresh', async () => {
-    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'true');
     vi.stubEnv('VITE_E2E_MODE', 'true');
 
     const { useSynthesisStore } = await import('../store/synthesis');

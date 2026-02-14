@@ -304,7 +304,6 @@ describe('synthesis store', () => {
   });
 
   it('module bootstrap uses E2E mock singleton branch when env is enabled', async () => {
-    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'true');
     vi.stubEnv('VITE_E2E_MODE', 'true');
     vi.resetModules();
 

@@ -17,8 +17,8 @@ export interface FeedShellProps {
  * Shell container for the V2 discovery feed.
  * Composes FilterChips + SortControls + feed item list.
  *
- * This component is mounted only when VITE_FEED_V2_ENABLED is on (C-5).
- * It does NOT gate itself — the flag guard lives in the page/route layer.
+ * V2 feed is now the permanent path (Wave 1 flag retired).
+ * This component does NOT gate itself — it is unconditionally mounted.
  *
  * Spec: docs/specs/spec-topic-discovery-ranking-v0.md §2
  */
