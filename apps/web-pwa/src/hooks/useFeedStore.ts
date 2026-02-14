@@ -34,14 +34,16 @@ const DISCOVERY_SUMMARY_BY_KIND: Record<FeedKind, string> = {
   NEWS_STORY: 'Trending in discovery feed.',
   USER_TOPIC: 'Community topic update.',
   SOCIAL_NOTIFICATION: 'Social activity update.',
-  ARTICLE: 'Published community article.'
+  ARTICLE: 'Published community article.',
+  ACTION_RECEIPT: 'Civic action receipt.'
 };
 
 const DISCOVERY_SOURCE_BY_KIND: Record<FeedKind, string> = {
   NEWS_STORY: 'Discovery · News',
   USER_TOPIC: 'Discovery · Topics',
   SOCIAL_NOTIFICATION: 'Discovery · Social',
-  ARTICLE: 'Discovery · Articles'
+  ARTICLE: 'Discovery · Articles',
+  ACTION_RECEIPT: 'Bridge · Actions'
 };
 
 function normalizeTimestamp(value: number): number {

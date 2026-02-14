@@ -7,6 +7,7 @@ import { NewsCard } from './NewsCard';
 import { TopicCard } from './TopicCard';
 import { SocialNotificationCard } from './SocialNotificationCard';
 import { ArticleFeedCard } from '../docs/ArticleFeedCard';
+import { ReceiptFeedCard } from './ReceiptFeedCard';
 
 export interface FeedShellProps {
   /** Discovery feed hook result (injected for testability). */
@@ -120,6 +121,8 @@ const FeedItemCard: React.FC<FeedItemCardProps> = ({ item }) => {
       return <SocialNotificationCard item={item} />;
     case 'ARTICLE':
       return <ArticleFeedCard item={item} />;
+    case 'ACTION_RECEIPT':
+      return <ReceiptFeedCard item={item} />;
     default:
       return (
         <article
