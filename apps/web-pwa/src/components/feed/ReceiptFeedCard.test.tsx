@@ -45,4 +45,42 @@ describe('ReceiptFeedCard', () => {
     // Date should be rendered (exact format varies by locale)
     expect(el.textContent).toContain('/');
   });
+
+  it('shows status badge when meta is present', () => {
+    const withMeta = { ...receiptItem, meta: { status: 'success', intent: 'email' } } as any;
+    render(<ReceiptFeedCard item={withMeta} />);
+    expect(screen.getByTestId('receipt-status').textContent).toContain('Delivered');
+    expect(screen.getByTestId('receipt-status').textContent).toContain('✅');
+  });
+
+  it('shows failed status', () => {
+    const withMeta = { ...receiptItem, meta: { status: 'failed', intent: 'phone' } } as any;
+    render(<ReceiptFeedCard item={withMeta} />);
+    expect(screen.getByTestId('receipt-status').textContent).toContain('Failed');
+  });
+
+  it('shows cancelled status', () => {
+    const withMeta = { ...receiptItem, meta: { status: 'user-cancelled' } } as any;
+    render(<ReceiptFeedCard item={withMeta} />);
+    expect(screen.getByTestId('receipt-status').textContent).toContain('Cancelled');
+  });
+
+  it('shows intent in description when meta present', () => {
+    const withMeta = { ...receiptItem, meta: { status: 'success', intent: 'email' } } as any;
+    render(<ReceiptFeedCard item={withMeta} />);
+    const el = screen.getByTestId('feed-receipt-receipt-abc-123');
+    expect(el.textContent).toContain('via email');
+  });
+
+  it('handles meta with invalid status gracefully', () => {
+    const withMeta = { ...receiptItem, meta: { status: 'unknown-status' } } as any;
+    render(<ReceiptFeedCard item={withMeta} />);
+    // Falls back to success label
+    expect(screen.getByTestId('receipt-status').textContent).toContain('Delivered');
+  });
+
+  it('renders without status badge when no meta', () => {
+    render(<ReceiptFeedCard item={receiptItem} />);
+    expect(screen.queryByTestId('receipt-status')).toBeNull();
+  });
 });

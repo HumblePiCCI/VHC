@@ -77,3 +77,16 @@ export {
   retryReceipt,
   type ReceiptOutcome,
 } from './receiptManager';
+
+export { getMockConstituencyProof } from './constituencyProof';
+
+export {
+  emitActionCompleted,
+  emitElevationForwarded,
+  pruneStaleEntries,
+  XP_FIRST_ACTION,
+  XP_SUBSEQUENT_ACTION,
+  XP_ELEVATION_FORWARDED,
+  _resetXPForTesting,
+  _getRepWeekSetSize,
+} from './bridgeXP';
