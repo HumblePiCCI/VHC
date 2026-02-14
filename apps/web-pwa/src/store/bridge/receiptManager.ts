@@ -43,9 +43,8 @@ export async function createReceipt(
   // Find existing receipts for chaining
   const existing = getReceiptsForAction(actionId);
   const retryCount = existing.length;
-  const previousReceiptId = existing.length > 0
-    ? existing[existing.length - 1].id
-    : undefined;
+  const lastReceipt = existing.length > 0 ? existing[existing.length - 1] : undefined;
+  const previousReceiptId = lastReceipt?.id;
 
   const receipt: DeliveryReceipt = {
     id: receiptId,
