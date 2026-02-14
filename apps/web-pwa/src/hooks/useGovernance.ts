@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { create } from 'zustand';
-import { CURATED_PROJECTS } from '@vh/data-model';
+import { CURATED_PROJECTS, TRUST_ELEVATED } from '@vh/data-model';
 import { isE2EMode } from '../store';
 import { useXpLedger } from '../store/xpLedger';
 
@@ -27,7 +27,7 @@ type StoredVote = { amount: number; direction: 'for' | 'against' };
 type StoredVotes = Record<string, StoredVote>;
 
 const VOTE_STORAGE_KEY = 'vh_governance_votes';
-export const MIN_TRUST_TO_VOTE = 0.7;
+export const MIN_TRUST_TO_VOTE = TRUST_ELEVATED;
 
 const seedProposals: Proposal[] = [
   {

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Button } from '@vh/ui';
+import { TRUST_MINIMUM } from '@vh/data-model';
 import { useWallet } from '../hooks/useWallet';
 import { useIdentity } from '../hooks/useIdentity';
 import { useXpLedger } from '../store/xpLedger';
@@ -67,7 +68,7 @@ export const WalletPanel: React.FC = () => {
     identity?.session?.trustScore ??
     (identity?.session?.scaledTrustScore != null ? identity.session.scaledTrustScore / 10000 : undefined);
   const eligibleLocal =
-    trustScoreFloat != null && trustScoreFloat >= 0.5 && (localNextClaimAt === 0 || localNextClaimAt * 1000 <= Date.now());
+    trustScoreFloat != null && trustScoreFloat >= TRUST_MINIMUM && (localNextClaimAt === 0 || localNextClaimAt * 1000 <= Date.now());
   const nextClaimLabel = useMemo(() => formatNextClaimLabel(claimStatus), [claimStatus]);
   // Prefer local identity trust score, fallback to wallet/chain trust score
   const trustLabel = useMemo(() => {

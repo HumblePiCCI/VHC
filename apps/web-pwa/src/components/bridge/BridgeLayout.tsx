@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { TRUST_MINIMUM } from '@vh/data-model';
 import { useIdentity } from '../../hooks/useIdentity';
 import { RepresentativeSelector } from './RepresentativeSelector';
 import { ActionComposer } from './ActionComposer';
@@ -46,7 +47,7 @@ export const BridgeLayout: React.FC<BridgeLayoutProps> = ({ initialSection = 're
     );
   }
 
-  if (trustScore < 0.5) {
+  if (trustScore < TRUST_MINIMUM) {
     return (
       <div data-testid="bridge-trust-gate" className="p-4">
         <p className="text-sm text-amber-600">

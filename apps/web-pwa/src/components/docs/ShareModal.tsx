@@ -11,6 +11,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
+import { TRUST_MINIMUM } from '@vh/data-model';
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ export interface ShareModalProps {
 
 // ── Constants ─────────────────────────────────────────────────────────
 
-const DEFAULT_TRUST_THRESHOLD = 0.5;
+const DEFAULT_TRUST_THRESHOLD = TRUST_MINIMUM;
 const MAX_COLLABORATORS = 10;
 
 // ── Component ─────────────────────────────────────────────────────────

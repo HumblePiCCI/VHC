@@ -1,4 +1,5 @@
 import React from 'react';
+import { TRUST_MINIMUM } from '@vh/data-model';
 import { useIdentity } from '../../../hooks/useIdentity';
 
 interface Props {
@@ -9,7 +10,7 @@ interface Props {
 export const TrustGate: React.FC<Props> = ({ children, fallback }) => {
   const { identity } = useIdentity();
   const trustScore = identity?.session?.trustScore ?? 0;
-  if (trustScore < 0.5) {
+  if (trustScore < TRUST_MINIMUM) {
     return (
       <>
         {fallback ?? (

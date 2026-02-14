@@ -9,6 +9,7 @@
 
 import React from 'react';
 import type { Representative } from '@vh/data-model';
+import { TRUST_MINIMUM } from '@vh/data-model';
 import { useIdentity } from '../../hooks/useIdentity';
 import { findRepresentatives } from '../../store/bridge/representativeDirectory';
 
@@ -33,7 +34,7 @@ export const RepresentativeSelector: React.FC<RepresentativeSelectorProps> = ({ 
   const { identity } = useIdentity();
   const trustScore = identity?.session?.trustScore ?? 0;
 
-  if (trustScore < 0.5) {
+  if (trustScore < TRUST_MINIMUM) {
     return (
       <p data-testid="rep-trust-gate" className="text-sm text-amber-600">
         Trust score ({trustScore.toFixed(2)}) below 0.50 — verify identity to view representatives.
