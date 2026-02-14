@@ -142,12 +142,17 @@
     "source": [
       "packages/data-model/src/constants/**",
       "apps/web-pwa/src/hooks/useIdentity*",
-      "apps/web-pwa/src/store/bridge/constituencyProof*"
+      "apps/web-pwa/src/store/bridge/constituencyProof*",
+      "packages/types/src/constituency-verification*",
+      "apps/web-pwa/src/hooks/useRegion*"
     ],
     "test": [
       "packages/data-model/src/constants/**/*.test.*",
       "apps/web-pwa/src/hooks/useIdentity*.test.*",
-      "apps/web-pwa/src/store/bridge/constituencyProof*.test.*"
-    ]
+      "apps/web-pwa/src/store/bridge/constituencyProof*.test.*",
+      "packages/types/src/constituency-verification*.test.*",
+      "apps/web-pwa/src/hooks/useRegion*.test.*"
+    ],
+    "branchPrefix": "w4l/"
   }
 }
