@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Button } from '@vh/ui';
+import { TRUST_MINIMUM, TRUST_ELEVATED } from '@vh/data-model';
 import { useAI, type AnalysisResult } from '@vh/ai-engine';
 import { useAppStore } from '../store';
 import { useIdentity } from '../hooks/useIdentity';
@@ -175,17 +176,17 @@ export const DashboardContent: React.FC = () => {
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Connected to mesh</span>
-            {identity?.session?.trustScore != null && identity.session.trustScore >= 0.7 && (
+            {identity?.session?.trustScore != null && identity.session.trustScore >= TRUST_ELEVATED && (
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700" data-testid="identity-badge">
                 Verified
               </span>
             )}
-            {identity?.session?.trustScore != null && identity.session.trustScore >= 0.5 && identity.session.trustScore < 0.7 && (
+            {identity?.session?.trustScore != null && identity.session.trustScore >= TRUST_MINIMUM && identity.session.trustScore < TRUST_ELEVATED && (
               <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700" data-testid="identity-badge">
                 Attested
               </span>
             )}
-            {identity?.session?.trustScore != null && identity.session.trustScore < 0.5 && (
+            {identity?.session?.trustScore != null && identity.session.trustScore < TRUST_MINIMUM && (
               <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600" data-testid="identity-badge">
                 Limited
               </span>

@@ -1,8 +1,9 @@
 import type { HermesComment, HermesThread, IdentityRecord } from '@vh/types';
 import type { VennClient } from '@vh/gun-client';
+import { TRUST_MINIMUM } from '@vh/data-model';
 
 export const VOTES_KEY_PREFIX = 'vh_forum_votes:';
-export const TRUST_THRESHOLD = 0.5;
+export const TRUST_THRESHOLD = TRUST_MINIMUM;
 export const SEEN_TTL_MS = 60_000;
 export const SEEN_CLEANUP_THRESHOLD = 100;
 

@@ -11,6 +11,7 @@
 
 import React, { useState, useMemo } from 'react';
 import type { DeliveryIntent } from '@vh/data-model';
+import { TRUST_MINIMUM, TRUST_ELEVATED } from '@vh/data-model';
 import { useIdentity } from '../../hooks/useIdentity';
 import { useXpLedger } from '../../store/xpLedger';
 
@@ -70,9 +71,9 @@ export const ActionComposer: React.FC<ActionComposerProps> = ({ selectedRepId })
   const hasErrors = Object.keys(errors).length > 0;
 
   const budgetCheck = useXpLedger.getState().canPerformAction('civic_actions/day');
-  const canSend = trustScore >= 0.7 && !hasErrors && budgetCheck.allowed;
+  const canSend = trustScore >= TRUST_ELEVATED && !hasErrors && budgetCheck.allowed;
 
-  if (trustScore < 0.5) {
+  if (trustScore < TRUST_MINIMUM) {
     return (
       <p data-testid="composer-trust-gate" className="text-sm text-amber-600">
         Trust score ({trustScore.toFixed(2)}) below 0.50 — verify identity to draft actions.
@@ -164,7 +165,7 @@ export const ActionComposer: React.FC<ActionComposerProps> = ({ selectedRepId })
       </div>
 
       {/* Trust info for send threshold */}
-      {trustScore < 0.7 && (
+      {trustScore < TRUST_ELEVATED && (
         <p data-testid="send-trust-gate" className="text-xs text-amber-600">
           Trust score ({trustScore.toFixed(2)}) below 0.70 — cannot send actions yet.
         </p>

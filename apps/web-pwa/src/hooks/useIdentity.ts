@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { IdentityRecord } from '@vh/types';
+import { TRUST_MINIMUM } from '@vh/data-model';
 import { SEA, createSession } from '@vh/gun-client';
 import { authenticateGunUser, publishDirectoryEntry, useAppStore } from '../store';
 import { getHandleError, isValidHandle } from '../utils/handle';
@@ -112,7 +113,7 @@ export function useIdentity() {
         }
       }
 
-      if (session.trustScore < 0.5) {
+      if (session.trustScore < TRUST_MINIMUM) {
         throw new Error('Security Error: Low Trust Device');
       }
 

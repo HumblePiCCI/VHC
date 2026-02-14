@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { BudgetActionKey, BudgetCheckResult, NullifierBudget } from '@vh/types';
+import { TRUST_MINIMUM } from '@vh/data-model';
 import { getPublishedIdentity } from './identityProvider';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { checkBudget, consumeFromBudget, ensureBudget, todayISO, validateBudgetOrNull } from './xpLedgerBudget';
@@ -316,7 +317,7 @@ export const useXpLedger = create<XpLedgerState>((set, get) => ({
     return clampRvu(get().totalXP * (scaled / 10000));
   },
   claimDailyBoost(trustScore) {
-    if (clampTrust(trustScore) < 0.5) return 0;
+    if (clampTrust(trustScore) < TRUST_MINIMUM) return 0;
     const rvMint = DAILY_BOOST_RVU;
     get().addXp('civic', rvMint);
     return rvMint;
