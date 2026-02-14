@@ -326,7 +326,6 @@ describe('privacy', () => {
 
 describe('useDiscoveryFeed hook (unit-level)', () => {
   beforeEach(() => {
-    vi.stubEnv('VITE_FEED_V2_ENABLED', 'false');
     useDiscoveryStore.getState().reset();
   });
 
@@ -354,7 +353,7 @@ describe('useDiscoveryFeed hook (unit-level)', () => {
     expect(typeof mod.useDiscoveryFeed).toBe('function');
   });
 
-  it('hook returns noop result when flag is off', async () => {
+  it('hook returns empty feed from empty store', async () => {
     const { useDiscoveryFeed } = await import('../../hooks/useDiscoveryFeed');
     const { result, unmount } = renderHook(() => useDiscoveryFeed());
 
@@ -369,7 +368,7 @@ describe('useDiscoveryFeed hook (unit-level)', () => {
     unmount();
   });
 
-  it('noop actions do not throw', async () => {
+  it('actions update filter and sort', async () => {
     const { useDiscoveryFeed } = await import('../../hooks/useDiscoveryFeed');
     const { result, unmount } = renderHook(() => useDiscoveryFeed());
 
@@ -381,21 +380,7 @@ describe('useDiscoveryFeed hook (unit-level)', () => {
     unmount();
   });
 
-  it('treats an unset flag as disabled (node env fallback path)', async () => {
-    vi.unstubAllEnvs();
-    delete process.env.VITE_FEED_V2_ENABLED;
-
-    const { useDiscoveryFeed } = await import('../../hooks/useDiscoveryFeed');
-    const { result, unmount } = renderHook(() => useDiscoveryFeed());
-
-    expect(result.current.feed).toHaveLength(0);
-    expect(result.current.filter).toBe('ALL');
-
-    unmount();
-  });
-
-  it('hook returns composed data when flag is on', async () => {
-    vi.stubEnv('VITE_FEED_V2_ENABLED', 'true');
+  it('hook returns composed data from store', async () => {
     useDiscoveryStore.getState().setItems([
       makeFeedItem({ topic_id: 'n1', kind: 'NEWS_STORY', latest_activity_at: NOW }),
       makeFeedItem({ topic_id: 't1', kind: 'USER_TOPIC', latest_activity_at: NOW - HOUR_MS }),

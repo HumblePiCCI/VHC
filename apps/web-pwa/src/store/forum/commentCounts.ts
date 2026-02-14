@@ -7,26 +7,10 @@
  * Browser-safe: no node:* imports. Pure in-memory tracking with
  * snapshot export for the synthesis pipeline.
  *
- * Feature-gated behind VITE_TOPIC_SYNTHESIS_V2_ENABLED.
+ * V2 synthesis is now the permanent path (Wave 1 flag retired).
  *
  * @module commentCounts
  */
-
-// ── Feature flag ───────────────────────────────────────────────────
-
-function isSynthesisV2Enabled(): boolean {
-  const viteValue = (
-    import.meta as unknown as {
-      env?: { VITE_TOPIC_SYNTHESIS_V2_ENABLED?: string };
-    }
-  ).env?.VITE_TOPIC_SYNTHESIS_V2_ENABLED;
-  /* v8 ignore next 3 -- browser runtime may not expose process */
-  const nodeValue =
-    typeof process !== 'undefined'
-      ? process.env?.VITE_TOPIC_SYNTHESIS_V2_ENABLED
-      : undefined;
-  return (nodeValue ?? viteValue) === 'true';
-}
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -76,7 +60,7 @@ interface TopicCountState {
 export function createCommentCountTracker(
   overrides?: { enabled?: boolean },
 ): CommentCountTracker {
-  const enabled = overrides?.enabled ?? isSynthesisV2Enabled();
+  const enabled = overrides?.enabled ?? true;
   const topics = new Map<string, TopicCountState>();
 
   function getOrCreate(topicId: string): TopicCountState {

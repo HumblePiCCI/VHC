@@ -22,7 +22,7 @@ function formatTimestamp(timestampMs: number): string {
 
 /**
  * Article card for discovery feed ARTICLE items.
- * Feature-gated at the feed level (VITE_FEED_V2_ENABLED).
+ * Rendered in the discovery feed (V2 feed is now the permanent path).
  */
 export const ArticleFeedCard: React.FC<ArticleFeedCardProps> = ({ item }) => {
   const publishedDate = formatTimestamp(item.created_at);
