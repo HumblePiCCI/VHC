@@ -19,6 +19,12 @@ export {
   DEFAULT_SESSION_TTL_MS,
 } from './session-lifecycle';
 
+export {
+  type ProofVerificationError,
+  type ProofVerificationResult,
+  verifyConstituencyProof,
+} from './constituency-verification';
+
 export interface RegionProof {
   proof: string;
   publicSignals: string[];

@@ -8,6 +8,7 @@ import { getHandleError, isValidHandle } from '../utils/handle';
 import { migrateLegacyLocalStorage, clearIdentity as vaultClear } from '@vh/identity-vault';
 import { publishIdentity, clearPublishedIdentity } from '../store/identityProvider';
 import { loadIdentityRecord, saveIdentityRecord } from '../utils/vaultTyped';
+import { useSentimentState } from './useSentimentState';
 
 const E2E_MODE = (import.meta as any).env?.VITE_E2E_MODE === 'true';
 const DEV_MODE = (import.meta as any).env?.DEV === true || (import.meta as any).env?.MODE === 'development';
@@ -256,6 +257,8 @@ export function useIdentity() {
     setStatus('anonymous');
     setError(undefined);
     clearPublishedIdentity();
+    // Constituency proof is derived from identity — clearing identity invalidates all proofs (spec §2.1.3)
+    useSentimentState.setState({ signals: [] });
     await vaultClear().catch(() => {});
   }, []);
 

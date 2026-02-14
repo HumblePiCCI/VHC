@@ -1,20 +1,22 @@
-/**
- * Constituency proof — stub for Phase 3 development.
- *
- * Real proof acquisition deferred to W3-LUMA identity hardening workstream.
- * Spec: spec-civic-action-kit-v0.md §7.2
- */
-
 import type { ConstituencyProof } from '@vh/data-model';
 
-/**
- * Return a mock constituency proof for development/testing.
- * The district_hash matches the provided value to satisfy Zod validation.
- */
-export function getMockConstituencyProof(districtHash: string): ConstituencyProof {
+export function isProofVerificationEnabled(): boolean {
+  try {
+    const importMetaEnv = (import.meta as any).env;
+    const processEnv = (globalThis as any).process?.env;
+    return (importMetaEnv?.VITE_CONSTITUENCY_PROOF_REAL ?? processEnv?.VITE_CONSTITUENCY_PROOF_REAL) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function getMockConstituencyProof(
+  districtHash: string,
+  nullifier?: string,
+): ConstituencyProof {
   return {
     district_hash: districtHash,
-    nullifier: 'mock-nullifier',
+    nullifier: nullifier ?? 'mock-nullifier',
     merkle_root: 'mock-root',
   };
 }
