@@ -102,7 +102,26 @@ All coefficients and decay parameters must be config-driven and versioned.
 
 These objects must remain token-free and identity-free.
 
-## 8. Tests
+## 8. Synthesis enrichment (Wave 3)
+
+`USER_TOPIC` feed cards are enriched with `TopicSynthesisV2` data when available.
+
+**Rendering contract:**
+- `facts_summary` displays as inline paragraph below title
+- `frames` array renders as collapsible "N perspectives" toggle → `{frame} → {reframe}` list
+- `warnings` render as amber callout when non-empty
+- `divergence_metrics.disagreement_score > 0.5` shows "⚡ High divergence" badge
+
+**Hydration strategy:**
+- Lazy per-card via `useSynthesis(item.topic_id)` hook
+- Viewport-contained: `useInView` defers Gun subscription until card is within 200px of viewport
+- Fallback: when synthesis is unavailable (loading/error/absent), card renders original engagement-only layout
+
+**Non-breaking:** TopicCard preserves all existing behavior when synthesis data is absent.
+
+Cross-ref: `docs/specs/topic-synthesis-v2.md` for full `TopicSynthesisV2` schema.
+
+## 9. Tests
 
 1. Filter correctness for All/News/Topics/Social/Articles (including ACTION_RECEIPT under All only).
 2. Sort correctness for Latest/Hottest/My Activity.
@@ -118,3 +137,4 @@ These objects must remain token-free and identity-free.
 | 0.1 | Wave 1 | Initial spec: 3 FeedKinds, 4 filter chips |
 | 0.2 | Wave 2 | Added `ARTICLE` kind, `ARTICLES` filter chip, `title` field on FeedItem |
 | 0.3 | Wave 3 | Added `ACTION_RECEIPT` kind (All filter only), documented filter-to-kind mapping |
+| 0.4 | Wave 3 | Added synthesis enrichment for USER_TOPIC cards (§8), viewport-aware hydration |
