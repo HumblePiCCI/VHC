@@ -58,7 +58,7 @@ Wave 2 delivered the following features across 3 workstreams and 36 PRs to `inte
 - E2E bypass: `VITE_E2E_MODE=true` → `MockGunYjsProvider` (no Yjs/Gun init)
 - 204 new tests, 100% line+branch coverage on all touched modules
 
-> **Note:** Stage 2 is foundation-only. `CollabEditor` is built and tested but NOT wired into the active `ArticleEditor` path. Runtime wiring is Wave 3 scope (see `WAVE3_CARRYOVER.md`).
+> **Note:** `CollabEditor` is wired into the active `ArticleEditor` path via lazy-load + `useEditorMode` hook (Wave 3). Flag-gated by `VITE_HERMES_DOCS_ENABLED` + `VITE_DOCS_COLLAB_ENABLED`.
 
 ### W2-Gamma Phase 1 — Linked-Social Substrate (PR #207)
 - Schema convergence: `LinkedSocialAccount` and `SocialNotification` with strict Zod validation
@@ -353,7 +353,7 @@ All features through Wave 4 are flag-gated. Default false. Legacy behavior prese
 - ✅ Topology guard prevents unauthorized Gun writes
 - ✅ Encryption required for sensitive mesh paths
 - ✅ XP ledger is local-only
-- ✅ Participation governors enforce rate limits (7/8 budget keys active)
+- ✅ Participation governors enforce rate limits (8/8 budget keys active)
 - ✅ TOCTOU hardening on concurrent budget operations
 - ✅ Attestation verifier has structured validation and rate limiting
 - ✅ AI engine default is truthful (LocalMlEngine in non-E2E)
@@ -379,7 +379,7 @@ Wave 4 merged to main via PR #253 (`31fce88`, 2026-02-15T01:44:54Z). All integra
 
 Remaining from Wave 3 carryover (see `docs/foundational/WAVE3_CARRYOVER.md`):
 1. **Feature-flag retirement** — promote Wave 1–4 flags to permanent-on after stability verification
-2. **Remaining budget key** — `moderation/day` enforcement (key 8/8)
+2. ~~**Remaining budget key**~~ — `moderation/day` enforcement landed (PR #259, all 8/8 active)
 3. **Runtime wiring** — synthesis pipeline → discovery feed UI (v2 end-to-end)
 
 Post-Season 0 (deferred per spec §9.2):

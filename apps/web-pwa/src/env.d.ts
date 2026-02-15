@@ -13,6 +13,11 @@ interface ImportMetaEnv {
   readonly VITE_LINKED_SOCIAL_ENABLED?: 'true' | 'false';
   readonly VITE_HERMES_DOCS_ENABLED?: 'true' | 'false';
   readonly VITE_DOCS_COLLAB_ENABLED?: 'true' | 'false';
+  readonly VITE_SESSION_LIFECYCLE_ENABLED?: 'true' | 'false';
+  readonly VITE_CONSTITUENCY_PROOF_REAL?: 'true' | 'false';
+  readonly VITE_REMOTE_ENGINE_API_KEY?: string;
+  readonly VITE_IDB_ROOT_SECRET?: string;
+  readonly VITE_IDB_ROOT_SALT?: string;
 }
 
 interface ImportMeta {
