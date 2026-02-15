@@ -1,6 +1,6 @@
 /* @vitest-environment jsdom */
 
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi, afterEach } from 'vitest';
 import { safeSetItem, safeGetItem } from '../../utils/safeStorage';
 import {
   isInviteOnlyEnabled,
@@ -11,6 +11,10 @@ import {
 
 beforeEach(() => {
   safeSetItem('vh_invite_kill_switch', '');
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('isInviteOnlyEnabled', () => {
@@ -33,6 +37,11 @@ describe('isInviteOnlyEnabled', () => {
     expect(isInviteOnlyEnabled()).toBe(false);
     clearKillSwitch();
     expect(isInviteOnlyEnabled()).toBe(true);
+  });
+
+  it('returns false when env var VITE_INVITE_ONLY_ENABLED is "false"', () => {
+    vi.stubEnv('VITE_INVITE_ONLY_ENABLED', 'false');
+    expect(isInviteOnlyEnabled()).toBe(false);
   });
 });
 

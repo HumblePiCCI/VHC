@@ -108,6 +108,7 @@ export function redeemInviteToken(
 
   const store = loadTokenStore();
   const idx = store.tokens.findIndex((t) => t.token === tokenStr);
+  /* v8 ignore next -- defensive: validateInviteToken above rejects missing tokens */
   if (idx === -1) return { valid: false, reason: 'Token not found' };
 
   const updated: InviteToken = {

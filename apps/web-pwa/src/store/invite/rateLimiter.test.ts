@@ -29,10 +29,25 @@ describe('checkRateLimit', () => {
     );
   });
 
+  it('uses Date.now() when now parameter is omitted', () => {
+    const result = checkRateLimit('invite_validate');
+    expect(result.allowed).toBe(true);
+  });
+
   it('allows unknown config key', () => {
     const result = checkRateLimit('unknown_key', NOW);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(Infinity);
+  });
+
+  it('returns remaining when within active window and under limit', () => {
+    const config = RATE_LIMITS['invite_validate']!;
+    recordAttempt('invite_validate', NOW);
+    recordAttempt('invite_validate', NOW + 100);
+    const result = checkRateLimit('invite_validate', NOW + 200);
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(config.maxAttempts - 2 - 1);
+    expect(result.retryAfterMs).toBe(0);
   });
 
   it('resets window after expiry', () => {
@@ -48,6 +63,11 @@ describe('checkRateLimit', () => {
 });
 
 describe('recordAttempt', () => {
+  it('uses Date.now() when now parameter is omitted', () => {
+    const result = recordAttempt('invite_validate');
+    expect(result.allowed).toBe(true);
+  });
+
   it('tracks attempts within window', () => {
     const r1 = recordAttempt('identity_create', NOW);
     expect(r1.allowed).toBe(true);

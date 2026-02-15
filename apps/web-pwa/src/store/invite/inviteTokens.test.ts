@@ -25,6 +25,13 @@ describe('generateInviteToken', () => {
     expect(token.token).toMatch(/^inv_/);
   });
 
+  it('uses Date.now() when now parameter is omitted', () => {
+    const before = Date.now();
+    const token = generateInviteToken('admin-1');
+    expect(token.createdAt).toBeGreaterThanOrEqual(before);
+    expect(token.createdAt).toBeLessThanOrEqual(Date.now());
+  });
+
   it('sets correct expiry', () => {
     const token = generateInviteToken('admin-1', NOW);
     expect(token.expiresAt).toBe(NOW + DEFAULT_TOKEN_EXPIRY_MS);
@@ -65,6 +72,12 @@ describe('validateInviteToken', () => {
     expect(result.valid).toBe(true);
   });
 
+  it('uses Date.now() when now parameter is omitted', () => {
+    const token = createInviteToken('admin-1');
+    const result = validateInviteToken(token.token);
+    expect(result.valid).toBe(true);
+  });
+
   it('rejects unknown token', () => {
     const result = validateInviteToken('inv_unknown', NOW);
     expect(result).toEqual({ valid: false, reason: 'Token not found' });
@@ -102,6 +115,16 @@ describe('redeemInviteToken', () => {
     }
   });
 
+  it('uses Date.now() when now parameter is omitted', () => {
+    const token = createInviteToken('admin-1');
+    const before = Date.now();
+    const result = redeemInviteToken(token.token, 'user-1');
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.token.redeemedAt).toBeGreaterThanOrEqual(before);
+    }
+  });
+
   it('rejects double redemption', () => {
     const token = createInviteToken('admin-1', NOW);
     redeemInviteToken(token.token, 'user-1', NOW + 1000);
@@ -135,6 +158,29 @@ describe('revokeToken', () => {
 
   it('returns false for unknown token', () => {
     expect(revokeToken('inv_unknown')).toBe(false);
+  });
+});
+
+describe('randomToken fallback', () => {
+  it('uses fallback when crypto.randomUUID is unavailable', () => {
+    const origCrypto = globalThis.crypto;
+    try {
+      // Replace crypto with object lacking randomUUID to test fallback
+      const mockCrypto = { getRandomValues: origCrypto.getRandomValues.bind(origCrypto) };
+      Object.defineProperty(globalThis, 'crypto', {
+        value: mockCrypto,
+        writable: true,
+        configurable: true,
+      });
+      const token = generateInviteToken('admin-1', NOW);
+      expect(token.token).toMatch(/^inv_\d+-[0-9a-f]+$/);
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', {
+        value: origCrypto,
+        writable: true,
+        configurable: true,
+      });
+    }
   });
 });
 

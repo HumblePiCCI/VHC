@@ -15,8 +15,8 @@ export function isInviteOnlyEnabled(): boolean {
   if (killSwitch === 'disabled') return false;
   if (killSwitch === 'enabled') return true;
 
-  const envVal = (import.meta as any).env?.VITE_INVITE_ONLY_ENABLED;
-  if (envVal === 'false' || envVal === false) return false;
+  const envVal = import.meta.env.VITE_INVITE_ONLY_ENABLED;
+  if (envVal === 'false') return false;
   return true;
 }
 

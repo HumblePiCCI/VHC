@@ -28,6 +28,13 @@ describe('appendAuditEntry', () => {
     expect(entry.id).toBeTruthy();
   });
 
+  it('uses Date.now() when now parameter is omitted', () => {
+    const before = Date.now();
+    const entry = appendAuditEntry('gating_check', {});
+    expect(entry.timestamp).toBeGreaterThanOrEqual(before);
+    expect(entry.timestamp).toBeLessThanOrEqual(Date.now());
+  });
+
   it('maintains insertion order', () => {
     appendAuditEntry('invite_created', {}, NOW);
     appendAuditEntry('invite_redeemed', {}, NOW + 1000);
@@ -90,6 +97,29 @@ describe('clearAuditLog', () => {
     appendAuditEntry('rate_limit_hit', {}, NOW + 1000);
     clearAuditLog();
     expect(getAuditEntries()).toHaveLength(0);
+  });
+});
+
+describe('generateId fallback', () => {
+  it('uses fallback when crypto.randomUUID is unavailable', () => {
+    const origCrypto = globalThis.crypto;
+    try {
+      // Replace crypto with object lacking randomUUID to test fallback
+      const mockCrypto = { getRandomValues: origCrypto.getRandomValues.bind(origCrypto) };
+      Object.defineProperty(globalThis, 'crypto', {
+        value: mockCrypto,
+        writable: true,
+        configurable: true,
+      });
+      const entry = appendAuditEntry('gating_check', { fb: true }, NOW);
+      expect(entry.id).toMatch(/^\d+-[0-9a-f]+$/);
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', {
+        value: origCrypto,
+        writable: true,
+        configurable: true,
+      });
+    }
   });
 });
 
