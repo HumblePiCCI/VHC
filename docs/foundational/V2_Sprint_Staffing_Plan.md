@@ -588,7 +588,7 @@ graph LR
   - Feed renders synthesis panel from real V2 data (A+C)
   - Delegation grants consume correct budget pools (D + existing budgets)
 - Privacy lint: no sensitive fields in public mesh paths
-- LOC audit: no file exceeds 350 lines
+- LOC audit: no non-test source file exceeds 350 lines (tests/specs/stories and `*.d.ts` are exempt)
 - Feature flags validated:
   - `VITE_FEED_V2_ENABLED=false` preserves current production-safe behavior
   - `VITE_FEED_V2_ENABLED=true` + `VITE_TOPIC_SYNTHESIS_V2_ENABLED=true` exercises new end-to-end flow
