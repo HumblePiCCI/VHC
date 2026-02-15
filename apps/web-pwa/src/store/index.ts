@@ -49,6 +49,27 @@ export function isE2EMode(): boolean {
   return (import.meta as any).env?.VITE_E2E_MODE === 'true';
 }
 
+function shouldBootstrapFeedBridges(): boolean {
+  const viteEnv = (import.meta as unknown as {
+    env?: {
+      VITE_NEWS_BRIDGE_ENABLED?: string;
+      VITE_SYNTHESIS_BRIDGE_ENABLED?: string;
+    };
+  }).env;
+
+  const nodeEnv =
+    typeof process !== 'undefined'
+      ? process.env
+      : undefined;
+
+  const newsEnabled =
+    (nodeEnv?.VITE_NEWS_BRIDGE_ENABLED ?? viteEnv?.VITE_NEWS_BRIDGE_ENABLED) === 'true';
+  const synthesisEnabled =
+    (nodeEnv?.VITE_SYNTHESIS_BRIDGE_ENABLED ?? viteEnv?.VITE_SYNTHESIS_BRIDGE_ENABLED) === 'true';
+
+  return newsEnabled || synthesisEnabled;
+}
+
 function resolveGunPeers(): string[] {
   const raw = (import.meta as any).env?.VITE_GUN_PEERS;
   if (raw && typeof raw === 'string') {
@@ -274,6 +295,16 @@ export const useAppStore = create<AppState>((set, get) => ({
           identityStatus: profile ? 'ready' : 'idle',
           profile
         });
+
+        // Wire feed bridges (behind feature flags)
+        if (shouldBootstrapFeedBridges()) {
+          try {
+            const { bootstrapFeedBridges } = await import('./feedBridge');
+            await bootstrapFeedBridges();
+          } catch (bridgeError) {
+            console.warn('[vh:feed-bridge] Failed to bootstrap bridges in E2E mode:', bridgeError);
+          }
+        }
         return;
       }
 
@@ -302,6 +333,16 @@ export const useAppStore = create<AppState>((set, get) => ({
         identityStatus: profile ? 'ready' : 'idle',
         sessionReady: Boolean(profile)
       });
+
+      // Wire feed bridges (behind feature flags)
+      if (shouldBootstrapFeedBridges()) {
+        try {
+          const { bootstrapFeedBridges } = await import('./feedBridge');
+          await bootstrapFeedBridges();
+        } catch (bridgeError) {
+          console.warn('[vh:feed-bridge] Failed to bootstrap bridges:', bridgeError);
+        }
+      }
     } catch (err) {
       set({ initializing: false, identityStatus: 'error', error: (err as Error).message });
     }

@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_RVU_ADDRESS?: string;
   readonly VITE_ELEVATION_ENABLED?: 'true' | 'false';
   readonly VITE_LINKED_SOCIAL_ENABLED?: 'true' | 'false';
+  readonly VITE_NEWS_BRIDGE_ENABLED?: 'true' | 'false';
+  readonly VITE_SYNTHESIS_BRIDGE_ENABLED?: 'true' | 'false';
   readonly VITE_HERMES_DOCS_ENABLED?: 'true' | 'false';
   readonly VITE_DOCS_COLLAB_ENABLED?: 'true' | 'false';
   readonly VITE_SESSION_LIFECYCLE_ENABLED?: 'true' | 'false';
