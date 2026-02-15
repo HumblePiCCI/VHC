@@ -1,6 +1,6 @@
 # TRINITY Implementation Status
 
-**Last Updated:** 2026-02-14
+**Last Updated:** 2026-02-15
 **Version:** 0.7.0 (Wave 4 Complete — LUMA Trust Constants, Session Lifecycle, Constituency Proof Verification)
 **Assessment:** Pre-production prototype, Wave 4 complete and merged to main (LUMA identity hardening). All integration branches merged.
 
@@ -105,16 +105,25 @@ The following items were explicitly deferred to Wave 3 by CEO decision:
 |------|---------|---------|------|
 | `VITE_FEED_V2_ENABLED` | Gates discovery feed v2 UI | `false` | 1 |
 | `VITE_TOPIC_SYNTHESIS_V2_ENABLED` | Gates synthesis v2 hooks | `false` | 1 |
+| `VITE_NEWS_BRIDGE_ENABLED` | Gates news store → discovery feed bridge bootstrap | `false` | 1 |
+| `VITE_SYNTHESIS_BRIDGE_ENABLED` | Gates synthesis store → discovery feed bridge bootstrap | `false` | 1 |
+| `VITE_NEWS_RUNTIME_ENABLED` | Gates ai-engine news runtime bootstrap in app init | `false` | 1 |
+| `VITE_NEWS_FEED_SOURCES` | JSON override for runtime feed source list | empty (`[]`) | 1 |
+| `VITE_NEWS_TOPIC_MAPPING` | JSON override for runtime topic mapping | empty (defaults to `topic-news`) | 1 |
+| `VITE_NEWS_POLL_INTERVAL_MS` | Runtime polling cadence override (ms) | empty (defaults to 30m) | 1 |
+| `VITE_E2E_MODE` | Deterministic bypass of heavy I/O init (Gun/Yjs) | `false` | 1 |
+| `VITE_REMOTE_ENGINE_URL` | Enables remote AI engine endpoint opt-in | empty | 1 |
+| `VITE_ANALYSIS_MODEL` | Selects remote analysis model id in ai-engine | `gpt-5.2` | 1 |
+| `VITE_REMOTE_API_KEY` | Auth key for remote analysis requests | empty | 1 |
 | `VITE_HERMES_DOCS_ENABLED` | Gates HERMES Docs store + article editor | `false` | 2 |
 | `VITE_DOCS_COLLAB_ENABLED` | Gates collaborative editing runtime | `false` | 2 |
 | `VITE_LINKED_SOCIAL_ENABLED` | Gates linked-social notification pipeline | `false` | 2 |
 | `VITE_ELEVATION_ENABLED` | Gates elevation artifact generation | `false` | 2 |
-| `VITE_E2E_MODE` | Deterministic bypass of heavy I/O init (Gun/Yjs) | `false` | 1 |
-| `VITE_REMOTE_ENGINE_URL` | Enables remote AI engine opt-in | empty | 1 |
+| `VITE_INVITE_ONLY_ENABLED` | Gates route-level invite-only mode | `true` | 2 |
 | `VITE_SESSION_LIFECYCLE_ENABLED` | Gates session expiry/near-expiry checks + forum freshness | `false` | 4 |
 | `VITE_CONSTITUENCY_PROOF_REAL` | Gates constituency proof verification enforcement | `false` | 4 |
 
-All features through Wave 4 are flag-gated. Default false. Legacy behavior preserved when flags are off.
+Feature-toggle defaults remain `false` unless explicitly noted. Non-boolean config/env values default to empty input with code-level fallbacks.
 
 ---
 
@@ -135,7 +144,7 @@ All features through Wave 4 are flag-gated. Default false. Legacy behavior prese
 ## Test & Coverage Truth
 
 **Gate verification date:** 2026-02-15
-**Branch verified:** `main` at `31fce88` (Wave 4 merged via PR #253)
+**Branch verified:** `main` at `df0f787` (PR #276 merged, all 7 CI checks green)
 
 | Gate | Result | Detail |
 |------|--------|--------|
