@@ -87,11 +87,10 @@ describe('useArticleFeedItems', () => {
   beforeEach(() => {
     mockEnabled = true;
     mockPublished = [];
-    vi.stubEnv('VITE_FEED_V2_ENABLED', 'true');
   });
 
   afterEach(() => {
-    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it('returns empty array when no published articles', () => {
@@ -106,13 +105,6 @@ describe('useArticleFeedItems', () => {
     expect(result.current).toHaveLength(1);
     expect(result.current[0].kind).toBe('ARTICLE');
     expect(result.current[0].title).toBe('Published Article');
-  });
-
-  it('returns empty array when VITE_FEED_V2_ENABLED is false', () => {
-    vi.stubEnv('VITE_FEED_V2_ENABLED', 'false');
-    mockPublished = [publishedDoc];
-    const { result } = renderHook(() => useArticleFeedItems());
-    expect(result.current).toEqual([]);
   });
 
   it('returns empty array when docs store is disabled', () => {

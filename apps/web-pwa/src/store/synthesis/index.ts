@@ -61,21 +61,11 @@ function upsertTopicState(
   };
 }
 
-function isSynthesisV2Enabled(): boolean {
-  const viteValue = (import.meta as unknown as { env?: { VITE_TOPIC_SYNTHESIS_V2_ENABLED?: string } })
-    .env?.VITE_TOPIC_SYNTHESIS_V2_ENABLED;
-  /* v8 ignore next 3 -- browser runtime may not expose process */
-  const nodeValue = typeof process !== 'undefined'
-    ? process.env?.VITE_TOPIC_SYNTHESIS_V2_ENABLED
-    : undefined;
-  return (nodeValue ?? viteValue) === 'true';
-}
-
 export function createSynthesisStore(overrides?: Partial<InternalDeps>): StoreApi<SynthesisState> {
   /* v8 ignore next 5 -- default DI wiring; tests always inject overrides */
   const defaults: InternalDeps = {
     resolveClient: () => useAppStore.getState().client,
-    enabled: isSynthesisV2Enabled(),
+    enabled: true,
     hydrateTopic: hydrateSynthesisStore,
     readLatest: readTopicLatestSynthesis
   };
@@ -251,12 +241,7 @@ const isE2E =
 /* v8 ignore stop */
 
 /* v8 ignore start -- environment branch depends on Vite import.meta at module-eval time */
-export const useSynthesisStore: StoreApi<SynthesisState> = isSynthesisV2Enabled()
-  ? (isE2E ? createMockSynthesisStore() : createSynthesisStore({ enabled: true }))
-  : createSynthesisStore({
-    enabled: false,
-    resolveClient: () => null,
-    hydrateTopic: () => false,
-    readLatest: async () => null
-  });
+export const useSynthesisStore: StoreApi<SynthesisState> = isE2E
+  ? createMockSynthesisStore()
+  : createSynthesisStore({ enabled: true });
 /* v8 ignore stop */

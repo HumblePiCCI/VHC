@@ -1,10 +1,28 @@
 /* @vitest-environment jsdom */
 
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { describe, expect, it, afterEach } from 'vitest';
-import type { FeedItem } from '@vh/data-model';
+import { describe, expect, it, afterEach, vi, beforeEach } from 'vitest';
+import type { FeedItem, TopicSynthesisV2 } from '@vh/data-model';
+import type { UseSynthesisResult } from '../../hooks/useSynthesis';
+
+// ---- Mocks ----
+
+const mockUseSynthesis = vi.fn<(topicId?: string | null) => UseSynthesisResult>();
+const mockUseInView = vi.fn();
+
+vi.mock('../../hooks/useSynthesis', () => ({
+  useSynthesis: (...args: unknown[]) => mockUseSynthesis(args[0] as string | null | undefined),
+}));
+
+vi.mock('../../hooks/useInView', () => ({
+  useInView: () => mockUseInView(),
+}));
+
+// Import after mocks
 import { TopicCard } from './TopicCard';
+
+// ---- Fixtures ----
 
 const NOW = 1_700_000_000_000;
 
@@ -24,53 +42,177 @@ function makeTopicItem(overrides: Partial<FeedItem> = {}): FeedItem {
   };
 }
 
+function makeSynthesis(overrides: Partial<TopicSynthesisV2> = {}): TopicSynthesisV2 {
+  return {
+    schemaVersion: 'topic-synthesis-v2',
+    topic_id: 'topic-42',
+    epoch: 3,
+    synthesis_id: 'synth-001',
+    inputs: {},
+    quorum: { required: 3, received: 3, reached_at: NOW, timed_out: false, selection_rule: 'deterministic' },
+    facts_summary: 'Transit weekends show 23% ridership increase in pilot districts.',
+    frames: [
+      { frame: 'Economic equity', reframe: 'Low-income riders gain disproportionate access benefit.' },
+      { frame: 'Fiscal impact', reframe: 'Revenue loss offset by reduced road maintenance costs.' },
+    ],
+    warnings: [],
+    divergence_metrics: { disagreement_score: 0.2, source_dispersion: 0.3, candidate_count: 3 },
+    provenance: { candidate_ids: ['c1', 'c2', 'c3'], provider_mix: [{ provider_id: 'local', count: 3 }] },
+    created_at: NOW,
+    ...overrides,
+  };
+}
+
+function makeSynthesisResult(overrides: Partial<UseSynthesisResult> = {}): UseSynthesisResult {
+  return {
+    enabled: true,
+    topicId: 'topic-42',
+    epoch: null,
+    synthesis: null,
+    hydrated: false,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+    ...overrides,
+  };
+}
+
+const nullRef = { current: null };
+
+// ---- Tests ----
+
 describe('TopicCard', () => {
-  afterEach(() => cleanup());
+  beforeEach(() => {
+    mockUseInView.mockReturnValue([nullRef, true]); // default: visible
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult());
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
 
   it('renders topic badge, title, and stats', () => {
     render(<TopicCard item={makeTopicItem()} />);
 
     expect(screen.getByTestId('topic-card-topic-42')).toBeInTheDocument();
     expect(screen.getByText('Topic')).toBeInTheDocument();
-    expect(
-      screen.getByText('Should the district pilot free transit weekends?'),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId('topic-card-eye-topic-42')).toHaveTextContent(
-      '14',
-    );
-    expect(
-      screen.getByTestId('topic-card-lightbulb-topic-42'),
-    ).toHaveTextContent('9');
-    expect(screen.getByTestId('topic-card-comments-topic-42')).toHaveTextContent(
-      '12',
-    );
+    expect(screen.getByText('Should the district pilot free transit weekends?')).toBeInTheDocument();
+    expect(screen.getByTestId('topic-card-eye-topic-42')).toHaveTextContent('14');
+    expect(screen.getByTestId('topic-card-lightbulb-topic-42')).toHaveTextContent('9');
+    expect(screen.getByTestId('topic-card-comments-topic-42')).toHaveTextContent('12');
   });
 
   it('formats my_activity_score with one decimal place', () => {
     render(<TopicCard item={makeTopicItem()} />);
-
-    expect(
-      screen.getByTestId('topic-card-activity-topic-42'),
-    ).toHaveTextContent('My activity 4.3');
+    expect(screen.getByTestId('topic-card-activity-topic-42')).toHaveTextContent('My activity 4.3');
   });
 
   it('uses 0.0 when my_activity_score is missing', () => {
     render(<TopicCard item={makeTopicItem({ my_activity_score: undefined })} />);
-
-    expect(
-      screen.getByTestId('topic-card-activity-topic-42'),
-    ).toHaveTextContent('My activity 0.0');
+    expect(screen.getByTestId('topic-card-activity-topic-42')).toHaveTextContent('My activity 0.0');
   });
 
   it('uses 0.0 when my_activity_score is invalid', () => {
-    render(
-      <TopicCard
-        item={makeTopicItem({ my_activity_score: Number.NEGATIVE_INFINITY })}
-      />,
-    );
+    render(<TopicCard item={makeTopicItem({ my_activity_score: Number.NEGATIVE_INFINITY })} />);
+    expect(screen.getByTestId('topic-card-activity-topic-42')).toHaveTextContent('My activity 0.0');
+  });
 
-    expect(
-      screen.getByTestId('topic-card-activity-topic-42'),
-    ).toHaveTextContent('My activity 0.0');
+  // ---- Synthesis states ----
+
+  it('shows fallback text when synthesis is absent', () => {
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ synthesis: null, loading: false }));
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.getByText('Active thread with community responses.')).toBeInTheDocument();
+    expect(screen.queryByTestId('synthesis-summary')).not.toBeInTheDocument();
+  });
+
+  it('shows loading indicator during synthesis hydration', () => {
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ loading: true }));
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.getByTestId('topic-card-synthesis-loading')).toHaveTextContent('Loading synthesis');
+  });
+
+  it('shows error fallback when synthesis fails', () => {
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ error: 'Network error' }));
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.getByTestId('topic-card-synthesis-error')).toHaveTextContent('Synthesis unavailable.');
+  });
+
+  it('renders synthesis facts_summary when available', () => {
+    const synthesis = makeSynthesis();
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ synthesis, epoch: 3 }));
+    render(<TopicCard item={makeTopicItem()} />);
+
+    expect(screen.getByTestId('synthesis-facts')).toHaveTextContent(
+      'Transit weekends show 23% ridership increase',
+    );
+    expect(screen.queryByText('Active thread with community responses.')).not.toBeInTheDocument();
+  });
+
+  it('renders collapsible frames when synthesis has perspectives', () => {
+    const synthesis = makeSynthesis();
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ synthesis, epoch: 3 }));
+    render(<TopicCard item={makeTopicItem()} />);
+
+    // Frames collapsed by default
+    const toggle = screen.getByTestId('synthesis-frames-toggle');
+    expect(toggle).toHaveTextContent('2 perspectives');
+    expect(screen.queryByTestId('synthesis-frames-list')).not.toBeInTheDocument();
+
+    // Expand frames
+    fireEvent.click(toggle);
+    expect(screen.getByTestId('synthesis-frames-list')).toBeInTheDocument();
+    expect(screen.getByTestId('synthesis-frame-0')).toHaveTextContent('Economic equity');
+    expect(screen.getByTestId('synthesis-frame-1')).toHaveTextContent('Fiscal impact');
+
+    // Collapse frames
+    fireEvent.click(toggle);
+    expect(screen.queryByTestId('synthesis-frames-list')).not.toBeInTheDocument();
+  });
+
+  it('shows divergence indicator when disagreement_score > 0.5', () => {
+    const synthesis = makeSynthesis({
+      divergence_metrics: { disagreement_score: 0.7, source_dispersion: 0.4, candidate_count: 5 },
+    });
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ synthesis, epoch: 3 }));
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.getByTestId('synthesis-divergence')).toHaveTextContent('High divergence');
+  });
+
+  it('hides divergence indicator when disagreement_score <= 0.5', () => {
+    const synthesis = makeSynthesis();
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ synthesis, epoch: 3 }));
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.queryByTestId('synthesis-divergence')).not.toBeInTheDocument();
+  });
+
+  it('renders warnings when present', () => {
+    const synthesis = makeSynthesis({ warnings: ['Possible editorial bias detected.'] });
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ synthesis, epoch: 3 }));
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.getByTestId('synthesis-warnings')).toHaveTextContent('editorial bias');
+  });
+
+  it('renders "1 perspective" singular when only one frame', () => {
+    const synthesis = makeSynthesis({ frames: [{ frame: 'Only view', reframe: 'Still only view' }] });
+    mockUseSynthesis.mockReturnValue(makeSynthesisResult({ synthesis, epoch: 3 }));
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.getByTestId('synthesis-frames-toggle')).toHaveTextContent('1 perspective');
+  });
+
+  // ---- Viewport hydration containment ----
+
+  it('defers synthesis hydration when card is not visible', () => {
+    mockUseInView.mockReturnValue([nullRef, false]); // not visible
+    render(<TopicCard item={makeTopicItem()} />);
+    // Should pass null to useSynthesis when not visible
+    expect(mockUseSynthesis).toHaveBeenCalledWith(null);
+  });
+
+  it('activates synthesis hydration when card becomes visible', () => {
+    mockUseInView.mockReturnValue([nullRef, true]); // visible
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(mockUseSynthesis).toHaveBeenCalledWith('topic-42');
   });
 });
