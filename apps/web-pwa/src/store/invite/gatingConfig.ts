@@ -11,6 +11,9 @@ const KILL_SWITCH_KEY = 'vh_invite_kill_switch';
 
 /** Read VITE_INVITE_ONLY_ENABLED env var (default: true for testnet). */
 export function isInviteOnlyEnabled(): boolean {
+  // E2E mode bypasses invite gate so Playwright tests can reach the app
+  if (import.meta.env.VITE_E2E_MODE === 'true') return false;
+
   const killSwitch = safeGetItem(KILL_SWITCH_KEY);
   if (killSwitch === 'disabled') return false;
   if (killSwitch === 'enabled') return true;
@@ -36,4 +39,22 @@ export function getKillSwitchState(): 'enabled' | 'disabled' | 'default' {
   if (val === 'enabled') return 'enabled';
   if (val === 'disabled') return 'disabled';
   return 'default';
+}
+
+// ── Invite access persistence ─────────────────────────────────────────
+const ACCESS_KEY = 'vh_invite_access_granted';
+
+/** Check if user has been granted invite access. */
+export function hasInviteAccess(): boolean {
+  return safeGetItem(ACCESS_KEY) === 'granted';
+}
+
+/** Persist invite access grant. */
+export function grantInviteAccess(): void {
+  safeSetItem(ACCESS_KEY, 'granted');
+}
+
+/** Revoke persisted invite access. */
+export function revokeInviteAccess(): void {
+  safeSetItem(ACCESS_KEY, '');
 }
