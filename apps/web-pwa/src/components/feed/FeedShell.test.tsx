@@ -170,6 +170,21 @@ describe('FeedShell', () => {
     expect(screen.getByText('My Published Article')).toBeInTheDocument();
   });
 
+  it('routes ACTION_RECEIPT kind to ReceiptFeedCard', () => {
+    const items = [
+      makeFeedItem({
+        topic_id: 'receipt-1',
+        title: 'Letter to Rep. Smith',
+        kind: 'ACTION_RECEIPT',
+      }),
+    ];
+
+    render(<FeedShell feedResult={makeFeedResult({ feed: items })} />);
+
+    expect(screen.getByTestId('feed-receipt-receipt-1')).toBeInTheDocument();
+    expect(screen.getByText('Letter to Rep. Smith')).toBeInTheDocument();
+  });
+
   // ---- Filter and sort interaction ----
 
   it('passes active filter to FilterChips', () => {

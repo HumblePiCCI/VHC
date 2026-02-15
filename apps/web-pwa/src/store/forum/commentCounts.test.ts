@@ -225,25 +225,13 @@ describe('createCommentCountTracker feature flag', () => {
     });
   });
 
-  it('uses default feature flag when no override is provided', async () => {
-    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'false');
-    vi.resetModules();
-
-    const mod = await import('./commentCounts');
-    const tracker = mod.createCommentCountTracker();
-    expect(tracker.enabled).toBe(false);
-
-    vi.unstubAllEnvs();
+  it('defaults to enabled (synthesis v2 is permanent)', () => {
+    const tracker = createCommentCountTracker();
+    expect(tracker.enabled).toBe(true);
   });
 
-  it('reads VITE_TOPIC_SYNTHESIS_V2_ENABLED=true from env', async () => {
-    vi.stubEnv('VITE_TOPIC_SYNTHESIS_V2_ENABLED', 'true');
-    vi.resetModules();
-
-    const mod = await import('./commentCounts');
-    const tracker = mod.createCommentCountTracker();
-    expect(tracker.enabled).toBe(true);
-
-    vi.unstubAllEnvs();
+  it('can be disabled via override for testing', () => {
+    const tracker = createCommentCountTracker({ enabled: false });
+    expect(tracker.enabled).toBe(false);
   });
 });

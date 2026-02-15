@@ -17,6 +17,7 @@ export const FEED_KINDS = [
   'USER_TOPIC',
   'SOCIAL_NOTIFICATION',
   'ARTICLE',
+  'ACTION_RECEIPT',
 ] as const;
 
 export const FeedKindSchema = z.enum(FEED_KINDS);

@@ -46,3 +46,16 @@ Coordinator owns `topology.ts` updates for Wave 3 bridge paths. Pre-dispatch coo
 - `~<devicePub>/hermes/bridge/reports/<reportId>` (auth)
 
 Per spec-civic-action-kit-v0.md §5.1.
+
+### A4. Chief agents are orchestration-only (CEO directive 2026-02-14)
+
+**Effective immediately.** All chief agents (`w1a-chief`, `w1b-chief`, `w1c-chief`, `w2a-chief`, `w2b-chief`, `w2g-chief`) are restricted to orchestration roles:
+
+- **Allowed:** Plan, scope, review, dispatch to impl agents, route QA/maint gating, recommend merge.
+- **Denied:** Direct code/test editing, exec commands, file writes. Tools `write`, `edit`, `exec`, `process` are denied in config.
+- **Enforcement:** If a chief task requires code/test changes, the chief must spawn the appropriate impl agent (`sessions_spawn`) with the implementation prompt.
+- **Workflow:** Chief → impl agent (code/PR) → QA agent (gate) → chief (merge recommendation) → coordinator.
+
+Config enforcement: `tools.deny: ["write", "edit", "exec", "process"]` on all chief agent entries.
+
+This policy supersedes any prior implicit permission for chiefs to execute code directly.

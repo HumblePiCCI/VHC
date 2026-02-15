@@ -531,7 +531,7 @@ After all team PRs are green on `integration/wave-1`:
 1. Run full CI pipeline.
 2. Run all cross-team integration tests from readiness matrix.
 3. Run privacy lint.
-4. Run LOC audit (no file exceeds 350 lines).
+4. Run LOC audit (no non-test source file exceeds 350 lines; test/spec/story files and `*.d.ts` are exempt).
 5. Validate feature flags:
    - `VITE_FEED_V2_ENABLED=false` preserves production-safe behavior
    - `VITE_FEED_V2_ENABLED=true` + `VITE_TOPIC_SYNTHESIS_V2_ENABLED=true` exercises full V2 flow
@@ -579,7 +579,7 @@ Reduce long-term risk while keeping scope tight.
 
 Review against diff `origin/integration/wave-1...<branch>`. Check for:
 
-- LOC cap violations (350 line hard limit per source file)
+- LOC cap violations (350 line hard limit per non-test source file; tests/specs/stories and `*.d.ts` are exempt)
 - Coverage gaps in touched modules
 - Ownership scope (changes only within team's paths)
 - Feature flag discipline (V2 code behind flags)

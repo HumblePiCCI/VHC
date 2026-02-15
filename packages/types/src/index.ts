@@ -8,11 +8,22 @@ export interface VerificationResult {
   issuedAt: number;
 }
 
-export interface SessionResponse {
-  token: string;
-  trustScore: number;
-  nullifier: string;
-}
+export type { SessionResponse } from './session';
+export { SessionResponseSchema } from './session';
+
+export {
+  isSessionExpired,
+  isSessionNearExpiry,
+  migrateSessionFields,
+  NEAR_EXPIRY_WINDOW_MS,
+  DEFAULT_SESSION_TTL_MS,
+} from './session-lifecycle';
+
+export {
+  type ProofVerificationError,
+  type ProofVerificationResult,
+  verifyConstituencyProof,
+} from './constituency-verification';
 
 export interface RegionProof {
   proof: string;
@@ -31,12 +42,6 @@ export const VerificationResultSchema = z.object({
   success: z.boolean(),
   trustScore: z.number().min(0).max(1),
   issuedAt: z.number().int().nonnegative()
-});
-
-export const SessionResponseSchema = z.object({
-  token: z.string().min(1),
-  trustScore: z.number().min(0).max(1),
-  nullifier: z.string().min(1)
 });
 
 export const RegionProofSchema = z.object({
@@ -61,11 +66,11 @@ export interface SentimentSignal {
 
 export type RegionProofTuple = [string, string, string]; // [district_hash, nullifier, merkle_root]
 
-export interface ConstituencyProof {
-  district_hash: string;
-  nullifier: string;
-  merkle_root: string;
-}
+import type { ConstituencyProof as _ConstituencyProof } from './constituency-proof';
+// Re-export the extracted type (avoids circular dep with constituency-verification.ts)
+export type { ConstituencyProof } from './constituency-proof';
+// Local alias for use within this file
+type ConstituencyProof = _ConstituencyProof;
 
 export const ConstituencyProofSchema = z.object({
   district_hash: z.string().min(1),
