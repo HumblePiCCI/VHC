@@ -7,6 +7,9 @@ import {
   setKillSwitch,
   clearKillSwitch,
   getKillSwitchState,
+  hasInviteAccess,
+  grantInviteAccess,
+  revokeInviteAccess,
 } from './gatingConfig';
 
 beforeEach(() => {
@@ -43,6 +46,17 @@ describe('isInviteOnlyEnabled', () => {
     vi.stubEnv('VITE_INVITE_ONLY_ENABLED', 'false');
     expect(isInviteOnlyEnabled()).toBe(false);
   });
+
+  it('returns false when VITE_E2E_MODE is "true" (E2E bypass)', () => {
+    vi.stubEnv('VITE_E2E_MODE', 'true');
+    expect(isInviteOnlyEnabled()).toBe(false);
+  });
+
+  it('E2E bypass takes priority over kill switch enabled', () => {
+    vi.stubEnv('VITE_E2E_MODE', 'true');
+    setKillSwitch(true);
+    expect(isInviteOnlyEnabled()).toBe(false);
+  });
 });
 
 describe('getKillSwitchState', () => {
@@ -76,5 +90,33 @@ describe('setKillSwitch', () => {
   it('persists disabled state to localStorage', () => {
     setKillSwitch(false);
     expect(safeGetItem('vh_invite_kill_switch')).toBe('disabled');
+  });
+});
+
+describe('invite access persistence', () => {
+  beforeEach(() => {
+    safeSetItem('vh_invite_access_granted', '');
+  });
+
+  it('hasInviteAccess returns false when no access stored', () => {
+    expect(hasInviteAccess()).toBe(false);
+  });
+
+  it('hasInviteAccess returns true after grantInviteAccess', () => {
+    grantInviteAccess();
+    expect(hasInviteAccess()).toBe(true);
+    expect(safeGetItem('vh_invite_access_granted')).toBe('granted');
+  });
+
+  it('revokeInviteAccess clears access', () => {
+    grantInviteAccess();
+    expect(hasInviteAccess()).toBe(true);
+    revokeInviteAccess();
+    expect(hasInviteAccess()).toBe(false);
+  });
+
+  it('hasInviteAccess returns false for non-granted values', () => {
+    safeSetItem('vh_invite_access_granted', 'something-else');
+    expect(hasInviteAccess()).toBe(false);
   });
 });

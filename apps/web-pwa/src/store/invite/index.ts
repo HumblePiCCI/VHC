@@ -3,6 +3,9 @@ export {
   setKillSwitch,
   clearKillSwitch,
   getKillSwitchState,
+  hasInviteAccess,
+  grantInviteAccess,
+  revokeInviteAccess,
 } from './gatingConfig';
 
 export {
