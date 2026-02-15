@@ -11,6 +11,8 @@ import type { FeedItem } from '@vh/data-model';
 export interface ArticleFeedCardProps {
   /** Discovery feed item; expected kind: ARTICLE. */
   readonly item: FeedItem;
+  /** Optional thread route target; defaults to item.topic_id. */
+  readonly threadId?: string;
 }
 
 function formatTimestamp(timestampMs: number): string {
@@ -20,12 +22,20 @@ function formatTimestamp(timestampMs: number): string {
   return new Date(timestampMs).toLocaleDateString();
 }
 
+function buildThreadHref(threadId: string): string {
+  return `/hermes/${encodeURIComponent(threadId)}`;
+}
+
 /**
  * Article card for discovery feed ARTICLE items.
  * Rendered in the discovery feed (V2 feed is now the permanent path).
  */
-export const ArticleFeedCard: React.FC<ArticleFeedCardProps> = ({ item }) => {
+export const ArticleFeedCard: React.FC<ArticleFeedCardProps> = ({
+  item,
+  threadId,
+}) => {
   const publishedDate = formatTimestamp(item.created_at);
+  const resolvedThreadId = threadId?.trim() || item.topic_id;
 
   return (
     <article
@@ -62,6 +72,14 @@ export const ArticleFeedCard: React.FC<ArticleFeedCardProps> = ({ item }) => {
           💬 {item.comments}
         </span>
       </div>
+
+      <a
+        href={buildThreadHref(resolvedThreadId)}
+        className="mt-3 inline-flex text-xs font-medium text-teal-700 hover:underline"
+        data-testid={`article-card-open-thread-${item.topic_id}`}
+      >
+        Open thread →
+      </a>
     </article>
   );
 };

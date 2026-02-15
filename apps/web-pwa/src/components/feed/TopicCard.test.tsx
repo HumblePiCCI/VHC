@@ -103,6 +103,11 @@ describe('TopicCard', () => {
     expect(screen.getByTestId('topic-card-comments-topic-42')).toHaveTextContent('12');
   });
 
+  it('links to thread detail route for the topic', () => {
+    render(<TopicCard item={makeTopicItem()} />);
+    expect(screen.getByTestId('topic-card-open-thread-topic-42')).toHaveAttribute('href', '/hermes/topic-42');
+  });
+
   it('formats my_activity_score with one decimal place', () => {
     render(<TopicCard item={makeTopicItem()} />);
     expect(screen.getByTestId('topic-card-activity-topic-42')).toHaveTextContent('My activity 4.3');

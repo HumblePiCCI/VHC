@@ -120,7 +120,7 @@ const FeedItemCard: React.FC<FeedItemCardProps> = ({ item }) => {
     case 'SOCIAL_NOTIFICATION':
       return <SocialNotificationCard item={item} />;
     case 'ARTICLE':
-      return <ArticleFeedCard item={item} />;
+      return <ArticleFeedCard item={item} threadId={item.topic_id} />;
     case 'ACTION_RECEIPT':
       return <ReceiptFeedCard item={item} />;
     default:

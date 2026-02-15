@@ -100,6 +100,16 @@ describe('ArticleFeedCard', () => {
     expect(screen.getByTestId('article-card-date-article-1')).toHaveTextContent('unknown');
   });
 
+  it('links to thread detail route using topic_id by default', () => {
+    render(<ArticleFeedCard item={makeArticleItem({ topic_id: 'custom-id' })} />);
+    expect(screen.getByTestId('article-card-open-thread-custom-id')).toHaveAttribute('href', '/hermes/custom-id');
+  });
+
+  it('uses explicit threadId when provided', () => {
+    render(<ArticleFeedCard item={makeArticleItem()} threadId="thread-99" />);
+    expect(screen.getByTestId('article-card-open-thread-article-1')).toHaveAttribute('href', '/hermes/thread-99');
+  });
+
   it('renders with different topic_id', () => {
     render(<ArticleFeedCard item={makeArticleItem({ topic_id: 'custom-id' })} />);
     expect(screen.getByTestId('article-card-custom-id')).toBeInTheDocument();

@@ -16,6 +16,10 @@ function formatActivityScore(score: number | undefined): string {
   return score.toFixed(1);
 }
 
+function buildThreadHref(threadId: string): string {
+  return `/hermes/${encodeURIComponent(threadId)}`;
+}
+
 /**
  * User topic/thread card for discovery feed USER_TOPIC items.
  *
@@ -62,6 +66,14 @@ export const TopicCard: React.FC<TopicCardProps> = ({ item }) => {
         <span data-testid={`topic-card-lightbulb-${item.topic_id}`}>💡 {item.lightbulb}</span>
         <span data-testid={`topic-card-comments-${item.topic_id}`}>💬 {item.comments}</span>
       </div>
+
+      <a
+        href={buildThreadHref(item.topic_id)}
+        className="mt-3 inline-flex text-xs font-medium text-emerald-700 hover:underline"
+        data-testid={`topic-card-open-thread-${item.topic_id}`}
+      >
+        Open thread →
+      </a>
     </article>
   );
 };

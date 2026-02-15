@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useForumStore } from '../../../store/hermesForum';
-import { CommentComposer } from './CommentComposer';
+import { CommentComposerWithArticle } from './CommentComposerWithArticle';
 import { TrustGate } from './TrustGate';
 import { renderMarkdown } from '../../../utils/markdown';
 import { CommentStream } from '../CommentStream';
 import { CommunityReactionSummary } from '../CommunityReactionSummary';
 import { EngagementIcons } from '../../EngagementIcons';
+import { SynthesisSummary } from '../../feed/SynthesisSummary';
 import { useSentimentState } from '../../../hooks/useSentimentState';
+import { useSynthesis } from '../../../hooks/useSynthesis';
 import { useViewTracking } from '../../../hooks/useViewTracking';
 import { safeGetItem, safeSetItem } from '../../../utils/safeStorage';
 import type { HermesComment } from '@vh/types';
@@ -54,7 +56,8 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
   const allComments = commentsForThread ?? EMPTY_COMMENTS;
   const eyeWeight = useSentimentState((s) => s.getEyeWeight(threadId));
   const lightbulbWeight = useSentimentState((s) => s.getLightbulbWeight(threadId));
-  
+  const { synthesis, loading: synthesisLoading, error: synthesisError } = useSynthesis(threadId);
+
   const [loaded, setLoaded] = useState(false);
   const [showRootComposer, setShowRootComposer] = useState(false);
   const [showCallout, setShowCallout] = useState(() => {
@@ -122,6 +125,29 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
           </div>
         </div>
 
+        <section
+          className="rounded-xl border border-emerald-200/70 bg-emerald-50/60 p-3"
+          data-testid="thread-synthesis-panel"
+          aria-label="Thread lens"
+        >
+          <p className="text-xs font-semibold tracking-[0.06em] uppercase text-emerald-800">Thread lens</p>
+          {synthesisLoading ? (
+            <p className="mt-1 text-xs text-emerald-700" data-testid="thread-synthesis-loading">
+              Loading synthesis context…
+            </p>
+          ) : synthesisError ? (
+            <p className="mt-1 text-xs text-amber-700" data-testid="thread-synthesis-error">
+              Synthesis context unavailable.
+            </p>
+          ) : synthesis ? (
+            <SynthesisSummary synthesis={synthesis} />
+          ) : (
+            <p className="mt-1 text-xs text-emerald-700" data-testid="thread-synthesis-empty">
+              No synthesis context yet.
+            </p>
+          )}
+        </section>
+
         {/* Conversation summary with threaded stream inside */}
         <CommunityReactionSummary threadId={threadId}>
           {!loaded && <p className="text-sm text-slate-500">Loading comments…</p>}
@@ -181,8 +207,9 @@ export const ThreadView: React.FC<Props> = ({ threadId }) => {
           {showRootComposer && (
             <div className="mt-3">
               <TrustGate>
-                <CommentComposer
+                <CommentComposerWithArticle
                   threadId={threadId}
+                  sourceContext={{ sourceThreadId: threadId }}
                   onSubmit={async () => setShowRootComposer(false)}
                 />
               </TrustGate>

@@ -35,6 +35,7 @@ vi.mock('./SlideToPost', () => ({
 
 let storeDocuments = new Map<string, any>();
 let idCounter = 0;
+let docsEnabled = true;
 
 const mockCreateDraft = vi.fn((text: string, ctx?: any) => {
   const id = `test-doc-${idCounter++}`;
@@ -76,7 +77,7 @@ const mockPublishArticle = vi.fn((docId: string) => {
 vi.mock('../../../store/hermesDocs', () => ({
   useDocsStore: (selector?: any) => {
     const state = {
-      enabled: true,
+      enabled: docsEnabled,
       createDraft: mockCreateDraft,
       saveDraft: mockSaveDraft,
       publishArticle: mockPublishArticle,
@@ -105,6 +106,7 @@ describe('CommentComposerWithArticle', () => {
   beforeEach(() => {
     storeDocuments = new Map();
     idCounter = 0;
+    docsEnabled = true;
     createCommentMock.mockClear();
     mockCreateDraft.mockClear();
     mockSaveDraft.mockClear();
@@ -128,11 +130,24 @@ describe('CommentComposerWithArticle', () => {
     ).toBeInTheDocument();
   });
 
-  it('CTA button is enabled (handler is wired)', () => {
+  it('CTA button is enabled when docs are enabled', () => {
     render(<CommentComposerWithArticle threadId="thread-1" />);
     typeIntoComposer('x'.repeat(REPLY_WARNING_THRESHOLD));
     const btn = screen.getByTestId('convert-to-article-btn');
     expect(btn).not.toBeDisabled();
+  });
+
+  it('falls back to "Coming soon" CTA state when docs are disabled', () => {
+    docsEnabled = false;
+    render(<CommentComposerWithArticle threadId="thread-1" />);
+    typeIntoComposer('x'.repeat(REPLY_WARNING_THRESHOLD));
+
+    const btn = screen.getByTestId('convert-to-article-btn');
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('title', 'Coming soon');
+
+    fireEvent.click(btn);
+    expect(screen.queryByTestId('article-editor')).not.toBeInTheDocument();
   });
 
   it('clicking CTA opens ArticleEditor with pre-populated text', () => {

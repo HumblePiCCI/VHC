@@ -3,6 +3,7 @@ import React from 'react';
 import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
+import type { TopicSynthesisV2 } from '@vh/data-model';
 import { ThreadView } from './ThreadView';
 
 const baseThread = {
@@ -27,6 +28,33 @@ const mockStore = {
   vote: vi.fn()
 };
 
+const mockUseSynthesis = vi.fn();
+const composerWithArticlePropsMock = vi.fn();
+
+function makeSynthesis(overrides: Partial<TopicSynthesisV2> = {}): TopicSynthesisV2 {
+  return {
+    schemaVersion: 'topic-synthesis-v2',
+    topic_id: baseThread.id,
+    epoch: 2,
+    synthesis_id: 'synth-thread-1',
+    inputs: {},
+    quorum: {
+      required: 3,
+      received: 3,
+      reached_at: Date.now(),
+      timed_out: false,
+      selection_rule: 'deterministic',
+    },
+    facts_summary: 'Synthesis summary for thread context.',
+    frames: [{ frame: 'Budget lens', reframe: 'Target a phased rollout.' }],
+    warnings: [],
+    divergence_metrics: { disagreement_score: 0.2, source_dispersion: 0.2, candidate_count: 3 },
+    provenance: { candidate_ids: ['c1', 'c2', 'c3'], provider_mix: [{ provider_id: 'local', count: 3 }] },
+    created_at: Date.now(),
+    ...overrides,
+  };
+}
+
 vi.mock('../../../store/hermesForum', () => ({
   useForumStore: (selector?: (s: typeof mockStore) => any) => (selector ? selector(mockStore) : mockStore)
 }));
@@ -42,12 +70,23 @@ vi.mock('../../../hooks/useSentimentState', () => ({
       : { getEyeWeight: () => 0, getLightbulbWeight: () => 0 }
 }));
 
+vi.mock('../../../hooks/useSynthesis', () => ({
+  useSynthesis: (...args: unknown[]) => mockUseSynthesis(...args)
+}));
+
 vi.mock('../../../hooks/useViewTracking', () => ({
   useViewTracking: () => undefined
 }));
 
 vi.mock('../CommunityReactionSummary', () => ({
   CommunityReactionSummary: ({ children }: any) => <div data-testid="community-summary">{children}</div>
+}));
+
+vi.mock('./CommentComposerWithArticle', () => ({
+  CommentComposerWithArticle: (props: any) => {
+    composerWithArticlePropsMock(props);
+    return <div data-testid="comment-composer-with-article">Composer with article</div>;
+  }
 }));
 
 expect.extend(matchers);
@@ -62,6 +101,17 @@ describe('ThreadView threaded layout', () => {
     mockStore.createComment.mockClear();
     mockStore.vote.mockClear();
     mockStore.userVotes = new Map();
+    composerWithArticlePropsMock.mockClear();
+    mockUseSynthesis.mockReturnValue({
+      enabled: true,
+      topicId: baseThread.id,
+      epoch: null,
+      synthesis: null,
+      hydrated: false,
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
     window.localStorage.clear();
   });
 
@@ -114,13 +164,41 @@ describe('ThreadView threaded layout', () => {
     expect(screen.getByText('Counter content')).toBeInTheDocument();
   });
 
-  it('toggles the root reply composer', async () => {
+  it('toggles the root reply composer and wires source context', async () => {
     render(<ThreadView threadId={baseThread.id} />);
     await waitFor(() => expect(mockStore.loadComments).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: /reply to thread/i }));
-    expect(screen.getByTestId('comment-composer')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-composer-with-article')).toBeInTheDocument();
+    expect(composerWithArticlePropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        threadId: baseThread.id,
+        sourceContext: { sourceThreadId: baseThread.id },
+      }),
+    );
+
     fireEvent.click(screen.getByRole('button', { name: /reply to thread/i }));
-    expect(screen.queryByTestId('comment-composer')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('comment-composer-with-article')).not.toBeInTheDocument();
+  });
+
+  it('renders synthesis lens panel when synthesis context is available', async () => {
+    mockUseSynthesis.mockReturnValue({
+      enabled: true,
+      topicId: baseThread.id,
+      epoch: 2,
+      synthesis: makeSynthesis(),
+      hydrated: true,
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+
+    render(<ThreadView threadId={baseThread.id} />);
+    await waitFor(() => expect(mockStore.loadComments).toHaveBeenCalled());
+
+    expect(screen.getByTestId('thread-synthesis-panel')).toBeInTheDocument();
+    expect(screen.getByText('Thread lens')).toBeInTheDocument();
+    expect(screen.getByTestId('synthesis-summary')).toBeInTheDocument();
+    expect(screen.getByText('Synthesis summary for thread context.')).toBeInTheDocument();
   });
 });

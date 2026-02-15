@@ -155,7 +155,7 @@ describe('FeedShell', () => {
     expect(within(socialRow).getByText('Linked social mention')).toBeInTheDocument();
   });
 
-  it('routes ARTICLE kind to ArticleFeedCard', () => {
+  it('routes ARTICLE kind to ArticleFeedCard with thread route link', () => {
     const items = [
       makeFeedItem({
         topic_id: 'article-1',
@@ -168,6 +168,7 @@ describe('FeedShell', () => {
 
     expect(screen.getByTestId('article-card-article-1')).toBeInTheDocument();
     expect(screen.getByText('My Published Article')).toBeInTheDocument();
+    expect(screen.getByTestId('article-card-open-thread-article-1')).toHaveAttribute('href', '/hermes/article-1');
   });
 
   it('routes ACTION_RECEIPT kind to ReceiptFeedCard', () => {
