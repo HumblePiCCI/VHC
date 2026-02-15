@@ -46,3 +46,6 @@ export { toStoryBundleSource, computeProvenanceHash } from './provenance';
 
 export { clusterItems, extractWords } from './cluster';
 export type { ClusterOptions } from './cluster';
+
+export { orchestrateNewsPipeline } from './orchestrator';
+export type { PipelineConfig, PipelineResult } from './orchestrator';
