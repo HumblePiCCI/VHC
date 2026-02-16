@@ -10,6 +10,7 @@ import {
   type NormalizedItem,
   type StoryBundle,
 } from './newsTypes';
+import { shouldMerge, computeMergeSignals } from './sameEventMerge';
 
 const MIN_ENTITY_OVERLAP = 2;
 
@@ -111,7 +112,13 @@ function toCluster(items: NormalizedItem[]): MutableCluster[] {
     const existing = clusters.find(
       (cluster) =>
         cluster.bucketStart === bucketStart &&
-        hasSignificantEntityOverlap(cluster, entityKeys),
+        hasSignificantEntityOverlap(cluster, entityKeys) &&
+        shouldMerge(
+          [...cluster.entitySet],
+          cluster.items.map((i) => i.title),
+          entityKeys,
+          item.title,
+        ),
     );
 
     if (existing) {
@@ -263,11 +270,25 @@ function buildEvidence(cluster: MutableCluster): string[] {
   const spreadMs = ts.length >= 2 ? Math.max(...ts) - Math.min(...ts) : 0;
   const spreadH = (spreadMs / (60 * 60 * 1000)).toFixed(1);
   const sourceIds = new Set(cluster.items.map((i) => i.sourceId));
-  return [
+
+  // Add same-event merge signal summary for the cluster as a whole.
+  const titles = cluster.items.map((i) => i.title);
+  const entityKeys = [...cluster.entitySet];
+  const mergeSignals = cluster.items.length >= 2
+    ? computeMergeSignals(entityKeys, titles.slice(0, -1), entityKeysForItem(cluster.items[cluster.items.length - 1]!), titles[titles.length - 1]!)
+    : null;
+
+  const evidence = [
     `entity_overlap:${entityRatio.toFixed(2)}`,
     `time_proximity:${spreadH}h`,
     `source_count:${sourceIds.size}`,
   ];
+  if (mergeSignals) {
+    evidence.push(`keyword_overlap:${mergeSignals.keywordOverlap.toFixed(2)}`);
+    evidence.push(`action_match:${mergeSignals.actionMatch}`);
+    evidence.push(`composite_score:${mergeSignals.score.toFixed(2)}`);
+  }
+  return evidence;
 }
 
 /**
