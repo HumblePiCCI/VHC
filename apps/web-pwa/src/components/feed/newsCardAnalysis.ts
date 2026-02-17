@@ -13,6 +13,8 @@ export interface NewsCardSourceAnalysis {
   readonly summary: string;
   readonly biases: ReadonlyArray<string>;
   readonly counterpoints: ReadonlyArray<string>;
+  readonly provider_id?: string;
+  readonly model_id?: string;
 }
 
 export interface NewsCardAnalysisSynthesis {
@@ -31,7 +33,12 @@ let cachedRunAnalysis:
   | null = null;
 
 const synthesisCache = new Map<string, Promise<NewsCardAnalysisSynthesis>>();
+const resolvedSynthesisCache = new Map<string, NewsCardAnalysisSynthesis>();
 const articleTextCache = new Map<string, Promise<string>>();
+
+function toStoryCacheKey(story: StoryBundle): string {
+  return `${story.story_id}:${story.provenance_hash}`;
+}
 
 interface ArticleTextProxyResponse {
   readonly url: string;
@@ -203,6 +210,15 @@ function buildAnalysisInput(
   ].join('\n');
 }
 
+function normalizeOptionalString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : undefined;
+}
+
 function toSourceAnalysis(
   source: StoryBundle['sources'][number],
   analysis: AnalysisResult,
@@ -214,6 +230,12 @@ function toSourceAnalysis(
     summary: analysis.summary.trim(),
     biases: analysis.biases,
     counterpoints: analysis.counterpoints,
+    provider_id:
+      normalizeOptionalString(analysis.provider_id) ??
+      normalizeOptionalString(analysis.provider?.provider_id),
+    model_id:
+      normalizeOptionalString(analysis.model_id) ??
+      normalizeOptionalString(analysis.provider?.model_id),
   };
 }
 
@@ -315,7 +337,12 @@ export async function synthesizeStoryFromAnalysisPipeline(
     return runSynthesis(story, options.runAnalysis, fetchArticleText);
   }
 
-  const cacheKey = `${story.story_id}:${story.provenance_hash}`;
+  const cacheKey = toStoryCacheKey(story);
+  const resolved = resolvedSynthesisCache.get(cacheKey);
+  if (resolved) {
+    return resolved;
+  }
+
   let pending = synthesisCache.get(cacheKey);
   if (!pending) {
     pending = runSynthesis(story, getRunAnalysis(), fetchArticleText);
@@ -323,15 +350,25 @@ export async function synthesizeStoryFromAnalysisPipeline(
   }
 
   try {
-    return await pending;
+    const result = await pending;
+    resolvedSynthesisCache.set(cacheKey, result);
+    return result;
   } catch (error) {
     synthesisCache.delete(cacheKey);
+    resolvedSynthesisCache.delete(cacheKey);
     throw error;
   }
 }
 
+export function getCachedSynthesisForStory(
+  story: StoryBundle,
+): NewsCardAnalysisSynthesis | null {
+  return resolvedSynthesisCache.get(toStoryCacheKey(story)) ?? null;
+}
+
 export function __resetNewsCardAnalysisCacheForTests(): void {
   synthesisCache.clear();
+  resolvedSynthesisCache.clear();
   articleTextCache.clear();
   cachedRunAnalysis = null;
 }
