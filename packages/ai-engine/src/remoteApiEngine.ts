@@ -8,18 +8,72 @@ import {
 } from './modelConfig';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_PROVIDER_ID = 'remote-api';
 
 export interface RemoteApiEngineOptions {
   endpointUrl: string;
   timeoutMs?: number;
 }
 
+function isDirectEndpoint(endpointUrl: string): boolean {
+  return /^https?:\/\//i.test(endpointUrl);
+}
+
+function readProvider(value: unknown): { provider_id: string; model_id: string } | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as {
+    provider?: { provider_id?: unknown; model_id?: unknown };
+    provenance?: { provider_id?: unknown; model_id?: unknown };
+  };
+
+  const provider = candidate.provider ?? candidate.provenance;
+  if (!provider) {
+    return null;
+  }
+
+  if (typeof provider.provider_id !== 'string' || typeof provider.model_id !== 'string') {
+    return null;
+  }
+
+  if (!provider.provider_id.trim() || !provider.model_id.trim()) {
+    return null;
+  }
+
+  return {
+    provider_id: provider.provider_id,
+    model_id: provider.model_id,
+  };
+}
+
+function readContent(value: unknown): string | null {
+  const candidate = value as {
+    content?: unknown;
+    response?: { text?: unknown };
+    choices?: Array<{ message?: { content?: unknown } }>;
+  };
+
+  const content =
+    candidate?.content ??
+    candidate?.choices?.[0]?.message?.content ??
+    candidate?.response?.text;
+
+  if (typeof content !== 'string' || content.trim().length === 0) {
+    return null;
+  }
+
+  return content;
+}
+
 export class RemoteApiEngine implements JsonCompletionEngine {
-  readonly name = 'remote-api';
   readonly kind = 'remote' as const;
 
   private readonly endpointUrl: string;
   private readonly timeoutMs: number;
+  private resolvedProviderId = DEFAULT_PROVIDER_ID;
+  private resolvedModelName = getAnalysisModel();
 
   constructor(options: RemoteApiEngineOptions) {
     const endpointUrl = options.endpointUrl.trim();
@@ -31,8 +85,15 @@ export class RemoteApiEngine implements JsonCompletionEngine {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
+  get name(): string {
+    return this.resolvedProviderId;
+  }
+
   get modelName(): string {
-    return getAnalysisModel();
+    if (this.resolvedProviderId === DEFAULT_PROVIDER_ID) {
+      return getAnalysisModel();
+    }
+    return this.resolvedModelName;
   }
 
   async generate(prompt: string): Promise<string> {
@@ -40,12 +101,14 @@ export class RemoteApiEngine implements JsonCompletionEngine {
     const timeoutHandle = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      validateRemoteAuth();
-
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getRemoteApiKey()}`,
       };
+
+      if (isDirectEndpoint(this.endpointUrl)) {
+        validateRemoteAuth();
+        headers.Authorization = `Bearer ${getRemoteApiKey()}`;
+      }
 
       const response = await fetch(this.endpointUrl, {
         method: 'POST',
@@ -59,9 +122,12 @@ export class RemoteApiEngine implements JsonCompletionEngine {
       }
 
       const body = await response.json();
-      const content = body?.choices?.[0]?.message?.content ?? body?.response?.text;
+      const provider = readProvider(body);
+      this.resolvedProviderId = provider?.provider_id ?? DEFAULT_PROVIDER_ID;
+      this.resolvedModelName = provider?.model_id ?? getAnalysisModel();
 
-      if (typeof content !== 'string' || content.trim().length === 0) {
+      const content = readContent(body);
+      if (!content) {
         throw new EngineUnavailableError('remote-only');
       }
 

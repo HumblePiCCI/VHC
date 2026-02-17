@@ -61,6 +61,18 @@ describe('data-model schemas', () => {
     ).toThrow();
   });
 
+  it('backfills analysis sentimentScore to 0 when omitted', () => {
+    const parsed = AnalysisSchema.parse({
+      canonicalId: 'abc',
+      summary: 'test',
+      biases: ['x'],
+      counterpoints: ['y'],
+      timestamp: Date.now()
+    });
+
+    expect(parsed.sentimentScore).toBe(0);
+  });
+
   it('rejects analysis with out-of-range sentiment score', () => {
     expect(() =>
       AnalysisSchema.parse({
@@ -110,10 +122,10 @@ describe('data-model schemas', () => {
       justify_bias_claim: ['justification'],
       biases: ['bias'],
       counterpoints: ['counter'],
-      sentimentScore: 0.5,
       timestamp: 123
     });
     expect(valid.urlHash).toBe('abc');
+    expect(valid.sentimentScore).toBe(0);
     expect(valid.engine).toBeUndefined();
     expect(valid.warnings).toBeUndefined();
   });

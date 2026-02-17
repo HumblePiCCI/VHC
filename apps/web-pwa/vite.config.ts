@@ -1,9 +1,10 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
-import type { ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { relayAnalysis } from './src/server/analysisRelay';
 
 const ARTICLE_TEXT_CACHE_TTL_MS = 5 * 60 * 1000;
 const ARTICLE_TEXT_MAX_CHARS = 24_000;
@@ -190,8 +191,48 @@ const ANALYSIS_PIPELINE_ENABLED = readBooleanEnv(process.env.VITE_VH_ANALYSIS_PI
 const EXTRACTION_SERVICE_TARGET =
   process.env.VITE_NEWS_EXTRACTION_SERVICE_URL?.trim() || 'http://127.0.0.1:3001';
 
+async function readJsonRequestBody(req: IncomingMessage): Promise<unknown> {
+  let raw = '';
+  for await (const chunk of req) {
+    raw += typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return {};
+  }
+
+  return JSON.parse(trimmed) as unknown;
+}
+
+function createAnalysisRelayPlugin(): Plugin {
+  return {
+    name: 'vh-analysis-relay',
+    configureServer(server) {
+      server.middlewares.use('/api/analyze', async (req, res) => {
+        if ((req.method ?? 'GET').toUpperCase() !== 'POST') {
+          sendJson(res, 405, { error: 'Method not allowed' });
+          return;
+        }
+
+        try {
+          const body = await readJsonRequestBody(req);
+          const result = await relayAnalysis(body);
+          sendJson(res, result.status, result.payload);
+        } catch (error) {
+          sendJson(res, 400, {
+            error: error instanceof Error ? error.message : 'Invalid JSON body',
+          });
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: ANALYSIS_PIPELINE_ENABLED ? [react()] : [react(), createArticleTextProxyPlugin()],
+  plugins: ANALYSIS_PIPELINE_ENABLED
+    ? [react(), createAnalysisRelayPlugin()]
+    : [react(), createArticleTextProxyPlugin(), createAnalysisRelayPlugin()],
   server: {
     host: true,
     port: 2048,

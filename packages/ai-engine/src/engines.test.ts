@@ -45,6 +45,7 @@ function makeEngine(
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   MockLocalMlEngine.mockClear();
   MockRemoteApiEngine.mockClear();
 });
@@ -117,6 +118,7 @@ describe('createDefaultEngine', () => {
 
 describe('createRemoteEngine', () => {
   it('returns RemoteApiEngine when URL is configured', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.stubEnv('VITE_E2E_MODE', 'false');
     vi.stubEnv('VITE_REMOTE_ENGINE_URL', 'https://remote.example/v1');
 
@@ -127,6 +129,20 @@ describe('createRemoteEngine', () => {
     expect(MockRemoteApiEngine).toHaveBeenCalledWith({
       endpointUrl: 'https://remote.example/v1'
     });
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[vh:ai-engine] Direct remote engine URLs are deprecated. Prefer server relay endpoint /api/analyze.'
+    );
+  });
+
+  it('does not warn for same-origin relay endpoints', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubEnv('VITE_E2E_MODE', 'false');
+    vi.stubEnv('VITE_REMOTE_ENGINE_URL', '/api/analyze');
+
+    createRemoteEngine();
+
+    expect(MockRemoteApiEngine).toHaveBeenCalledWith({ endpointUrl: '/api/analyze' });
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 
   it('does not pass auth material into engine construction', () => {
