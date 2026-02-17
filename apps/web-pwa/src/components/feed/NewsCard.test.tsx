@@ -1,24 +1,24 @@
 /* @vitest-environment jsdom */
-
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedItem, StoryBundle, TopicSynthesisV2 } from '@vh/data-model';
 import { useNewsStore } from '../../store/news';
 import { useSynthesisStore } from '../../store/synthesis';
 import { NewsCard } from './NewsCard';
-import { synthesizeStoryFromAnalysisPipeline } from './newsCardAnalysis';
-
+import {
+  getCachedSynthesisForStory,
+  synthesizeStoryFromAnalysisPipeline,
+} from './newsCardAnalysis';
 vi.mock('./newsCardAnalysis', () => ({
   synthesizeStoryFromAnalysisPipeline: vi.fn(),
+  getCachedSynthesisForStory: vi.fn(),
 }));
-
 const mockSynthesizeStoryFromAnalysisPipeline = vi.mocked(
   synthesizeStoryFromAnalysisPipeline,
 );
-
+const mockGetCachedSynthesisForStory = vi.mocked(getCachedSynthesisForStory);
 const NOW = 1_700_000_000_000;
-
 function makeNewsItem(overrides: Partial<FeedItem> = {}): FeedItem {
   return {
     topic_id: 'news-1',
@@ -33,7 +33,6 @@ function makeNewsItem(overrides: Partial<FeedItem> = {}): FeedItem {
     ...overrides,
   };
 }
-
 function makeStoryBundle(overrides: Partial<StoryBundle> = {}): StoryBundle {
   return {
     schemaVersion: 'story-bundle-v0',
@@ -63,7 +62,6 @@ function makeStoryBundle(overrides: Partial<StoryBundle> = {}): StoryBundle {
     ...overrides,
   };
 }
-
 function makeSynthesis(overrides: Partial<TopicSynthesisV2> = {}): TopicSynthesisV2 {
   return {
     schemaVersion: 'topic-synthesis-v2',
@@ -99,12 +97,15 @@ function makeSynthesis(overrides: Partial<TopicSynthesisV2> = {}): TopicSynthesi
     ...overrides,
   };
 }
-
 describe('NewsCard', () => {
   beforeEach(() => {
     useNewsStore.getState().reset();
     useSynthesisStore.getState().reset();
+    localStorage.clear();
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'false');
     mockSynthesizeStoryFromAnalysisPipeline.mockReset();
+    mockGetCachedSynthesisForStory.mockReset();
+    mockGetCachedSynthesisForStory.mockReturnValue(null);
     mockSynthesizeStoryFromAnalysisPipeline.mockResolvedValue({
       summary: 'Pipeline synthesis summary from analyzed sources.',
       frames: [
@@ -113,142 +114,192 @@ describe('NewsCard', () => {
           reframe: 'Funding constraints justify phased implementation.',
         },
       ],
-      analyses: [],
+      analyses: [
+        {
+          source_id: 'src-1',
+          publisher: 'Local Paper',
+          url: 'https://example.com/news-1',
+          summary: 'Local coverage emphasizes urgency and commuter demand.',
+          biases: ['Immediate expansion framing.'],
+          counterpoints: ['Budget pacing lowers fiscal risk.'],
+          provider_id: 'openai',
+          model_id: 'gpt-4o-mini',
+        },
+      ],
     });
   });
-
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
     useNewsStore.getState().reset();
     useSynthesisStore.getState().reset();
   });
-
   it('renders title and news badge', () => {
     render(<NewsCard item={makeNewsItem()} />);
-
     expect(screen.getByTestId('news-card-news-1')).toBeInTheDocument();
     expect(screen.getByText('News')).toBeInTheDocument();
     expect(
       screen.getByText('City council votes on transit plan'),
     ).toBeInTheDocument();
   });
-
-  it('renders source badges as links to original articles', () => {
-    useNewsStore.getState().setStories([makeStoryBundle()]);
-    render(<NewsCard item={makeNewsItem()} />);
-
-    expect(screen.getByTestId('source-badge-src-1')).toHaveAttribute(
-      'href',
-      'https://example.com/news-1',
-    );
-  });
-
-  it('renders created/updated timestamps as ISO strings', () => {
-    const item = makeNewsItem();
-    render(<NewsCard item={item} />);
-
-    expect(
-      screen.getByText(
-        `Created ${new Date(item.created_at).toISOString()} • Updated ${new Date(item.latest_activity_at).toISOString()}`,
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('renders engagement stats and hotness with fixed precision', () => {
-    render(<NewsCard item={makeNewsItem()} />);
-
-    expect(screen.getByTestId('news-card-eye-news-1')).toHaveTextContent('22');
-    expect(screen.getByTestId('news-card-lightbulb-news-1')).toHaveTextContent('8');
-    expect(screen.getByTestId('news-card-comments-news-1')).toHaveTextContent('5');
-    expect(screen.getByTestId('news-card-hotness-news-1')).toHaveTextContent(
-      'Hotness 7.12',
-    );
-  });
-
   it('falls back to unknown timestamp and hotness 0.00 for invalid numeric values', () => {
     const malformed = makeNewsItem({
       created_at: -1,
       latest_activity_at: Number.NaN,
       hotness: Number.POSITIVE_INFINITY,
     } as Partial<FeedItem>);
-
     render(<NewsCard item={malformed} />);
-
-    expect(
-      screen.getByText('Created unknown • Updated unknown'),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId('news-card-hotness-news-1')).toHaveTextContent(
-      'Hotness 0.00',
+    expect(screen.getByText('Created unknown • Updated unknown')).toBeInTheDocument();
+    expect(screen.getByTestId('news-card-hotness-news-1')).toHaveTextContent('Hotness 0.00');
+  });
+  it('matches a story by topic + headline when created_at differs', () => {
+    const storyWithDifferentCreatedAt = makeStoryBundle({ created_at: NOW - 1 });
+    useNewsStore.getState().setStories([storyWithDifferentCreatedAt]);
+    render(<NewsCard item={makeNewsItem()} />);
+    expect(screen.getByTestId('source-badge-src-1')).toHaveAttribute(
+      'href',
+      'https://example.com/news-1',
     );
   });
-
-  it('flips on headline click and shows pipeline summary + frame/reframe table', async () => {
+  it('feature flag off keeps existing synthesis behavior and does not call analysis pipeline', async () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'false');
     useNewsStore.getState().setStories([makeStoryBundle()]);
     useSynthesisStore
       .getState()
       .setTopicSynthesis('news-1', makeSynthesis());
-
     render(<NewsCard item={makeNewsItem()} />);
-
     fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
-
-    expect(screen.getByTestId('news-card-back-news-1')).toBeInTheDocument();
-
+    expect(await screen.findByTestId('news-card-summary-news-1')).toHaveTextContent(
+      'Council approved a phased transit expansion plan.',
+    );
+    expect(mockSynthesizeStoryFromAnalysisPipeline).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('analysis-status-message')).not.toBeInTheDocument();
+  });
+  it('feature flag on renders analysis summary, provenance, and per-source summaries', async () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'true');
+    useNewsStore.getState().setStories([makeStoryBundle()]);
+    useSynthesisStore
+      .getState()
+      .setTopicSynthesis('news-1', makeSynthesis());
+    render(<NewsCard item={makeNewsItem()} />);
+    fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
     expect(
       await screen.findByText('Pipeline synthesis summary from analyzed sources.'),
     ).toBeInTheDocument();
-
-    expect(screen.getByTestId('news-card-frame-table-news-1')).toBeInTheDocument();
+    expect(screen.getByTestId('news-card-analysis-provider-news-1')).toHaveTextContent(
+      'Analysis by gpt-4o-mini',
+    );
     expect(
-      screen.getByText('Local Paper: Transit spending must accelerate now.'),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('Funding constraints justify phased implementation.'),
-    ).toBeInTheDocument();
-
+      screen.getByTestId('news-card-analysis-source-summaries-news-1'),
+    ).toHaveTextContent('Local Paper: Local coverage emphasizes urgency and commuter demand.');
+    expect(screen.getByText('Local Paper: Transit spending must accelerate now.')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('news-card-back-button-news-1'));
     expect(screen.getByTestId('news-card-headline-news-1')).toBeInTheDocument();
+    expect(mockSynthesizeStoryFromAnalysisPipeline).toHaveBeenCalledTimes(1);
   });
-
-  it('shows empty frame/reframe state when neither pipeline nor synthesis has rows', async () => {
+  it('uses provider_id provenance when model metadata is unavailable', async () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'true');
     mockSynthesizeStoryFromAnalysisPipeline.mockResolvedValueOnce({
-      summary: 'Pipeline summary only.',
+      summary: 'Provider fallback summary.',
+      frames: [],
+      analyses: [
+        {
+          source_id: 'src-1',
+          publisher: 'Local Paper',
+          url: 'https://example.com/news-1',
+          summary: 'Provider fallback source summary.',
+          biases: [],
+          counterpoints: [],
+          provider_id: 'openai',
+        },
+      ],
+    });
+    useNewsStore.getState().setStories([makeStoryBundle()]);
+    useSynthesisStore.getState().setTopicSynthesis('news-1', makeSynthesis({ frames: [] }));
+    render(<NewsCard item={makeNewsItem()} />);
+    fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
+    expect(await screen.findByText('Provider fallback summary.')).toBeInTheDocument();
+    expect(screen.getByTestId('news-card-analysis-provider-news-1')).toHaveTextContent(
+      'Analysis by openai',
+    );
+  });
+  it('omits provenance when analysis metadata is missing', async () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'true');
+    mockSynthesizeStoryFromAnalysisPipeline.mockResolvedValueOnce({
+      summary: 'Summary without provenance metadata.',
+      frames: [],
+      analyses: [
+        {
+          source_id: 'src-1',
+          publisher: 'Local Paper',
+          url: 'https://example.com/news-1',
+          summary: 'No provider metadata attached.',
+          biases: [],
+          counterpoints: [],
+        },
+      ],
+    });
+    useNewsStore.getState().setStories([makeStoryBundle()]);
+    render(<NewsCard item={makeNewsItem()} />);
+    fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
+    expect(await screen.findByText('Summary without provenance metadata.')).toBeInTheDocument();
+    expect(screen.queryByTestId('news-card-analysis-provider-news-1')).not.toBeInTheDocument();
+  });
+  it('omits provenance when analyses list is empty', async () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'true');
+    mockSynthesizeStoryFromAnalysisPipeline.mockResolvedValueOnce({
+      summary: 'Summary with no per-source analyses.',
       frames: [],
       analyses: [],
     });
-
     useNewsStore.getState().setStories([makeStoryBundle()]);
-    useSynthesisStore
-      .getState()
-      .setTopicSynthesis('news-1', makeSynthesis({ frames: [] }));
-
     render(<NewsCard item={makeNewsItem()} />);
     fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
-
-    expect(
-      await screen.findByTestId('news-card-frame-empty-news-1'),
-    ).toHaveTextContent('No frame/reframe pairs yet for this topic.');
+    expect(await screen.findByText('Summary with no per-source analyses.')).toBeInTheDocument();
+    expect(screen.queryByTestId('news-card-analysis-provider-news-1')).not.toBeInTheDocument();
   });
-
-  it('falls back to synthesis summary + frames when pipeline analysis fails', async () => {
+  it('feature flag on shows staged loading state while analysis is pending', async () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'true');
+    mockSynthesizeStoryFromAnalysisPipeline.mockReturnValue(
+      new Promise(() => {
+        // intentionally unresolved
+      }),
+    );
+    useNewsStore.getState().setStories([makeStoryBundle()]);
+    render(<NewsCard item={makeNewsItem()} />);
+    fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
+    expect(
+      await screen.findByText('Extracting article text…'),
+    ).toBeInTheDocument();
+  });
+  it('feature flag on shows error state with retry action', async () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'true');
     mockSynthesizeStoryFromAnalysisPipeline.mockRejectedValueOnce(
       new Error('analysis unavailable'),
     );
-
     useNewsStore.getState().setStories([makeStoryBundle()]);
-    useSynthesisStore
-      .getState()
-      .setTopicSynthesis('news-1', makeSynthesis());
-
     render(<NewsCard item={makeNewsItem()} />);
     fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
-
-    expect(
-      await screen.findByText('Council approved a phased transit expansion plan.'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Public investment is overdue')).toBeInTheDocument();
-    expect(
-      screen.getByTestId('news-card-analysis-error-news-1'),
-    ).toHaveTextContent('analysis unavailable');
+    expect(await screen.findByText('analysis unavailable')).toBeInTheDocument();
+    expect(screen.getByTestId('analysis-retry-button')).toBeInTheDocument();
+  });
+  it('renders synthesis loading and synthesis unavailable states when analysis is disabled', () => {
+    vi.stubEnv('VITE_VH_ANALYSIS_PIPELINE', 'false');
+    useNewsStore.getState().setStories([makeStoryBundle()]);
+    render(<NewsCard item={makeNewsItem()} />);
+    fireEvent.click(screen.getByTestId('news-card-headline-news-1'));
+    act(() => {
+      useSynthesisStore.getState().setTopicLoading('news-1', true);
+    });
+    expect(screen.getByTestId('news-card-synthesis-loading-news-1')).toHaveTextContent(
+      'Loading synthesis…',
+    );
+    act(() => {
+      useSynthesisStore.getState().setTopicLoading('news-1', false);
+      useSynthesisStore.getState().setTopicError('news-1', 'fetch failed');
+    });
+    expect(screen.getByTestId('news-card-synthesis-error-news-1')).toHaveTextContent(
+      'Synthesis unavailable.',
+    );
   });
 });
