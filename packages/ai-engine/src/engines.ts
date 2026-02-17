@@ -112,6 +112,10 @@ export function createRemoteEngine(): JsonCompletionEngine | undefined {
     return undefined;
   }
 
+  if (/^https?:\/\//i.test(endpointUrl)) {
+    console.warn('[vh:ai-engine] Direct remote engine URLs are deprecated. Prefer server relay endpoint /api/analyze.');
+  }
+
   return new RemoteApiEngine({
     endpointUrl
   });

@@ -95,6 +95,82 @@ describe('RemoteApiEngine', () => {
     expect(parsedBody.model).toBe('gpt-5.2-extended');
   });
 
+  it('does not require API key for same-origin relay endpoint', async () => {
+    vi.unstubAllEnvs();
+
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(okJsonResponse({ content: '{"ok":true}' }));
+
+    const engine = new RemoteApiEngine({ endpointUrl: '/api/analyze' });
+    await expect(engine.generate('Prompt body')).resolves.toBe('{"ok":true}');
+
+    const [, calledInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(calledInit.headers).toEqual({
+      'Content-Type': 'application/json',
+    });
+  });
+
+  it('adopts provider provenance from relay responses', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(
+      okJsonResponse({
+        content: '{"ok":true}',
+        provider: {
+          provider_id: 'relay-provider',
+          model_id: 'gpt-5.2-relay',
+        },
+      }),
+    );
+
+    const engine = new RemoteApiEngine({ endpointUrl: '/api/analyze' });
+    await engine.generate('Prompt body');
+
+    expect(engine.name).toBe('relay-provider');
+    expect(engine.modelName).toBe('gpt-5.2-relay');
+  });
+
+  it('ignores malformed provider payloads and keeps defaults', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(
+      okJsonResponse({
+        content: '{"ok":true}',
+        provider: {
+          provider_id: 123,
+          model_id: 'm',
+        },
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      okJsonResponse({
+        content: '{"ok":true}',
+        provider: {
+          provider_id: '   ',
+          model_id: '   ',
+        },
+      }),
+    );
+
+    const engine = new RemoteApiEngine({ endpointUrl: '/api/analyze' });
+    await engine.generate('Prompt body');
+    expect(engine.name).toBe('remote-api');
+    expect(engine.modelName).toBe('gpt-5.2');
+
+    await engine.generate('Prompt body 2');
+    expect(engine.name).toBe('remote-api');
+    expect(engine.modelName).toBe('gpt-5.2');
+  });
+
+  it('treats non-object JSON payloads as unavailable', async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValue(okJsonResponse('plain-text-payload'));
+
+    const engine = new RemoteApiEngine({ endpointUrl: '/api/analyze' });
+    await expect(engine.generate('Prompt body')).rejects.toMatchObject({
+      name: 'EngineUnavailableError',
+      policy: 'remote-only',
+    });
+  });
+
   it('falls back to response.text payload when choices content is missing', async () => {
     const fetchMock = vi.mocked(globalThis.fetch);
     fetchMock.mockResolvedValue(okJsonResponse({ response: { text: 'fallback-result' } }));
