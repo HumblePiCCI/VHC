@@ -10,6 +10,11 @@ export const FeedSourceSchema = z
     name: z.string().min(1),
     rssUrl: z.string().url(),
     trustTier: z.enum(['primary', 'secondary']).optional(),
+    // perspectiveTag is governance-managed metadata, not a political judgment.
+    // Validated against an external lookup; not constrained to a fixed enum.
+    perspectiveTag: z.string().min(1).optional(),
+    iconKey: z.string().min(1).optional(),
+    displayName: z.string().min(1).optional(),
     enabled: z.boolean(),
   })
   .strict();
@@ -92,6 +97,32 @@ export const StoryBundleSchema = z
   .strict();
 
 export type StoryBundle = z.infer<typeof StoryBundleSchema>;
+
+// --- Bundle Verification (separate entity, not embedded in StoryBundle) ---
+// CE decision: StoryBundle uses .strict(), embedding verification would break
+// the frozen v0 schema. Verification is a downstream enrichment keyed by story_id.
+
+export const BUNDLE_VERIFICATION_THRESHOLD = 0.6;
+
+export const VerificationMethodSchema = z.enum([
+  'entity_time_cluster',
+  'semantic_similarity',
+  'manual',
+]);
+
+export const BundleVerificationRecordSchema = z
+  .object({
+    story_id: z.string().min(1),
+    confidence: z.number().min(0).max(1),
+    evidence: z.array(z.string().min(1)).min(1),
+    method: VerificationMethodSchema,
+    verified_at: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export type BundleVerificationRecord = z.infer<
+  typeof BundleVerificationRecordSchema
+>;
 
 export const TopicMappingSchema = z
   .object({

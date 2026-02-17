@@ -129,6 +129,64 @@ describe('newsCluster', () => {
     expect(forward.provenance_hash).toBe(reverse.provenance_hash);
   });
 
+  it('separates same-entity items with conflicting event types (anti-collision)', () => {
+    const items: NormalizedItem[] = [
+      makeItem({
+        sourceId: 'src-a',
+        publisher: 'Publisher A',
+        canonicalUrl: 'https://example.com/trade',
+        url_hash: 'hash-trade',
+        title: 'Biden signs major trade deal with European Union',
+        publishedAt: 1707134400000,
+        entity_keys: ['biden', 'trade', 'european-union'],
+      }),
+      makeItem({
+        sourceId: 'src-b',
+        publisher: 'Publisher B',
+        canonicalUrl: 'https://example.com/health',
+        url_hash: 'hash-health',
+        title: 'Biden hospitalized after experiencing dizziness at event',
+        publishedAt: 1707134500000,
+        entity_keys: ['biden', 'health', 'white-house'],
+      }),
+    ];
+
+    const bundles = clusterItems(items, 'topic-biden');
+    // Must produce 2 separate bundles — different events despite shared entity
+    expect(bundles).toHaveLength(2);
+    const headlines = bundles.map((b) => b.headline);
+    expect(headlines).toContain('Biden signs major trade deal with European Union');
+    expect(headlines).toContain('Biden hospitalized after experiencing dizziness at event');
+  });
+
+  it('merges same-event items with varied wording', () => {
+    const items: NormalizedItem[] = [
+      makeItem({
+        sourceId: 'src-a',
+        publisher: 'Publisher A',
+        canonicalUrl: 'https://example.com/eq1',
+        url_hash: 'hash-eq1',
+        title: 'Major earthquake strikes Tokyo region',
+        publishedAt: 1707134400000,
+        entity_keys: ['earthquake', 'tokyo', 'japan'],
+      }),
+      makeItem({
+        sourceId: 'src-b',
+        publisher: 'Publisher B',
+        canonicalUrl: 'https://example.com/eq2',
+        url_hash: 'hash-eq2',
+        title: 'Earthquake rocks Tokyo area, tsunami warning issued',
+        publishedAt: 1707134500000,
+        entity_keys: ['earthquake', 'tokyo', 'japan'],
+      }),
+    ];
+
+    const bundles = clusterItems(items, 'topic-earthquake');
+    // Same event, different outlets → should merge into 1 bundle
+    expect(bundles).toHaveLength(1);
+    expect(bundles[0]!.sources).toHaveLength(2);
+  });
+
   it('covers cluster internals and error branches', () => {
     expect(clusterItems([], 'topic-empty')).toEqual([]);
     expect(() => clusterItems([], '   ')).toThrow('topicId must be non-empty');
