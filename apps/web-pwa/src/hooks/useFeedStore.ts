@@ -20,14 +20,22 @@ export interface FeedItem {
   perspectives: Perspective[];
 }
 
+export const FEED_PAGE_SIZE = 15;
+const LOAD_MORE_DELAY_MS = 80;
+
 interface FeedState {
   items: FeedItem[];
+  /** Visible paged discovery feed for FeedShell. */
+  discoveryFeed: DiscoveryFeedItem[];
+  /** Full discovery feed before pagination windowing. */
+  allDiscoveryFeed: DiscoveryFeedItem[];
   page: number;
   hasMore: boolean;
   loading: boolean;
   hydrate: () => void;
   loadMore: () => void;
   setItems: (items: FeedItem[]) => void;
+  setDiscoveryFeed: (items: ReadonlyArray<DiscoveryFeedItem>) => void;
 }
 
 const DISCOVERY_SUMMARY_BY_KIND: Record<FeedKind, string> = {
@@ -35,7 +43,7 @@ const DISCOVERY_SUMMARY_BY_KIND: Record<FeedKind, string> = {
   USER_TOPIC: 'Community topic update.',
   SOCIAL_NOTIFICATION: 'Social activity update.',
   ARTICLE: 'Published community article.',
-  ACTION_RECEIPT: 'Civic action receipt.'
+  ACTION_RECEIPT: 'Civic action receipt.',
 };
 
 const DISCOVERY_SOURCE_BY_KIND: Record<FeedKind, string> = {
@@ -43,7 +51,7 @@ const DISCOVERY_SOURCE_BY_KIND: Record<FeedKind, string> = {
   USER_TOPIC: 'Discovery · Topics',
   SOCIAL_NOTIFICATION: 'Discovery · Social',
   ARTICLE: 'Discovery · Articles',
-  ACTION_RECEIPT: 'Bridge · Actions'
+  ACTION_RECEIPT: 'Bridge · Actions',
 };
 
 function normalizeTimestamp(value: number): number {
@@ -62,7 +70,7 @@ function toLegacyFeedItem(item: DiscoveryFeedItem): FeedItem {
     timestamp: normalizeTimestamp(item.latest_activity_at),
     engagementScore: Math.max(0, item.lightbulb),
     readCount: Math.max(0, item.eye),
-    perspectives: []
+    perspectives: [],
   };
 }
 
@@ -88,58 +96,91 @@ function toDiscoveryFeedItem(item: FeedItem): DiscoveryFeedItem {
     hotness: Math.max(0, item.engagementScore),
     eye: Math.max(0, Math.floor(item.readCount)),
     lightbulb: Math.max(0, Math.floor(item.engagementScore)),
-    comments: 0
+    comments: 0,
   };
 }
 
-function selectDiscoveryFeedItems(): FeedItem[] {
+function selectDiscoveryFeedItems(): DiscoveryFeedItem[] {
   const discovery = useDiscoveryStore.getState();
-  const composed = composeFeed(
+  return composeFeed(
     discovery.items,
     discovery.filter,
     discovery.sortMode,
     discovery.rankingConfig,
-    Date.now()
+    Date.now(),
   );
-  return composed.map(toLegacyFeedItem);
+}
+
+function buildPagedState(
+  fullFeed: ReadonlyArray<DiscoveryFeedItem>,
+  page: number,
+  loading: boolean,
+): Pick<
+  FeedState,
+  'allDiscoveryFeed' | 'discoveryFeed' | 'items' | 'page' | 'hasMore' | 'loading'
+> {
+  const effectivePage = fullFeed.length === 0 ? 0 : Math.max(1, page);
+  const visibleFeed = fullFeed.slice(0, effectivePage * FEED_PAGE_SIZE);
+
+  return {
+    allDiscoveryFeed: [...fullFeed],
+    discoveryFeed: visibleFeed,
+    items: visibleFeed.map(toLegacyFeedItem),
+    page: effectivePage,
+    hasMore: fullFeed.length > visibleFeed.length,
+    loading,
+  };
 }
 
 /**
- * Feed store backed by the discovery store.
+ * Feed store backed by discovery feed composition + pagination windowing.
  *
  * V2 discovery feed is now the permanent path. Legacy seed-data
  * and localStorage caching removed in Wave 3 flag retirement.
  */
-export const useFeedStore = create<FeedState>((set) => ({
+export const useFeedStore = create<FeedState>((set, get) => ({
   items: [],
+  discoveryFeed: [],
+  allDiscoveryFeed: [],
   page: 0,
   hasMore: false,
   loading: false,
+
   hydrate() {
     const discoveryState = useDiscoveryStore.getState();
+    const composed = selectDiscoveryFeedItems();
     set({
-      items: selectDiscoveryFeedItems(),
-      page: 1,
-      hasMore: false,
-      loading: discoveryState.loading
+      ...buildPagedState(composed, 1, discoveryState.loading),
     });
   },
+
   setItems(items) {
     useDiscoveryStore.getState().setItems(items.map(toDiscoveryFeedItem));
     const discoveryState = useDiscoveryStore.getState();
+    const composed = selectDiscoveryFeedItems();
     set({
-      items: selectDiscoveryFeedItems(),
-      page: 1,
-      hasMore: false,
-      loading: discoveryState.loading
+      ...buildPagedState(composed, 1, discoveryState.loading),
     });
   },
+
+  setDiscoveryFeed(items) {
+    set((state) => ({
+      ...state,
+      ...buildPagedState(items, 1, false),
+    }));
+  },
+
   loadMore() {
-    const discoveryState = useDiscoveryStore.getState();
-    set({
-      items: selectDiscoveryFeedItems(),
-      hasMore: false,
-      loading: discoveryState.loading
-    });
-  }
+    const state = get();
+    if (state.loading || !state.hasMore) return;
+
+    set({ loading: true });
+
+    setTimeout(() => {
+      set((current) => ({
+        ...current,
+        ...buildPagedState(current.allDiscoveryFeed, current.page + 1, false),
+      }));
+    }, LOAD_MORE_DELAY_MS);
+  },
 }));

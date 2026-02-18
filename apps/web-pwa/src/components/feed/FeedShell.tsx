@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useStore } from 'zustand';
 import type { FeedItem } from '@vh/data-model';
 import type { UseDiscoveryFeedResult } from '../../hooks/useDiscoveryFeed';
+import { useFeedStore } from '../../hooks/useFeedStore';
+import { useIntersectionLoader } from '../../hooks/useIntersectionLoader';
 import { FilterChips } from './FilterChips';
 import { SortControls } from './SortControls';
 import { NewsCardWithRemoval } from './NewsCardWithRemoval';
@@ -28,6 +31,16 @@ export const FeedShell: React.FC<FeedShellProps> = ({ feedResult }) => {
   const { feed, filter, sortMode, loading, error, setFilter, setSortMode } =
     feedResult;
 
+  const pagedFeed = useStore(useFeedStore, (state) => state.discoveryFeed);
+  const hasMore = useStore(useFeedStore, (state) => state.hasMore);
+  const loadMore = useStore(useFeedStore, (state) => state.loadMore);
+  const loadingMore = useStore(useFeedStore, (state) => state.loading);
+  const setDiscoveryFeed = useStore(useFeedStore, (state) => state.setDiscoveryFeed);
+
+  useLayoutEffect(() => {
+    setDiscoveryFeed(feed);
+  }, [feed, setDiscoveryFeed]);
+
   return (
     <div className="flex flex-col gap-4" data-testid="feed-shell">
       {/* Controls row */}
@@ -37,7 +50,14 @@ export const FeedShell: React.FC<FeedShellProps> = ({ feedResult }) => {
       </div>
 
       {/* Feed content area */}
-      <FeedContent feed={feed} loading={loading} error={error} />
+      <FeedContent
+        feed={pagedFeed}
+        loading={loading}
+        error={error}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        loadMore={loadMore}
+      />
     </div>
   );
 };
@@ -48,9 +68,25 @@ interface FeedContentProps {
   readonly feed: ReadonlyArray<FeedItem>;
   readonly loading: boolean;
   readonly error: string | null;
+  readonly hasMore: boolean;
+  readonly loadingMore: boolean;
+  readonly loadMore: () => void;
 }
 
-const FeedContent: React.FC<FeedContentProps> = ({ feed, loading, error }) => {
+const FeedContent: React.FC<FeedContentProps> = ({
+  feed,
+  loading,
+  error,
+  hasMore,
+  loadingMore,
+  loadMore,
+}) => {
+  const sentinelRef = useIntersectionLoader<HTMLLIElement>({
+    enabled: hasMore,
+    loading: loadingMore,
+    onLoadMore: loadMore,
+  });
+
   if (error) {
     return (
       <div
@@ -86,14 +122,37 @@ const FeedContent: React.FC<FeedContentProps> = ({ feed, loading, error }) => {
   }
 
   return (
-    <ul data-testid="feed-list" className="space-y-3">
-      {feed.map((item, index) => (
-        <FeedItemRow
-          key={[item.kind, item.topic_id, item.title, item.created_at, index].join('|')}
-          item={item}
-        />
-      ))}
-    </ul>
+    <div className="space-y-2">
+      <ul data-testid="feed-list" className="space-y-3">
+        {feed.map((item, index) => (
+          <FeedItemRow
+            key={[item.kind, item.topic_id, item.title, item.created_at, index].join('|')}
+            item={item}
+          />
+        ))}
+
+        {hasMore && (
+          <li
+            ref={sentinelRef}
+            data-testid="feed-load-sentinel"
+            className="py-1 text-center text-xs text-slate-500"
+            aria-hidden="true"
+          >
+            Scroll for more…
+          </li>
+        )}
+      </ul>
+
+      {loadingMore && (
+        <p
+          data-testid="feed-loading-more"
+          className="text-center text-xs text-slate-500"
+          aria-live="polite"
+        >
+          Loading more…
+        </p>
+      )}
+    </div>
   );
 };
 
