@@ -45,6 +45,18 @@ Close the gap between currently merged FPD L1-L4 behavior and production-safe en
 
 Removal criteria: All transitional code is removed in Phase 5 (WS7) after production proof provider is validated and legacy paths are sunset.
 
+### P2.2 — Season 0 "Real" Provider Semantics
+
+"Real" in Season 0 means:
+- **Attestation-bound**: proof is derived from actual identity session data (real nullifier from verifier)
+- **Non-mock**: does not use `mock-district-hash` or `mock-root` values
+- **Non-transitional**: does not use `t9n-*` prefixed values
+- **Externalized district**: `district_hash` comes from configured source (`VITE_DEFAULT_DISTRICT_HASH`), not self-derived from nullifier
+- **Deterministic**: same inputs produce the same proof
+- **Not cryptographically verifiable**: Season 0 `merkle_root` is not ZK-bound to a residency set (that requires Phase 4-5 DBA/ZK enrollment per spec §4.3)
+
+This is not the final proof provider. It satisfies Hard Gate 1 within Season 0 boundary fence (spec §9). The upgrade path to real ZK-bound proofs is documented in spec §4.4.
+
 ### P3 — Identity-root migration safety
 - S2 point-identity root transition must preserve legacy analysisKey-based derivation during S4 dual-write window.
 - No hard cut that orphans existing user vote state.
