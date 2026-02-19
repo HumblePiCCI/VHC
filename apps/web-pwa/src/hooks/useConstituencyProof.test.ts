@@ -6,6 +6,8 @@ import type { ConstituencyProof } from '@vh/types';
 
 const useIdentityMock = vi.hoisted(() => vi.fn());
 const useRegionMock = vi.hoisted(() => vi.fn());
+const isProofVerificationEnabledMock = vi.hoisted(() => vi.fn());
+const getConfiguredDistrictMock = vi.hoisted(() => vi.fn());
 
 vi.mock('./useIdentity', () => ({
   useIdentity: () => useIdentityMock(),
@@ -15,12 +17,25 @@ vi.mock('./useRegion', () => ({
   useRegion: () => useRegionMock(),
 }));
 
+vi.mock('../store/bridge/constituencyProof', () => ({
+  isProofVerificationEnabled: () => isProofVerificationEnabledMock(),
+}));
+
+vi.mock('../store/bridge/districtConfig', () => ({
+  getConfiguredDistrict: () => getConfiguredDistrictMock(),
+}));
+
 import { useConstituencyProof } from './useConstituencyProof';
 
 describe('useConstituencyProof', () => {
   beforeEach(() => {
     useIdentityMock.mockReset();
     useRegionMock.mockReset();
+    isProofVerificationEnabledMock.mockReset();
+    getConfiguredDistrictMock.mockReset();
+
+    isProofVerificationEnabledMock.mockReturnValue(false);
+    getConfiguredDistrictMock.mockReturnValue('district-expected');
   });
 
   it('returns explicit error when identity nullifier is missing', () => {
@@ -97,6 +112,84 @@ describe('useConstituencyProof', () => {
 
     expect(result.current.proof).toBeNull();
     expect(result.current.error).toMatch(/mock constituency proof/i);
+  });
+
+  it('rejects transitional proof when real mode is enabled', () => {
+    const proof: ConstituencyProof = {
+      district_hash: 't9n-district-1',
+      nullifier: 'null-1',
+      merkle_root: 't9n-root-1',
+    };
+
+    isProofVerificationEnabledMock.mockReturnValue(true);
+    useIdentityMock.mockReturnValue({
+      identity: { session: { nullifier: 'null-1' } },
+    });
+    useRegionMock.mockReturnValue({ proof });
+
+    const { result } = renderHook(() => useConstituencyProof());
+
+    expect(result.current.proof).toBeNull();
+    expect(result.current.error).toMatch(/transitional proof rejected/i);
+  });
+
+  it('validates real mode against configured district (not proof district self-reference)', () => {
+    const proof: ConstituencyProof = {
+      district_hash: 'district-other',
+      nullifier: 'null-1',
+      merkle_root: 's0-root-1',
+    };
+
+    isProofVerificationEnabledMock.mockReturnValue(true);
+    getConfiguredDistrictMock.mockReturnValue('district-expected');
+    useIdentityMock.mockReturnValue({
+      identity: { session: { nullifier: 'null-1' } },
+    });
+    useRegionMock.mockReturnValue({ proof });
+
+    const { result } = renderHook(() => useConstituencyProof());
+
+    expect(result.current.proof).toBeNull();
+    expect(result.current.error).toMatch(/district_mismatch/i);
+  });
+
+  it('accepts real proof when real mode is enabled and configured district matches', () => {
+    const proof: ConstituencyProof = {
+      district_hash: 'district-expected',
+      nullifier: 'null-1',
+      merkle_root: 's0-root-1',
+    };
+
+    isProofVerificationEnabledMock.mockReturnValue(true);
+    getConfiguredDistrictMock.mockReturnValue('district-expected');
+    useIdentityMock.mockReturnValue({
+      identity: { session: { nullifier: 'null-1' } },
+    });
+    useRegionMock.mockReturnValue({ proof });
+
+    const { result } = renderHook(() => useConstituencyProof());
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.proof).toEqual(proof);
+  });
+
+  it('accepts transitional proof when real mode is disabled', () => {
+    const proof: ConstituencyProof = {
+      district_hash: 't9n-district-1',
+      nullifier: 'null-1',
+      merkle_root: 't9n-root-1',
+    };
+
+    isProofVerificationEnabledMock.mockReturnValue(false);
+    useIdentityMock.mockReturnValue({
+      identity: { session: { nullifier: 'null-1' } },
+    });
+    useRegionMock.mockReturnValue({ proof });
+
+    const { result } = renderHook(() => useConstituencyProof());
+
+    expect(result.current.error).toBeNull();
+    expect(result.current.proof).toEqual(proof);
   });
 
   it('returns verified proof when identity and region proof align', () => {

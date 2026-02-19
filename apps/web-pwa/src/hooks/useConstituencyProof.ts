@@ -3,6 +3,8 @@ import type { ConstituencyProof } from '@vh/types';
 import { verifyConstituencyProof } from '@vh/types';
 import { useIdentity } from './useIdentity';
 import { useRegion } from './useRegion';
+import { isProofVerificationEnabled } from '../store/bridge/constituencyProof';
+import { getConfiguredDistrict } from '../store/bridge/districtConfig';
 
 export interface ConstituencyProofState {
   readonly proof: ConstituencyProof | null;
@@ -13,6 +15,10 @@ function isMockProof(proof: ConstituencyProof): boolean {
   return proof.district_hash === 'mock-district-hash' || proof.merkle_root === 'mock-root';
 }
 
+function isTransitionalProof(proof: ConstituencyProof): boolean {
+  return proof.district_hash.startsWith('t9n-') || proof.merkle_root.startsWith('t9n-');
+}
+
 /**
  * L1 guardrail: ensure feed voting has a valid constituency proof derived from identity.
  * If identity/proof is missing or malformed, callers get a clear error and can hard-stop writes.
@@ -20,6 +26,7 @@ function isMockProof(proof: ConstituencyProof): boolean {
 export function useConstituencyProof(): ConstituencyProofState {
   const { identity } = useIdentity();
   const { proof } = useRegion();
+  const realMode = isProofVerificationEnabled();
 
   return useMemo(() => {
     const nullifier = identity?.session?.nullifier;
@@ -44,7 +51,15 @@ export function useConstituencyProof(): ConstituencyProofState {
       };
     }
 
-    const verification = verifyConstituencyProof(proof, nullifier, proof.district_hash);
+    if (realMode && isTransitionalProof(proof)) {
+      return {
+        proof: null,
+        error: 'Transitional proof rejected in production mode; real proof provider required',
+      };
+    }
+
+    const expectedDistrict = realMode ? getConfiguredDistrict() : proof.district_hash;
+    const verification = verifyConstituencyProof(proof, nullifier, expectedDistrict);
     if (!verification.valid) {
       return {
         proof: null,
@@ -53,5 +68,5 @@ export function useConstituencyProof(): ConstituencyProofState {
     }
 
     return { proof, error: null };
-  }, [identity?.session?.nullifier, proof]);
+  }, [identity?.session?.nullifier, proof, realMode]);
 }
