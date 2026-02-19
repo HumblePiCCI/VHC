@@ -109,21 +109,21 @@ describe('useSentimentState', () => {
     expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(0);
   });
 
-  it('recomputes lightbulb based on active cell count with decay', () => {
+  it('recomputes lightbulb based on active cell count with legacy falloff', () => {
     const proof = proofFor();
     // First cell -> weight 1
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
     expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1, 5);
-    // Second cell -> decay step to 1.3
+    // Second cell -> 1 + (1 - 0.75^(2-1)) = 1.25
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p2', analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
-    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.3, 5);
-    // Third cell -> next decay step ~1.51
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.25, 5);
+    // Third cell -> 1 + (1 - 0.75^(3-1)) = 1.4375
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p3', analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
-    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeGreaterThan(1.49);
-    // Remove one cell -> back to previous step (~1.3)
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.4375, 5);
+    // Remove one cell -> back to previous step (1.25)
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p2', analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
     expect(useSentimentState.getState().getAgreement(TOPIC, 'p2')).toBe(0);
-    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.3, 2);
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.25, 5);
   });
 
   it('calls setActiveNullifier with proof nullifier before budget check', () => {
@@ -361,5 +361,37 @@ describe('useSentimentState', () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it('emits synthesis_id + epoch when explicit context is provided', () => {
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('explicit'),
+    });
+
+    const signal = useSentimentState.getState().signals.at(-1);
+    expect(signal?.synthesis_id).toBe('synth-9');
+    expect(signal?.epoch).toBe(4);
+    expect(useSentimentState.getState().getAgreement(TOPIC, POINT, 'synth-9', 4)).toBe(1);
+  });
+
+  it('falls back to analysis_id compatibility context when synthesis inputs are absent', () => {
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('compat'),
+    });
+
+    const signal = useSentimentState.getState().signals.at(-1);
+    expect(signal?.synthesis_id).toBe(ANALYSIS);
+    expect(signal?.epoch).toBe(0);
+    expect(signal?.analysis_id).toBe(ANALYSIS);
   });
 });
