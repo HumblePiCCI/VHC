@@ -10,20 +10,20 @@ This document defines compile-time flags used by the web PWA for FPD rollout.
 
 - **`VITE_CONSTITUENCY_PROOF_REAL`**
   - **Default:** `false`
-  - **Description:** Selects proof-provider mode.
-    - `false`: transitional shim path (dev/staging/E2E only)
-    - `true`: real attestation-bound provider path
+  - **Description:** Enables strict production proof validation policy.
+    - `false`: non-production tolerance (still uses real attestation-bound proof generation)
+    - `true`: strict production mode (configured district enforcement + production guard)
   - **Production requirement:** `true`
 
 - **`VITE_E2E_MODE`**
   - **Default:** `false`
   - **Description:** Enables E2E-mode stores/wiring used for deterministic browser tests.
   - **Production requirement:** `false`
-  - **Note:** E2E mode uses transitional proof behavior and is never valid for production builds.
+  - **Note:** E2E mode is test-only and must never ship in production artifacts.
 
 - **`VITE_DEFAULT_DISTRICT_HASH`**
   - **Default:** empty
-  - **Description:** District hash used by proof verification in Season 0 real mode.
+  - **Description:** District hash used by proof verification in strict mode.
   - **Production requirement:** must be explicitly configured to the deployment district value.
 
 - **`VITE_VH_ANALYSIS_PIPELINE`**

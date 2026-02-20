@@ -5,7 +5,12 @@ import { writeSentimentEvent, writeVoterNode } from '@vh/gun-client';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { resolveClientFromAppStore } from '../store/clientResolver';
 import { useXpLedger } from '../store/xpLedger';
-import { legacyWeightForActiveCount, resolveNextAgreement, type Agreement } from '../components/feed/voteSemantics';
+import {
+  decayTowardsTopicImpactCap,
+  legacyWeightForActiveCount,
+  resolveNextAgreement,
+  type Agreement,
+} from '../components/feed/voteSemantics';
 import { logMeshWriteResult, logVoteAdmission } from '../utils/sentimentTelemetry';
 
 interface SentimentStore {
@@ -77,16 +82,7 @@ function persistStringMap(key: string, value: Record<string, string>) {
   }
 }
 
-function clampWeight(value: number): number {
-  if (Number.isNaN(value)) return 0;
-  if (value < 0) return 0;
-  if (value > 2) return 2;
-  return value;
-}
-
-function decayStep(current: number): number {
-  return clampWeight(current + 0.3 * (2.0 - current));
-}
+// Shared decay math lives in voteSemantics.ts
 
 function normalizeSynthesisId(value?: string): string | null {
   if (typeof value !== 'string') {
@@ -448,7 +444,7 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
   },
   recordRead(topicId) {
     const current = get().eye[topicId] ?? 0;
-    const next = current === 0 ? 1 : decayStep(current);
+    const next = current === 0 ? 1 : decayTowardsTopicImpactCap(current);
     const eye = { ...get().eye, [topicId]: next };
     persistNumberMap(EYE_KEY, eye);
     set({ eye });
@@ -456,7 +452,7 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
   },
   recordEngagement(topicId) {
     const current = get().lightbulb[topicId] ?? 0;
-    const next = current === 0 ? 1 : decayStep(current);
+    const next = current === 0 ? 1 : decayTowardsTopicImpactCap(current);
     const lightbulb = { ...get().lightbulb, [topicId]: next };
     persistNumberMap(LIGHTBULB_KEY, lightbulb);
     set({ lightbulb });

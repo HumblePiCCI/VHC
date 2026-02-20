@@ -234,7 +234,7 @@ interface SentimentSignal {
   epoch: number;
   point_id: string;
   agreement: -1 | 0 | 1;
-  weight: number; // [0,2]
+  weight: number; // [0,1.95] (strict <2 cap)
   constituency_proof: {
     district_hash: string;
     nullifier: string;

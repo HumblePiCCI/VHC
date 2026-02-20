@@ -1,45 +1,61 @@
 # ACTIVE TASK PACKET
 
-Last updated: 2026-02-19
-Status: Active
+Last updated: 2026-02-20
+Status: Active (WS8 execution in progress)
 Owner: Lou + main/coord
 
 ## Task ID
-FPD-PROD-WIRING
+FPD-PROD-WIRING-WS8-CLOSURE
 
 ## Objective
-Ship FPD production wiring safely on `main` with fail-closed production gates, migration safety, and quantitative rollout controls.
+Close production-readiness gaps after WS7 by executing WS8 alignment + hardening work for per-cell frame/reframe voting:
+
+1. Resolve spec/implementation drift on per-user engagement decay.
+2. Enforce anti-gaming bounded influence (`< 2`) with diminishing returns.
+3. Align proof-policy docs with post-WS7 runtime reality.
+4. Reconcile Gate 8b status language to reflect code-complete vs runtime-drill-complete phases.
+
+## Executive decisions (WS8)
+- **D1 — Decay model:** Use civic-decay curve with `alpha = 0.3`.
+- **D2 — Hard cap:** Clamp per-user topic engagement impact to `1.95` (strictly `< 2`).
+- **D3 — Anti-gaming stance:** Vote impact is keyed by active non-neutral stance count per `(topic_id, synthesis_id, epoch)` rather than raw click count.
+- **D4 — Contract truthfulness:** Gate 8b remains runtime-dependent until a real canary drill evidence bundle exists.
 
 ## Source of truth
-- `docs/plans/FPD-PROD-WIRING-RFC-20260219.md`
-- `docs/plans/FPD_OUTLINE_AND_DISPATCH_2026-02-19.md`
 - `docs/foundational/FPD_PROD_WIRING_DELTA_CONTRACT.md`
-- `docs/foundational/CE_DUAL_REVIEW_CONTRACTS.md`
-
-## Required hard gates
-1. Production fail-closed proof enforcement
-2. Transitional shim restricted to dev/staging/E2E
-3. Identity-root migration safety (dual-write/backfill/sunset)
-4. Aggregate read + deterministic mesh behavior
-5. CI/E2E/docs parity checks
-6. Canary SLO thresholds + abort/rollback readiness
-
-## Execution pattern
-- `main -> coord -> chief -> impl`
-- `chief` fanout to `qa/docs/spec` as needed
-- `coord` runs `codex + opus` dual-review before major dispatch decisions
+- `docs/plans/FPD-PROD-WIRING-RFC-20260219.md`
+- `docs/specs/spec-civic-sentiment.md`
+- `docs/feature-flags.md`
 
 ## Reporting contract
 Use: `state now / done / next / blockers / artifacts`
 
-## Branching target
-- Integration target: `main`
-- Execution branches: `coord/fpd-*`, `team-*/*`, `coord/*`
+## Execution packet
 
-## Out of scope
-- Dream automation work
-- Non-VHC initiatives
-- Historical wave reactivation
+### state now
+- `main` includes WS4–WS7 (`#322`–`#325`), CI green.
+- Remaining readiness work is alignment/hardening (no new architecture slice required).
 
-## Update rule for next task
-When priorities change, edit this file first (keep section headers stable so AGENTS contracts remain reusable).
+### done (this packet)
+- Decay/cap decision encoded in code and spec/docs.
+- Proof-flag + env docs reconciled to post-WS7 behavior.
+- Gate 8b status language reconciled to runtime-evidence reality.
+
+### next
+1. Run targeted tests for updated vote semantics + sentiment state.
+2. Run lint/typecheck scope needed for changed files.
+3. Open PR with WS8 closure diff and explicit acceptance evidence.
+4. Queue runtime canary drill ceremony (ops env) to move Gate 8b from partial → satisfied.
+
+### blockers
+- Runtime canary drill evidence requires deployment/runtime environment and cannot be fully completed in repo-only context.
+
+### artifacts
+- `apps/web-pwa/src/components/feed/voteSemantics.ts`
+- `apps/web-pwa/src/hooks/useSentimentState.ts`
+- `apps/web-pwa/src/components/feed/voteSemantics.test.ts`
+- `apps/web-pwa/src/hooks/useSentimentState.test.ts`
+- `docs/specs/spec-civic-sentiment.md`
+- `docs/feature-flags.md`
+- `apps/web-pwa/.env.example`
+- `docs/foundational/FPD_PROD_WIRING_DELTA_CONTRACT.md`

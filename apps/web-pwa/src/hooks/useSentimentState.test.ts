@@ -111,7 +111,7 @@ describe('useSentimentState', () => {
     const second = useSentimentState.getState().recordRead(TOPIC);
     expect(first).toBeGreaterThan(0);
     expect(second).toBeGreaterThan(first);
-    expect(second).toBeLessThanOrEqual(2);
+    expect(second).toBeLessThan(2);
     expect(useSentimentState.getState().getEyeWeight(TOPIC)).toBe(second);
   });
 
@@ -120,7 +120,7 @@ describe('useSentimentState', () => {
     const second = useSentimentState.getState().recordEngagement(TOPIC);
     expect(first).toBe(1);
     expect(second).toBeGreaterThan(first);
-    expect(second).toBeLessThanOrEqual(2);
+    expect(second).toBeLessThan(2);
     expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(second);
   });
 
@@ -145,8 +145,8 @@ describe('useSentimentState', () => {
 
     const eyeFromAboveTwo = useSentimentState.getState().recordRead(TOPIC);
     const lightbulbFromAboveTwo = useSentimentState.getState().recordEngagement(TOPIC);
-    expect(eyeFromAboveTwo).toBe(2);
-    expect(lightbulbFromAboveTwo).toBe(2);
+    expect(eyeFromAboveTwo).toBe(1.95);
+    expect(lightbulbFromAboveTwo).toBe(1.95);
   });
 
   it('returns zero fallback weights for unknown topics', () => {
@@ -163,21 +163,21 @@ describe('useSentimentState', () => {
     expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(0);
   });
 
-  it('recomputes lightbulb based on active cell count with legacy falloff', () => {
+  it('recomputes lightbulb based on active cell count with civic decay cap', () => {
     const proof = proofFor();
     // First cell -> weight 1
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
     expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1, 5);
-    // Second cell -> 1 + (1 - 0.75^(2-1)) = 1.25
+    // Second cell -> civic decay closed form (cap=1.95, alpha=0.3) => 1.285
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p2', analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
-    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.25, 5);
-    // Third cell -> 1 + (1 - 0.75^(3-1)) = 1.4375
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.285, 5);
+    // Third cell -> civic decay closed form (cap=1.95, alpha=0.3) => 1.4845
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p3', analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
-    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.4375, 5);
-    // Remove one cell -> back to previous step (1.25)
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.4845, 5);
+    // Remove one cell -> back to previous step (1.285)
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: 'p2', analysisId: ANALYSIS, desired: -1, constituency_proof: proof });
     expect(useSentimentState.getState().getAgreement(TOPIC, 'p2')).toBe(0);
-    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.25, 5);
+    expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBeCloseTo(1.285, 5);
   });
 
   it('calls setActiveNullifier with proof nullifier before budget check', () => {
@@ -607,7 +607,7 @@ describe('useSentimentState', () => {
     });
 
     const dualWeight = useSentimentState.getState().getLightbulbWeight(TOPIC);
-    expect(dualWeight).toBeCloseTo(1.4375, 5);
+    expect(dualWeight).toBeCloseTo(1.4845, 5);
 
     useSentimentState.setState({
       ...useSentimentState.getState(),

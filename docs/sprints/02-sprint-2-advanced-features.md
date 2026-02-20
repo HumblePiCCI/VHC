@@ -45,8 +45,8 @@
 - [x] **Feed:** Virtualized infinite scroll over **Topics** (external headlines + user threads).
     - **Tests:** Component tests for windowing thresholds, empty/error states.
 - [x] **Metrics:**
-    - **Eye:** Read Interest derived from per-user `eye_weight ∈ [0,2]` (Civic Decay applied on each read/expand). UI may show Eye score plus unique readers (`eye_weight > 0`).
-    - **Lightbulb:** Engagement Score derived from per-user `lightbulb_weight ∈ [0,2]` (Civic Decay applied on table interactions), used for topic-level engagement (not per-cell ratios).
+    - **Eye:** Read Interest derived from per-user `eye_weight ∈ [0,1.95]` (`< 2`, Civic Decay applied on each read/expand). UI may show Eye score plus unique readers (`eye_weight > 0`).
+    - **Lightbulb:** Engagement Score derived from per-user `lightbulb_weight ∈ [0,1.95]` (`< 2`, Civic Decay applied on table interactions), used for topic-level engagement (not per-cell ratios).
 - [x] **Transitions:** "Lift & Hover" effect (Scale + Z-Index) on expansion.
     - **Tests:** Verify lift state, metric rendering, and a11y/keyboard support.
 - [x] **Analysis + Thread UI:**
@@ -67,8 +67,8 @@
 
 ### 2.2 The Nervous System (Engine)
 - [x] **Civic Decay Algorithm:**
-    - **Formula:** `next = current + (2.0 - current) * 0.3`.
-    - **Tests:** Verify asymptotic ceiling (never > 2.0) and monotonic growth.
+    - **Formula:** `next = current + (1.95 - current) * 0.3`.
+    - **Tests:** Verify asymptotic ceiling (never > 1.95, therefore strict `< 2`) and monotonic growth.
     - **Scope:** Applied to the user's per-topic Lightbulb weight. Each qualifying interaction = one decay step (engagement only per `docs/specs/spec-civic-sentiment.md` §4; reads update Eye separately).
 - [x] **Local State:** Persist `topic_interaction_state` (current score) in Gun/IDB.
 - [x] **Optimization:** Integrate `q4f16_1` (or optimal) weights.
@@ -141,8 +141,8 @@
 - [x] **Civic Decay Consolidation:**
   - [x] Update `packages/ai-engine/src/decay.ts`:
     - [x] `calculateDecay` is the only implementation of the Civic Decay formula.
-    - [x] `applyDecay` delegates to `calculateDecay` and enforces `0 ≤ weight ≤ 2`.
-  - [x] Ensure `CivicDecaySchema` bounds `weight` to `[0, 2]` and tests cover monotonic, asymptotic behavior.
+    - [x] `applyDecay` delegates to `calculateDecay` and enforces bounded non-negative weight.
+  - [x] Ensure `CivicDecaySchema` validates non-negative `weight`, with tests covering monotonic/asymptotic behavior and runtime engagement clamping kept strict `< 2` (cap `1.95`).
 
 - [x] **3-State Sentiment UI:**
   - [x] Replace float-based `useCivicState` with `useSentimentState` (`agreement ∈ {-1,0,1}` per `(topic_id, point_id)`).
@@ -151,9 +151,9 @@
   - [x] Per-cell aggregates use committed votes only: `agreement = +1` increments `agree`, `agreement = -1` increments `disagree`, `agreement = 0` is not counted.
 
 - [x] **Eye & Lightbulb Wiring:**
-  - [x] Implement `useReadTracker` / `useReadState` to store per-topic `eye_weight ∈ [0,2]`, applying `calculateDecay` on each expand/read.
-  - [x] Aggregate Eye metrics for display from per-user `eye_weight` (sum of unique readers (where no individual reader's `eye_weight` is greater than 2 (decay falloff))).
-  - [x] Implement `useEngagementState` (per-topic `lightbulb_weight ∈ [0,2]`), deriving Lightbulb from active stances: first active stance sets weight to `1.0`, additional active stances apply decay toward `2.0`; clearing stances decrements (all neutral → `0`); never exceeds `2` per user.
+  - [x] Implement `useReadTracker` / `useReadState` to store per-topic `eye_weight ∈ [0,1.95]` (strict `< 2`), applying `calculateDecay` on each expand/read.
+  - [x] Aggregate Eye metrics for display from per-user `eye_weight` (sum of unique readers, where no individual reader's `eye_weight` exceeds `1.95`).
+  - [x] Implement `useEngagementState` (per-topic `lightbulb_weight ∈ [0,1.95]`, strict `< 2`), deriving Lightbulb from active stances: first active stance sets weight to `1.0`, additional active stances apply decay toward `1.95`; clearing stances decrements (all neutral → `0`); never exceeds `1.95` per user.
   - [x] Render per-user Lightbulb from `useEngagementState` in `HeadlineCard`
         (global aggregate will later come from `AggregateSentiment`).
 
