@@ -15,11 +15,13 @@ interface FakeMesh {
   writes: Array<{ path: string; value: unknown }>;
   setRead: (path: string, value: unknown) => void;
   setPutError: (path: string, err: string) => void;
+  setPutHang: (path: string) => void;
 }
 
 function createFakeMesh(): FakeMesh {
   const reads = new Map<string, unknown>();
   const putErrors = new Map<string, string>();
+  const putHangs = new Set<string>();
   const writes: Array<{ path: string; value: unknown }> = [];
 
   const makeNode = (segments: string[]): any => {
@@ -28,6 +30,9 @@ function createFakeMesh(): FakeMesh {
       once: vi.fn((cb?: (data: unknown) => void) => cb?.(reads.get(path))),
       put: vi.fn((value: unknown, cb?: (ack?: { err?: string }) => void) => {
         writes.push({ path, value });
+        if (putHangs.has(path)) {
+          return;
+        }
         const err = putErrors.get(path);
         cb?.(err ? { err } : {});
       }),
@@ -44,6 +49,9 @@ function createFakeMesh(): FakeMesh {
     },
     setPutError(path: string, err: string) {
       putErrors.set(path, err);
+    },
+    setPutHang(path: string) {
+      putHangs.add(path);
     },
   };
 }
@@ -140,6 +148,22 @@ describe('aggregateAdapters', () => {
       }),
     ).rejects.toThrow('boom');
   });
+
+  it('writeVoterNode resolves after ack-timeout fallback when put callback never arrives', async () => {
+    const mesh = createFakeMesh();
+    mesh.setPutHang('aggregates/topics/topic-1/syntheses/synth-1/epochs/4/voters/voter-1/point-1');
+    const guard = { validateWrite: vi.fn() } as unknown as TopologyGuard;
+    const client = createClient(mesh, guard);
+
+    const node = {
+      point_id: 'point-1',
+      agreement: 1 as const,
+      weight: 1,
+      updated_at: '2026-02-18T22:20:00.000Z',
+    };
+
+    await expect(writeVoterNode(client, 'topic-1', 'synth-1', 4, 'voter-1', node)).resolves.toEqual(node);
+  }, 10000);
 
   it('readAggregates fans-in voter sub-nodes and ignores neutral/invalid rows', async () => {
     const mesh = createFakeMesh();

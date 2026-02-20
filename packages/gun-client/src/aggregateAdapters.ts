@@ -128,9 +128,26 @@ function readOnce<T>(chain: ChainWithGet<T>): Promise<T | null> {
   });
 }
 
+const PUT_ACK_TIMEOUT_MS = 1000;
+
 async function putWithAck<T>(chain: ChainWithGet<T>, value: T): Promise<void> {
   await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      console.warn('[vh:gun-client] aggregate voter put ack timed out, proceeding best-effort');
+      resolve();
+    }, PUT_ACK_TIMEOUT_MS);
+
     chain.put(value, (ack?: ChainAck) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
       if (ack?.err) {
         reject(new Error(ack.err));
         return;
