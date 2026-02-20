@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { legacyWeightForActiveCount, resolveNextAgreement } from './voteSemantics';
+import {
+  MAX_TOPIC_ENGAGEMENT_IMPACT,
+  legacyWeightForActiveCount,
+  resolveNextAgreement,
+} from './voteSemantics';
 
 describe('resolveNextAgreement', () => {
   it('matches legacy toggle matrix', () => {
@@ -13,7 +17,7 @@ describe('resolveNextAgreement', () => {
 });
 
 describe('legacyWeightForActiveCount', () => {
-  it('is bounded and monotonic', () => {
+  it('is bounded, monotonic, and capped below 2', () => {
     const w0 = legacyWeightForActiveCount(0);
     const w1 = legacyWeightForActiveCount(1);
     const w2 = legacyWeightForActiveCount(2);
@@ -22,9 +26,10 @@ describe('legacyWeightForActiveCount', () => {
 
     expect(w0).toBe(0);
     expect(w1).toBe(1);
-    expect(w2).toBeCloseTo(1.25, 5);
-    expect(w3).toBeCloseTo(1.4375, 5);
-    expect(w10).toBeLessThanOrEqual(2);
+    expect(w2).toBeCloseTo(1.285, 5);
+    expect(w3).toBeCloseTo(1.4845, 5);
+    expect(w10).toBeLessThan(2);
+    expect(w10).toBeLessThanOrEqual(MAX_TOPIC_ENGAGEMENT_IMPACT);
 
     expect(w1).toBeGreaterThanOrEqual(w0);
     expect(w2).toBeGreaterThanOrEqual(w1);

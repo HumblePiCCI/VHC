@@ -1,6 +1,6 @@
 # Civic Sentiment and Engagement Spec
 
-Version: 0.2
+Version: 0.3
 Status: Canonical (V2-first)
 
 Normative contract for sentiment, Eye, and Lightbulb behavior in Season 0.
@@ -12,7 +12,7 @@ Normative contract for sentiment, Eye, and Lightbulb behavior in Season 0.
 - `epoch`: synthesis epoch number for the topic
 - `point_id`: claim/frame row identifier within synthesis
 - `agreement`: `-1 | 0 | 1`
-- `weight`: per-user Lightbulb contribution in `[0,2]`
+- `weight`: per-user Lightbulb contribution in `[0,2)` (runtime cap: **1.95**)
 
 Legacy note:
 
@@ -28,7 +28,7 @@ interface SentimentSignal {
   epoch: number;
   point_id: string;
   agreement: -1 | 0 | 1;
-  weight: number; // [0,2]
+  weight: number; // [0,2) with runtime cap 1.95
 
   constituency_proof: {
     district_hash: string;
@@ -75,15 +75,18 @@ Aggregation requirements:
 
 ## 4. Civic Decay
 
-Formula:
+Formula (executive WS8 decision):
 
-`E_new = E_current + 0.3 * (2.0 - E_current)`
+`E_cap = 1.95`
+
+`E_new = E_current + 0.3 * (E_cap - E_current)`
 
 Properties:
 
 - monotonic increase per qualifying interaction
-- bounded to `[0,2]`
+- bounded to `[0, 1.95]` (strictly `< 2`)
 - used for both Eye (reads) and Lightbulb (engagement) with separate state tracks
+- prevents single-user over-amplification by enforcing a hard per-topic impact ceiling
 
 ## 5. Eye and Lightbulb semantics
 
@@ -97,7 +100,8 @@ Lightbulb:
 
 - tracks engagement per `(topic_id, user)`
 - driven by stance interactions
-- first active stance sets baseline, further active stances decay toward 2.0
+- first active stance sets baseline, further active stances decay toward 1.95
+- vote impact uses active non-neutral stance count per `(topic_id, synthesis_id, epoch)` (not raw click count) to reduce toggle-gaming potential
 
 ## 6. Storage and topology
 
@@ -130,6 +134,7 @@ These clarifications are binding for the active production-wiring program.
 3. **Legacy sunset (required):** Compatibility read paths must have explicit sunset criteria (time + release-count) and telemetry to prove safe removal.
 4. **Aggregate visibility (required):** UI sentiment counters MUST read mesh aggregates (with resilience controls), not local-write-only projections.
 5. **Telemetry (required):** Vote attempts, denials by reason, projection retries/failures, and migration mapping outcomes must be observable.
+6. **Per-user anti-gaming cap (required):** Topic-level engagement impact must use diminishing returns with a strict cap below 2 (`E_cap = 1.95`).
 
 ## 10. Migration safety requirements
 
