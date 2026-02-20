@@ -1,31 +1,19 @@
 # ACTIVE TASK PACKET
 
 Last updated: 2026-02-20
-Status: Active (WS8 execution in progress)
+Status: Active (WS8b runtime canary remediation pending)
 Owner: Lou + main/coord
 
 ## Task ID
-FPD-PROD-WIRING-WS8-CLOSURE
+FPD-PROD-WIRING-WS8B-CANARY-DRILL
 
 ## Objective
-Close production-readiness gaps after WS7 by executing WS8 alignment + hardening work for per-cell frame/reframe voting:
-
-1. Resolve spec/implementation drift on per-user engagement decay.
-2. Enforce anti-gaming bounded influence (`< 2`) with diminishing returns.
-3. Align proof-policy docs with post-WS7 runtime reality.
-4. Reconcile Gate 8b status language to reflect code-complete vs runtime-drill-complete phases.
-
-## Executive decisions (WS8)
-- **D1 — Decay model:** Use civic-decay curve with `alpha = 0.3`.
-- **D2 — Hard cap:** Clamp per-user topic engagement impact to `1.95` (strictly `< 2`).
-- **D3 — Anti-gaming stance:** Vote impact is keyed by active non-neutral stance count per `(topic_id, synthesis_id, epoch)` rather than raw click count.
-- **D4 — Contract truthfulness:** Gate 8b remains runtime-dependent until a real canary drill evidence bundle exists.
+Execute Gate 8b runtime canary ceremony for per-cell voting and produce an evidence bundle with quantitative SLO evaluation + rollback proof.
 
 ## Source of truth
 - `docs/foundational/FPD_PROD_WIRING_DELTA_CONTRACT.md`
-- `docs/plans/FPD-PROD-WIRING-RFC-20260219.md`
-- `docs/specs/spec-civic-sentiment.md`
-- `docs/feature-flags.md`
+- `docs/plans/CANARY_ROLLBACK_PLAN.md`
+- `docs/reports/FPD_CANARY_EVIDENCE_BUNDLE_2026-02-20.md`
 
 ## Reporting contract
 Use: `state now / done / next / blockers / artifacts`
@@ -33,29 +21,31 @@ Use: `state now / done / next / blockers / artifacts`
 ## Execution packet
 
 ### state now
-- `main` includes WS4–WS7 (`#322`–`#325`), CI green.
-- Remaining readiness work is alignment/hardening (no new architecture slice required).
+- WS8 merged on `main` (`2c4166e`), CI green.
+- Runtime canary drill executed; rollout auto-aborted and rollback activated.
+- Gate 8b remains partial.
 
-### done (this packet)
-- Decay/cap decision encoded in code and spec/docs.
-- Proof-flag + env docs reconciled to post-WS7 behavior.
-- Gate 8b status language reconciled to runtime-evidence reality.
+### done
+1. Ran staged synthetic canary traffic (5/25/50/100 + explicit breach simulation) and captured SLO metrics.
+2. Recorded evidence bundle under `docs/reports/evidence/2026-02-20-canary/`.
+3. Executed rollback switch (`VITE_VH_BIAS_TABLE_V2=false`) and verified health (`/`, tailnet `/`, `/gun` all 200).
+4. Published runtime drill report: `docs/reports/FPD_CANARY_EVIDENCE_BUNDLE_2026-02-20.md`.
+5. Updated Gate 8b contract line to reflect executed-but-aborted status and evidence links.
 
 ### next
-1. Run targeted tests for updated vote semantics + sentiment state.
-2. Run lint/typecheck scope needed for changed files.
-3. Open PR with WS8 closure diff and explicit acceptance evidence.
-4. Queue runtime canary drill ceremony (ops env) to move Gate 8b from partial → satisfied.
+1. Fix vote→mesh projection completion behavior so every admitted vote terminates with telemetry (success/failure) in bounded time.
+2. Verify auth/session prerequisites for sentiment event + aggregate writes in canary runtime.
+3. Re-run Gate 8b canary with the same evidence format and target SLOs.
 
 ### blockers
-- Runtime canary drill evidence requires deployment/runtime environment and cannot be fully completed in repo-only context.
+- Mesh-write completion telemetry is absent in healthy canary stages (0 completion events), making mesh success and p95 latency fail/unmeasurable.
+- Without bounded completion + telemetry, Gate 8b cannot be marked satisfied.
 
 ### artifacts
-- `apps/web-pwa/src/components/feed/voteSemantics.ts`
-- `apps/web-pwa/src/hooks/useSentimentState.ts`
-- `apps/web-pwa/src/components/feed/voteSemantics.test.ts`
-- `apps/web-pwa/src/hooks/useSentimentState.test.ts`
-- `docs/specs/spec-civic-sentiment.md`
-- `docs/feature-flags.md`
-- `apps/web-pwa/.env.example`
+- `docs/reports/FPD_CANARY_EVIDENCE_BUNDLE_2026-02-20.md`
+- `docs/reports/evidence/2026-02-20-canary/canary-metrics.json`
+- `docs/reports/evidence/2026-02-20-canary/rollback-switch.txt`
+- `docs/reports/evidence/2026-02-20-canary/supervisor-pre-canary.sh`
+- `docs/reports/evidence/2026-02-20-canary/supervisor-rollback-active.sh`
+- `docs/reports/evidence/2026-02-20-canary/runbook-commands.txt`
 - `docs/foundational/FPD_PROD_WIRING_DELTA_CONTRACT.md`
