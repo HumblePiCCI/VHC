@@ -124,6 +124,36 @@ describe('useSentimentState', () => {
     expect(useSentimentState.getState().getLightbulbWeight(TOPIC)).toBe(second);
   });
 
+  it('clamps recordRead/recordEngagement weights for NaN, negative, and >2 inputs', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      eye: { [TOPIC]: Number.NaN },
+      lightbulb: { [TOPIC]: -5 },
+    });
+
+    const eyeFromNaN = useSentimentState.getState().recordRead(TOPIC);
+    expect(eyeFromNaN).toBe(0);
+
+    const lightbulbFromNegative = useSentimentState.getState().recordEngagement(TOPIC);
+    expect(lightbulbFromNegative).toBe(0);
+
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      eye: { [TOPIC]: 3 },
+      lightbulb: { [TOPIC]: 3 },
+    });
+
+    const eyeFromAboveTwo = useSentimentState.getState().recordRead(TOPIC);
+    const lightbulbFromAboveTwo = useSentimentState.getState().recordEngagement(TOPIC);
+    expect(eyeFromAboveTwo).toBe(2);
+    expect(lightbulbFromAboveTwo).toBe(2);
+  });
+
+  it('returns zero fallback weights for unknown topics', () => {
+    expect(useSentimentState.getState().getLightbulbWeight('unknown-topic')).toBe(0);
+    expect(useSentimentState.getState().getEyeWeight('unknown-topic')).toBe(0);
+  });
+
   it('resets lightbulb when all cells return to neutral', () => {
     const proof = proofFor();
     useSentimentState.getState().setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proof });
@@ -241,6 +271,56 @@ describe('useSentimentState', () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it('missing point id returns denial object', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = useSentimentState.getState().setAgreement({
+        topicId: TOPIC,
+        pointId: '   ',
+        analysisId: ANALYSIS,
+        desired: 1,
+        constituency_proof: proofFor('missing-point-id')
+      });
+
+      expect(result).toEqual({ denied: true, reason: 'Missing point_id' });
+      expect(warnSpy).toHaveBeenCalledWith('[vh:sentiment] Missing point_id; SentimentSignal not emitted');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('missing synthesis context returns denial object', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const result = useSentimentState.getState().setAgreement({
+        topicId: TOPIC,
+        pointId: POINT,
+        desired: 1,
+        constituency_proof: proofFor('missing-context')
+      });
+
+      expect(result).toEqual({ denied: true, reason: 'Missing synthesis context' });
+      expect(warnSpy).toHaveBeenCalledWith('[vh:sentiment] Missing synthesis context; SentimentSignal not emitted');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('desired=0 writes explicit neutral agreement', () => {
+    useSentimentState
+      .getState()
+      .setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 1, constituency_proof: proofFor('neutralize') });
+
+    useSentimentState
+      .getState()
+      .setAgreement({ topicId: TOPIC, pointId: POINT, analysisId: ANALYSIS, desired: 0, constituency_proof: proofFor('neutralize') });
+
+    expect(useSentimentState.getState().getAgreement(TOPIC, POINT)).toBe(0);
+    expect(useSentimentState.getState().signals.at(-1)?.agreement).toBe(0);
   });
 
   it('allowed path returns void (undefined)', () => {
@@ -417,6 +497,22 @@ describe('useSentimentState', () => {
     expect(signal?.synthesis_id).toBe(ANALYSIS);
     expect(signal?.epoch).toBe(0);
     expect(signal?.analysis_id).toBe(ANALYSIS);
+  });
+
+  it('treats blank synthesisId and invalid epoch as legacy compatibility context', () => {
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: '   ',
+      epoch: Number.NaN,
+      analysisId: 'legacy-analysis',
+      desired: 1,
+      constituency_proof: proofFor('compat-invalid-epoch'),
+    });
+
+    const signal = useSentimentState.getState().signals.at(-1);
+    expect(signal?.synthesis_id).toBe('legacy-analysis');
+    expect(signal?.epoch).toBe(0);
   });
 
   it('prefers canonical synthesis point ID and falls back to legacy point ID', () => {
@@ -645,5 +741,292 @@ describe('useSentimentState', () => {
       '[vh:sentiment] Failed to project aggregate voter node:',
       expect.any(Error),
     );
+  });
+
+  it('handles non-Error projection failures and combines both failure messages', async () => {
+    const fakeClient = {
+      gun: { user: () => ({}) },
+      mesh: { get: () => ({}) },
+    } as never;
+    vi.spyOn(ClientResolver, 'resolveClientFromAppStore').mockReturnValue(fakeClient);
+    vi.spyOn(GunClient, 'writeSentimentEvent').mockRejectedValue('outbox-string-failure');
+    vi.spyOn(GunClient, 'writeVoterNode').mockRejectedValue('aggregate-string-failure');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('projected-err-string'),
+    });
+
+    await flushProjection();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[vh:vote:mesh-write]',
+      expect.objectContaining({
+        success: false,
+        error: 'outbox-string-failure; aggregate-string-failure',
+      }),
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('handles aggregate-only non-Error failures when event write succeeds', async () => {
+    const fakeClient = {
+      gun: { user: () => ({}) },
+      mesh: { get: () => ({}) },
+    } as never;
+    vi.spyOn(ClientResolver, 'resolveClientFromAppStore').mockReturnValue(fakeClient);
+    vi.spyOn(GunClient, 'writeSentimentEvent').mockResolvedValue({ eventId: 'ok', event: {} as never });
+    vi.spyOn(GunClient, 'writeVoterNode').mockRejectedValue('aggregate-only-string-failure');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('projected-err-string-aggregate-only'),
+    });
+
+    await flushProjection();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[vh:vote:mesh-write]',
+      expect.objectContaining({
+        success: false,
+        error: 'aggregate-only-string-failure',
+      }),
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('prefers canonical contextual read before legacy fallback when both exist', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {
+        [`${TOPIC}:synth-1:0:canonical-point`]: 1,
+        [`${TOPIC}:legacy-point`]: -1,
+      },
+    });
+
+    expect(
+      useSentimentState.getState().getAgreement(
+        TOPIC,
+        'canonical-point',
+        'synth-1',
+        0,
+        'legacy-point',
+      ),
+    ).toBe(1);
+  });
+
+  it('falls back to suffix scan when contextual and legacy keys are absent', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {
+        [`${TOPIC}:synth-22:7:suffix-point`]: -1,
+      },
+    });
+
+    expect(useSentimentState.getState().getAgreement(TOPIC, 'suffix-point')).toBe(-1);
+  });
+
+  it('returns 0 when contextual key exists with undefined value', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {
+        [`${TOPIC}:synth-9:4:${POINT}`]: undefined as unknown as -1 | 0 | 1,
+      },
+    });
+
+    expect(useSentimentState.getState().getAgreement(TOPIC, POINT, 'synth-9', 4)).toBe(0);
+  });
+
+  it('returns 0 when legacy key exists with undefined value', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {
+        [`${TOPIC}:${POINT}`]: undefined as unknown as -1 | 0 | 1,
+      },
+    });
+
+    expect(useSentimentState.getState().getAgreement(TOPIC, POINT)).toBe(0);
+  });
+
+  it('returns 0 when suffix fallback key exists with undefined value', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {
+        [`${TOPIC}:synth-22:7:suffix-point`]: undefined as unknown as -1 | 0 | 1,
+      },
+    });
+
+    expect(useSentimentState.getState().getAgreement(TOPIC, 'suffix-point')).toBe(0);
+  });
+
+  it('suffix scan skips unrelated topic keys while searching candidates', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {
+        ['other-topic:synth-22:7:suffix-point']: 1,
+        [`${TOPIC}:synth-22:7:suffix-point`]: -1,
+      },
+    });
+
+    expect(useSentimentState.getState().getAgreement(TOPIC, 'suffix-point')).toBe(-1);
+  });
+
+  it('removes legacy flat keys after contextual write', () => {
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {
+        [`${TOPIC}:legacy-point`]: 1,
+        [`${TOPIC}:synth-point`]: -1,
+      },
+    });
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'legacy-point',
+      synthesisPointId: 'synth-point',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('cleanup'),
+    });
+
+    const agreements = useSentimentState.getState().agreements;
+    expect(agreements[`${TOPIC}:legacy-point`]).toBeUndefined();
+    expect(agreements[`${TOPIC}:synth-point`]).toBeUndefined();
+    expect(agreements[`${TOPIC}:synth-9:4:synth-point`]).toBe(1);
+  });
+
+  it('emits vote-admission telemetry for denied writes', () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      analysisId: ANALYSIS,
+      desired: 1,
+    });
+
+    expect(infoSpy).toHaveBeenCalledWith('[vh:vote:admission]', {
+      topic_id: TOPIC,
+      point_id: POINT,
+      admitted: false,
+      reason: 'Missing constituency proof',
+    });
+
+    infoSpy.mockRestore();
+  });
+
+  it('emits vote-admission + mesh-write telemetry for successful local admission', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('telemetry'),
+    });
+
+    await flushProjection();
+
+    expect(infoSpy).toHaveBeenCalledWith('[vh:vote:admission]', {
+      topic_id: TOPIC,
+      point_id: POINT,
+      admitted: true,
+    });
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[vh:vote:mesh-write]',
+      expect.objectContaining({
+        topic_id: TOPIC,
+        point_id: POINT,
+        success: false,
+        error: 'client-unavailable',
+      }),
+    );
+
+    infoSpy.mockRestore();
+  });
+
+  it('emits transport-unavailable mesh-write telemetry when client lacks transports', async () => {
+    const partialClient = { gun: {}, mesh: {} } as never;
+    vi.spyOn(ClientResolver, 'resolveClientFromAppStore').mockReturnValue(partialClient);
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const writeEventSpy = vi.spyOn(GunClient, 'writeSentimentEvent');
+    const writeVoterSpy = vi.spyOn(GunClient, 'writeVoterNode');
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('no-transports'),
+    });
+
+    await flushProjection();
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[vh:vote:mesh-write]',
+      expect.objectContaining({
+        topic_id: TOPIC,
+        point_id: POINT,
+        success: false,
+        error: 'sentiment-transport-unavailable',
+      }),
+    );
+    expect(writeEventSpy).not.toHaveBeenCalled();
+    expect(writeVoterSpy).not.toHaveBeenCalled();
+
+    infoSpy.mockRestore();
+  });
+
+  it('emits successful mesh-write telemetry when projection succeeds', async () => {
+    const fakeClient = {
+      gun: { user: () => ({}) },
+      mesh: { get: () => ({}) },
+    } as never;
+    vi.spyOn(ClientResolver, 'resolveClientFromAppStore').mockReturnValue(fakeClient);
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('telemetry-success'),
+    });
+
+    await flushProjection();
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      '[vh:vote:mesh-write]',
+      expect.objectContaining({
+        topic_id: TOPIC,
+        point_id: POINT,
+        success: true,
+      }),
+    );
+
+    infoSpy.mockRestore();
   });
 });

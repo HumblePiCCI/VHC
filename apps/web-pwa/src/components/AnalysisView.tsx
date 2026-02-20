@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { FeedItem, Perspective } from '../hooks/useFeedStore';
 import { useSentimentState } from '../hooks/useSentimentState';
-import { useRegion } from '../hooks/useRegion';
+import { useConstituencyProof } from '../hooks/useConstituencyProof';
 import { useIdentity } from '../hooks/useIdentity';
 import { useForumStore } from '../store/hermesForum';
 import { useRouter } from '@tanstack/react-router';
@@ -21,7 +21,7 @@ interface PerspectiveRowProps {
   perspective: Perspective;
   synthesisFramePointId?: string;
   synthesisReframePointId?: string;
-  onBlockedVote: () => void;
+  onBlockedVote: (reason: 'identity' | 'proof') => void;
 }
 
 function PerspectiveRow({
@@ -53,9 +53,13 @@ function PerspectiveRow({
     ),
   );
   const setAgreement = useSentimentState((s) => s.setAgreement);
-  const { proof } = useRegion();
+  const { proof, error: proofError } = useConstituencyProof();
   const { identity } = useIdentity();
-  const canVote = Boolean(identity);
+  const canVote = Boolean(identity) && proof !== null;
+  const blockedReason: 'identity' | 'proof' =
+    !identity || proofError?.includes('Identity nullifier unavailable')
+      ? 'identity'
+      : 'proof';
   const { aggregate: frameAggregate } = usePointAggregate({
     topicId: itemId,
     synthesisId: itemId,
@@ -82,7 +86,7 @@ function PerspectiveRow({
       epoch: 0,
       analysisId: itemId,
       desired,
-      constituency_proof: proof || undefined
+      constituency_proof: proof ?? undefined,
     });
   };
 
@@ -97,7 +101,7 @@ function PerspectiveRow({
             onClick={(e) => {
               e.stopPropagation();
               if (!canVote) {
-                onBlockedVote();
+                onBlockedVote(blockedReason);
                 return;
               }
               handleSet(framePointId, synthesisFramePointId, frameAgreement === -1 ? 0 : -1);
@@ -113,7 +117,7 @@ function PerspectiveRow({
             onClick={(e) => {
               e.stopPropagation();
               if (!canVote) {
-                onBlockedVote();
+                onBlockedVote(blockedReason);
                 return;
               }
               handleSet(framePointId, synthesisFramePointId, frameAgreement === 1 ? 0 : 1);
@@ -140,7 +144,7 @@ function PerspectiveRow({
             onClick={(e) => {
               e.stopPropagation();
               if (!canVote) {
-                onBlockedVote();
+                onBlockedVote(blockedReason);
                 return;
               }
               handleSet(reframePointId, synthesisReframePointId, reframeAgreement === -1 ? 0 : -1);
@@ -156,7 +160,7 @@ function PerspectiveRow({
             onClick={(e) => {
               e.stopPropagation();
               if (!canVote) {
-                onBlockedVote();
+                onBlockedVote(blockedReason);
                 return;
               }
               handleSet(reframePointId, synthesisReframePointId, reframeAgreement === 1 ? 0 : 1);
@@ -184,16 +188,16 @@ function ToggleButton({
   onClick,
   ariaLabel,
   label,
-  variant = 'default'
+  variant,
 }: {
   children: React.ReactNode;
   active: boolean;
   onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
   ariaLabel: string;
   label: string;
-  variant?: 'agree' | 'disagree' | 'default';
+  variant: 'agree' | 'disagree';
 }) {
-  const activeColor = variant === 'agree' ? 'bg-emerald-600' : variant === 'disagree' ? 'bg-red-600' : 'bg-teal-600';
+  const activeColor = variant === 'agree' ? 'bg-emerald-600' : 'bg-red-600';
   return (
     <button
       type="button"
@@ -208,9 +212,8 @@ function ToggleButton({
 }
 
 export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
-  const { identity } = useIdentity();
-  const canVote = Boolean(identity);
   const [warn, setWarn] = React.useState(false);
+  const [warnReason, setWarnReason] = React.useState<'identity' | 'proof'>('identity');
   const warnOnceRef = React.useRef<NodeJS.Timeout | null>(null);
   const forumStore = useForumStore();
   const router = useRouter();
@@ -230,7 +233,8 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
     [forumStore.threads, item.id]
   );
 
-  const showWarn = () => {
+  const showWarn = (reason: 'identity' | 'proof') => {
+    setWarnReason(reason);
     setWarn(true);
     if (warnOnceRef.current) {
       clearTimeout(warnOnceRef.current);
@@ -253,22 +257,17 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
       <div className="mt-4 space-y-3">
         <div className="flex items-center gap-3">
           <p className="text-sm uppercase tracking-wide" style={{ color: 'var(--analysis-label)' }}>Perspectives</p>
-          {!canVote && warn && (
+          {warn && (
             <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-800 shadow-sm animate-pulse">
-              Create an account to cast votes
+              {warnReason === 'proof'
+                ? 'Proof verification required to cast votes'
+                : 'Create an account to cast votes'}
             </span>
           )}
         </div>
         <div className="space-y-2 rounded-lg p-2" style={{ backgroundColor: 'var(--bias-table-bg)' }}>
           {item.perspectives.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => {
-                if (!canVote) {
-                  showWarn();
-                }
-              }}
-            >
+            <div key={p.id}>
               <PerspectiveRow
                 itemId={item.id}
                 perspective={p}

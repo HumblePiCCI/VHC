@@ -56,6 +56,9 @@ export default defineConfig({
         // --- React UI Components ---
         // Presentational; exercised by 9 passing E2E tests. RTL planned for Sprint 4.
         'apps/web-pwa/src/components/**/*.tsx',
+        // Override: keep critical vote-admission components in coverage scope.
+        '!apps/web-pwa/src/components/feed/CellVoteControls.tsx',
+        '!apps/web-pwa/src/components/AnalysisView.tsx',
 
         // --- DevColorPanel (dev-only UI) ---
         // Data config array and React hook for color dev panel; exercised manually.
@@ -88,7 +91,6 @@ export default defineConfig({
         // --- React Hooks (stateful wiring validated via E2E) ---
         'apps/web-pwa/src/hooks/useIdentity.ts',
         'apps/web-pwa/src/hooks/useFeedStore.ts',
-        'apps/web-pwa/src/hooks/useSentimentState.ts',
 
         // --- Gun-Client Adapters & Storage ---
         // Environment-specific storage implementations.

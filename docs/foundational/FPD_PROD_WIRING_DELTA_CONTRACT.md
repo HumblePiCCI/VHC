@@ -21,12 +21,16 @@ Close the gap between currently merged FPD L1-L4 behavior and production-safe en
 5. Aggregate read path wired to UI with retry/backoff + telemetry.
 6. Deterministic analysis mesh read-by-key (latest pointer fallback only).
 7. CI/e2e/coverage guardrails include critical proof/vote paths.
-8. Canary + rollback plan validated with quantitative thresholds.
+8a. Canary + rollback plan, telemetry instrumentation, and drill procedure documented in-repo (PR-satisfiable).
+8b. Canary drill executed with recorded evidence and quantitative threshold validation (runtime ceremony, post-merge/pre-prod).
 
 ### Gate status snapshot
 
 - Hard Gate 5 (WS5): **Satisfied** — `readAggregates` is wired into Feed (`CellVoteControls`) and `AnalysisView` via `usePointAggregate` with bounded exponential backoff retry (3 retries; 500ms/1s/2s/4s envelope) and structured telemetry `[vh:aggregate:read]`.
 - Hard Gate 6 (WS5): **Satisfied** — `readMeshAnalysis` reads by `deriveAnalysisKey`-derived key first; `readLatestAnalysis` is fallback-only; structured telemetry emitted as `[vh:analysis:mesh]`.
+- Hard Gate 2 (WS6): **Satisfied** — `AnalysisView` now uses `useConstituencyProof` for vote admission parity with Feed; vote requires identity + validated proof, with reason-specific blocked UX.
+- Hard Gate 7 (WS6): **Satisfied** — critical vote-admission paths (`useSentimentState`, `CellVoteControls`, `AnalysisView`) are included in coverage gates with expanded unit tests and diff-coverage allowlisting.
+- Hard Gate 8a (WS6): **Satisfied** — telemetry (`[vh:vote:admission]`, `[vh:vote:mesh-write]`) and canary/rollback plan are documented; Gate 8b remains pending runtime drill execution.
 
 ---
 
