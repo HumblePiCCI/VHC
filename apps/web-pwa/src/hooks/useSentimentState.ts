@@ -9,12 +9,14 @@ import { legacyWeightForActiveCount, resolveNextAgreement, type Agreement } from
 
 interface SentimentStore {
   agreements: Record<string, Agreement>;
+  pointIdAliases: Record<string, string>;
   lightbulb: Record<string, number>;
   eye: Record<string, number>;
   signals: SentimentSignal[];
   setAgreement: (params: {
     topicId: string;
     pointId: string;
+    synthesisPointId?: string;
     synthesisId?: string;
     epoch?: number;
     desired: Agreement;
@@ -24,16 +26,23 @@ interface SentimentStore {
   recordRead: (topicId: string) => number;
   /** Generic engagement tracker (for forum votes/comments) - increments lightbulb weight with decay */
   recordEngagement: (topicId: string) => number;
-  getAgreement: (topicId: string, pointId: string, synthesisId?: string, epoch?: number) => Agreement;
+  getAgreement: (
+    topicId: string,
+    pointId: string,
+    synthesisId?: string,
+    epoch?: number,
+    legacyPointId?: string,
+  ) => Agreement;
   getLightbulbWeight: (topicId: string) => number;
   getEyeWeight: (topicId: string) => number;
 }
 
 const AGREEMENTS_KEY = 'vh_sentiment_agreements_v1';
+const AGREEMENT_ALIASES_KEY = 'vh_sentiment_agreement_aliases_v1';
 const LIGHTBULB_KEY = 'vh_lightbulb_weights_v1';
 const EYE_KEY = 'vh_eye_weights_v1';
 
-function loadMap(key: string): Record<string, number> {
+function loadNumberMap(key: string): Record<string, number> {
   try {
     const raw = safeGetItem(key);
     return raw ? (JSON.parse(raw) as Record<string, number>) : {};
@@ -42,7 +51,24 @@ function loadMap(key: string): Record<string, number> {
   }
 }
 
-function persistMap(key: string, value: Record<string, number>) {
+function loadStringMap(key: string): Record<string, string> {
+  try {
+    const raw = safeGetItem(key);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistNumberMap(key: string, value: Record<string, number>) {
+  try {
+    safeSetItem(key, JSON.stringify(value));
+  } catch {
+    /* ignore */
+  }
+}
+
+function persistStringMap(key: string, value: Record<string, string>) {
   try {
     safeSetItem(key, JSON.stringify(value));
   } catch {
@@ -79,6 +105,14 @@ function normalizeEpoch(value?: number): number | null {
   return Math.floor(value);
 }
 
+function normalizePointId(value?: string): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function resolveSentimentContext(params: {
   synthesisId?: string;
   epoch?: number;
@@ -113,8 +147,23 @@ function buildLegacyAgreementKey(topicId: string, pointId: string): string {
   return `${topicId}:${pointId}`;
 }
 
-function contextActiveCount(agreements: Record<string, number>, prefix: string): number {
-  return Object.keys(agreements).filter((key) => key.startsWith(prefix) && agreements[key] !== 0).length;
+function contextActiveCount(
+  agreements: Record<string, number>,
+  prefix: string,
+  pointIdAliases: Record<string, string>,
+): number {
+  return Object.keys(agreements).filter((key) => {
+    if (!key.startsWith(prefix) || agreements[key] === 0) {
+      return false;
+    }
+
+    const canonicalKey = pointIdAliases[key];
+    if (canonicalKey && canonicalKey in agreements) {
+      return false;
+    }
+
+    return true;
+  }).length;
 }
 
 function readAgreementValue(
@@ -123,27 +172,36 @@ function readAgreementValue(
   pointId: string,
   synthesisId?: string,
   epoch?: number,
+  legacyPointId?: string,
 ): Agreement {
   const resolvedContext = resolveSentimentContext({
     synthesisId,
     epoch,
   });
 
+  const candidatePointIds = legacyPointId && legacyPointId !== pointId
+    ? [pointId, legacyPointId]
+    : [pointId];
+
   if (resolvedContext) {
-    const contextualKey = buildAgreementKey(
-      topicId,
-      resolvedContext.synthesisId,
-      resolvedContext.epoch,
-      pointId,
-    );
-    if (contextualKey in agreements) {
-      return agreements[contextualKey] ?? 0;
+    for (const candidatePointId of candidatePointIds) {
+      const contextualKey = buildAgreementKey(
+        topicId,
+        resolvedContext.synthesisId,
+        resolvedContext.epoch,
+        candidatePointId,
+      );
+      if (contextualKey in agreements) {
+        return agreements[contextualKey] ?? 0;
+      }
     }
   }
 
-  const legacyKey = buildLegacyAgreementKey(topicId, pointId);
-  if (legacyKey in agreements) {
-    return agreements[legacyKey] ?? 0;
+  for (const candidatePointId of candidatePointIds) {
+    const legacyKey = buildLegacyAgreementKey(topicId, candidatePointId);
+    if (legacyKey in agreements) {
+      return agreements[legacyKey] ?? 0;
+    }
   }
 
   const contextualPrefix = `${topicId}:`;
@@ -152,8 +210,10 @@ function readAgreementValue(
       continue;
     }
 
-    if (key.endsWith(`:${pointId}`)) {
-      return value ?? 0;
+    for (const candidatePointId of candidatePointIds) {
+      if (key.endsWith(`:${candidatePointId}`)) {
+        return value ?? 0;
+      }
     }
   }
 
@@ -210,15 +270,27 @@ async function projectSignalToMesh(signal: SentimentSignal): Promise<void> {
 }
 
 export const useSentimentState = create<SentimentStore>((set, get) => ({
-  agreements: loadMap(AGREEMENTS_KEY) as Record<string, Agreement>,
-  lightbulb: loadMap(LIGHTBULB_KEY),
-  eye: loadMap(EYE_KEY),
+  agreements: loadNumberMap(AGREEMENTS_KEY) as Record<string, Agreement>,
+  pointIdAliases: loadStringMap(AGREEMENT_ALIASES_KEY),
+  lightbulb: loadNumberMap(LIGHTBULB_KEY),
+  eye: loadNumberMap(EYE_KEY),
   signals: [],
-  setAgreement({ topicId, pointId, synthesisId, epoch, desired, constituency_proof, analysisId }) {
+  setAgreement({ topicId, pointId, synthesisPointId, synthesisId, epoch, desired, constituency_proof, analysisId }) {
     if (!constituency_proof) {
       console.warn('[vh:sentiment] Missing constituency proof; SentimentSignal not emitted');
       return { denied: true, reason: 'Missing constituency proof' };
     }
+
+    const normalizedPointId = normalizePointId(pointId);
+    if (!normalizedPointId) {
+      console.warn('[vh:sentiment] Missing point_id; SentimentSignal not emitted');
+      return { denied: true, reason: 'Missing point_id' };
+    }
+
+    const normalizedSynthesisPointId = normalizePointId(synthesisPointId) ?? normalizedPointId;
+    const legacyCompatPointId = normalizedSynthesisPointId !== normalizedPointId
+      ? normalizedPointId
+      : null;
 
     const context = resolveSentimentContext({ synthesisId, epoch, analysisId });
     if (!context) {
@@ -239,8 +311,17 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
       return { denied: true, reason };
     }
 
-    const key = buildAgreementKey(topicId, normalizedSynthesisId, normalizedEpoch, pointId);
-    const legacyKey = buildLegacyAgreementKey(topicId, pointId);
+    const canonicalContextKey = buildAgreementKey(
+      topicId,
+      normalizedSynthesisId,
+      normalizedEpoch,
+      normalizedSynthesisPointId,
+    );
+    const compatContextKey = legacyCompatPointId
+      ? buildAgreementKey(topicId, normalizedSynthesisId, normalizedEpoch, legacyCompatPointId)
+      : null;
+    const canonicalLegacyKey = buildLegacyAgreementKey(topicId, normalizedSynthesisPointId);
+    const legacyFlatKey = buildLegacyAgreementKey(topicId, normalizedPointId);
     const prefix = contextPrefix(topicId, normalizedSynthesisId, normalizedEpoch);
     let emittedSignal: SentimentSignal | null = null;
 
@@ -248,20 +329,30 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
       const currentAgreement = readAgreementValue(
         state.agreements,
         topicId,
-        pointId,
+        normalizedSynthesisPointId,
         normalizedSynthesisId,
         normalizedEpoch,
+        legacyCompatPointId ?? undefined,
       );
       const nextAgreement = desired === 0
         ? 0
         : resolveNextAgreement(currentAgreement, desired);
 
-      const nextAgreements: Record<string, Agreement> = { ...state.agreements, [key]: nextAgreement };
-      if (legacyKey !== key) {
-        delete nextAgreements[legacyKey];
+      const nextAgreements: Record<string, Agreement> = {
+        ...state.agreements,
+        [canonicalContextKey]: nextAgreement,
+      };
+      const nextPointIdAliases: Record<string, string> = { ...state.pointIdAliases };
+
+      if (compatContextKey) {
+        nextAgreements[compatContextKey] = nextAgreement;
+        nextPointIdAliases[compatContextKey] = canonicalContextKey;
       }
 
-      const activeCount = contextActiveCount(nextAgreements, prefix);
+      delete nextAgreements[legacyFlatKey];
+      delete nextAgreements[canonicalLegacyKey];
+
+      const activeCount = contextActiveCount(nextAgreements, prefix, nextPointIdAliases);
       const nextWeight = legacyWeightForActiveCount(activeCount);
       const nextLightbulb = { ...state.lightbulb, [topicId]: nextWeight };
 
@@ -270,7 +361,7 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
         synthesis_id: normalizedSynthesisId,
         epoch: normalizedEpoch,
         analysis_id: analysisId,
-        point_id: pointId,
+        point_id: normalizedSynthesisPointId,
         agreement: nextAgreement,
         weight: nextWeight,
         constituency_proof,
@@ -278,13 +369,15 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
       };
       emittedSignal = signal;
 
-      persistMap(AGREEMENTS_KEY, nextAgreements);
-      persistMap(LIGHTBULB_KEY, nextLightbulb);
+      persistNumberMap(AGREEMENTS_KEY, nextAgreements);
+      persistStringMap(AGREEMENT_ALIASES_KEY, nextPointIdAliases);
+      persistNumberMap(LIGHTBULB_KEY, nextLightbulb);
 
       const nextSignals = [...state.signals, signal].slice(-50);
 
       return {
         agreements: nextAgreements,
+        pointIdAliases: nextPointIdAliases,
         lightbulb: nextLightbulb,
         signals: nextSignals
       };
@@ -299,7 +392,7 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
     const current = get().eye[topicId] ?? 0;
     const next = current === 0 ? 1 : decayStep(current);
     const eye = { ...get().eye, [topicId]: next };
-    persistMap(EYE_KEY, eye);
+    persistNumberMap(EYE_KEY, eye);
     set({ eye });
     return next;
   },
@@ -307,12 +400,12 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
     const current = get().lightbulb[topicId] ?? 0;
     const next = current === 0 ? 1 : decayStep(current);
     const lightbulb = { ...get().lightbulb, [topicId]: next };
-    persistMap(LIGHTBULB_KEY, lightbulb);
+    persistNumberMap(LIGHTBULB_KEY, lightbulb);
     set({ lightbulb });
     return next;
   },
-  getAgreement(topicId, pointId, synthesisId, epoch) {
-    return readAgreementValue(get().agreements, topicId, pointId, synthesisId, epoch);
+  getAgreement(topicId, pointId, synthesisId, epoch, legacyPointId) {
+    return readAgreementValue(get().agreements, topicId, pointId, synthesisId, epoch, legacyPointId);
   },
   getLightbulbWeight(topicId) {
     return get().lightbulb[topicId] ?? 0;

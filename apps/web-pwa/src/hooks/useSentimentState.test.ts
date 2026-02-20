@@ -62,6 +62,7 @@ describe('useSentimentState', () => {
 
     useSentimentState.setState({
       agreements: {},
+      pointIdAliases: {},
       lightbulb: {},
       eye: {},
       signals: [],
@@ -416,6 +417,142 @@ describe('useSentimentState', () => {
     expect(signal?.synthesis_id).toBe(ANALYSIS);
     expect(signal?.epoch).toBe(0);
     expect(signal?.analysis_id).toBe(ANALYSIS);
+  });
+
+  it('prefers canonical synthesis point ID and falls back to legacy point ID', () => {
+    const legacyContextKey = `${TOPIC}:synth-9:4:legacy-point`;
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: { [legacyContextKey]: -1 },
+      pointIdAliases: {},
+      lightbulb: {},
+      eye: {},
+      signals: [],
+    });
+
+    expect(
+      useSentimentState
+        .getState()
+        .getAgreement(TOPIC, 'synth-point', 'synth-9', 4, 'legacy-point'),
+    ).toBe(-1);
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'legacy-point',
+      synthesisPointId: 'synth-point',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('compat-upgrade'),
+    });
+
+    expect(
+      useSentimentState
+        .getState()
+        .getAgreement(TOPIC, 'synth-point', 'synth-9', 4, 'legacy-point'),
+    ).toBe(1);
+  });
+
+  it('dual-write keeps local legacy+canonical keys but emits canonical signal point_id', () => {
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'legacy-abc',
+      synthesisPointId: 'synth-xyz',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('dual-write'),
+    });
+
+    const signal = useSentimentState.getState().signals.at(-1);
+    expect(signal?.point_id).toBe('synth-xyz');
+
+    const persistedAgreements = JSON.parse(localStorage.getItem('vh_sentiment_agreements_v1') ?? '{}') as Record<string, number>;
+    expect(persistedAgreements).toMatchObject({
+      [`${TOPIC}:synth-9:4:synth-xyz`]: 1,
+      [`${TOPIC}:synth-9:4:legacy-abc`]: 1,
+    });
+  });
+
+  it('dual-write migration does not inflate active-count weights', () => {
+    const dualProof = proofFor('dual-weight');
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'legacy-1',
+      synthesisPointId: 'synth-1',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: dualProof,
+    });
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'legacy-2',
+      synthesisPointId: 'synth-2',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: dualProof,
+    });
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'legacy-3',
+      synthesisPointId: 'synth-3',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: dualProof,
+    });
+
+    const dualWeight = useSentimentState.getState().getLightbulbWeight(TOPIC);
+    expect(dualWeight).toBeCloseTo(1.4375, 5);
+
+    useSentimentState.setState({
+      ...useSentimentState.getState(),
+      agreements: {},
+      pointIdAliases: {},
+      lightbulb: {},
+      eye: {},
+      signals: [],
+    });
+
+    const canonicalProof = proofFor('canonical-weight');
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'synth-1',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: canonicalProof,
+    });
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'synth-2',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: canonicalProof,
+    });
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: 'synth-3',
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: canonicalProof,
+    });
+
+    const canonicalWeight = useSentimentState.getState().getLightbulbWeight(TOPIC);
+    expect(dualWeight).toBeCloseTo(canonicalWeight, 5);
   });
 
   it('projects accepted votes to encrypted outbox + aggregate voter nodes', async () => {

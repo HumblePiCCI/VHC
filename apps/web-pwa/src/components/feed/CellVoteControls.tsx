@@ -5,6 +5,7 @@ import { useConstituencyProof } from '../../hooks/useConstituencyProof';
 export interface CellVoteControlsProps {
   readonly topicId: string;
   readonly pointId: string;
+  readonly synthesisPointId?: string;
   readonly synthesisId: string;
   readonly epoch: number;
   readonly analysisId?: string;
@@ -16,11 +17,13 @@ function countSignals(
   pointId: string,
   synthesisId: string,
   epoch: number,
+  legacyPointId?: string,
 ): { agrees: number; disagrees: number } {
   let agrees = 0;
   let disagrees = 0;
   for (const s of signals) {
-    if (s.point_id === pointId && s.synthesis_id === synthesisId && s.epoch === epoch) {
+    const isMatchingPoint = s.point_id === pointId || (legacyPointId !== undefined && s.point_id === legacyPointId);
+    if (isMatchingPoint && s.synthesis_id === synthesisId && s.epoch === epoch) {
       if (s.agreement === 1) agrees += 1;
       else if (s.agreement === -1) disagrees += 1;
     }
@@ -31,12 +34,18 @@ function countSignals(
 export const CellVoteControls: React.FC<CellVoteControlsProps> = ({
   topicId,
   pointId,
+  synthesisPointId,
   synthesisId,
   epoch,
   analysisId,
   disabled = false,
 }) => {
-  const currentVote = useSentimentState((s) => s.getAgreement(topicId, pointId, synthesisId, epoch));
+  const canonicalPointId = synthesisPointId ?? pointId;
+  const legacyPointId = synthesisPointId && synthesisPointId !== pointId ? pointId : undefined;
+
+  const currentVote = useSentimentState((s) =>
+    s.getAgreement(topicId, canonicalPointId, synthesisId, epoch, legacyPointId),
+  );
   const signals = useSentimentState((s) => s.signals);
   const setAgreement = useSentimentState((s) => s.setAgreement);
   const [denial, setDenial] = useState<string | null>(null);
@@ -44,8 +53,8 @@ export const CellVoteControls: React.FC<CellVoteControlsProps> = ({
 
   const hasProof = proof !== null;
   const { agrees, disagrees } = useMemo(
-    () => countSignals(signals, pointId, synthesisId, epoch),
-    [signals, pointId, synthesisId, epoch],
+    () => countSignals(signals, canonicalPointId, synthesisId, epoch, legacyPointId),
+    [canonicalPointId, epoch, legacyPointId, signals, synthesisId],
   );
 
   const handleVote = useCallback(
@@ -55,6 +64,7 @@ export const CellVoteControls: React.FC<CellVoteControlsProps> = ({
       const result = setAgreement({
         topicId,
         pointId,
+        synthesisPointId,
         synthesisId,
         epoch,
         analysisId,
@@ -65,7 +75,7 @@ export const CellVoteControls: React.FC<CellVoteControlsProps> = ({
         setDenial(result.reason);
       }
     },
-    [analysisId, disabled, epoch, pointId, proof, setAgreement, synthesisId, topicId],
+    [analysisId, disabled, epoch, pointId, proof, setAgreement, synthesisId, synthesisPointId, topicId],
   );
 
   const denialText = denial
