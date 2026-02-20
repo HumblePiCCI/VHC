@@ -6,11 +6,13 @@ import { useBiasPointIds } from './useBiasPointIds';
 
 const deriveAnalysisKeyMock = vi.hoisted(() => vi.fn());
 const derivePointIdMock = vi.hoisted(() => vi.fn());
+const deriveSynthesisPointIdMock = vi.hoisted(() => vi.fn());
 const getDevModelOverrideMock = vi.hoisted(() => vi.fn(() => null));
 
 vi.mock('@vh/data-model', () => ({
   deriveAnalysisKey: (...args: unknown[]) => deriveAnalysisKeyMock(...args),
   derivePointId: (...args: unknown[]) => derivePointIdMock(...args),
+  deriveSynthesisPointId: (...args: unknown[]) => deriveSynthesisPointIdMock(...args),
 }));
 
 vi.mock('../dev/DevModelPicker', () => ({
@@ -34,10 +36,12 @@ describe('useBiasPointIds', () => {
   beforeEach(() => {
     deriveAnalysisKeyMock.mockReset();
     derivePointIdMock.mockReset();
+    deriveSynthesisPointIdMock.mockReset();
     getDevModelOverrideMock.mockReset();
 
     deriveAnalysisKeyMock.mockResolvedValue('analysis-key');
-    derivePointIdMock.mockImplementation(async ({ column, text }: { column: string; text: string }) => `${column}:${text}`);
+    derivePointIdMock.mockImplementation(async ({ column, text }: { column: string; text: string }) => `legacy:${column}:${text}`);
+    deriveSynthesisPointIdMock.mockImplementation(async ({ column, text }: { column: string; text: string }) => `synth:${column}:${text}`);
     getDevModelOverrideMock.mockReturnValue(null);
   });
 
@@ -46,7 +50,7 @@ describe('useBiasPointIds', () => {
     vi.restoreAllMocks();
   });
 
-  it('derives deterministic frame/reframe point IDs when voting context is complete', async () => {
+  it('derives legacy + synthesis point IDs when voting context is complete', async () => {
     render(
       <HookHarness
         frames={[{ frame: 'Frame A', reframe: 'Reframe A' }]}
@@ -59,8 +63,8 @@ describe('useBiasPointIds', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('point-ids')).toHaveTextContent('"frame:0":"frame:Frame A"');
-      expect(screen.getByTestId('point-ids')).toHaveTextContent('"reframe:0":"reframe:Reframe A"');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"legacyPointIds":{"frame:0":"legacy:frame:Frame A","reframe:0":"legacy:reframe:Reframe A"}');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"synthesisPointIds":{"frame:0":"synth:frame:Frame A","reframe:0":"synth:reframe:Reframe A"}');
     });
 
     expect(deriveAnalysisKeyMock).toHaveBeenCalledWith({
@@ -86,7 +90,7 @@ describe('useBiasPointIds', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('point-ids')).toHaveTextContent('"frame:0":"frame:Frame A"');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"legacy:frame:Frame A"');
     });
 
     expect(deriveAnalysisKeyMock).toHaveBeenCalledWith({
@@ -97,7 +101,7 @@ describe('useBiasPointIds', () => {
     });
   });
 
-  it('returns empty map and skips derivation when analysisId is missing', async () => {
+  it('still derives synthesis IDs when analysisId is missing', async () => {
     render(
       <HookHarness
         frames={[{ frame: 'Frame A', reframe: 'Reframe A' }]}
@@ -109,13 +113,16 @@ describe('useBiasPointIds', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('point-ids')).toHaveTextContent('{}');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"legacyPointIds":{}');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"synthesisPointIds":{"frame:0":"synth:frame:Frame A","reframe:0":"synth:reframe:Reframe A"}');
     });
+
     expect(deriveAnalysisKeyMock).not.toHaveBeenCalled();
     expect(derivePointIdMock).not.toHaveBeenCalled();
+    expect(deriveSynthesisPointIdMock).toHaveBeenCalled();
   });
 
-  it('returns empty map and skips derivation when analysisId is malformed', async () => {
+  it('still derives synthesis IDs when analysisId is malformed', async () => {
     render(
       <HookHarness
         frames={[{ frame: 'Frame A', reframe: 'Reframe A' }]}
@@ -128,15 +135,18 @@ describe('useBiasPointIds', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('point-ids')).toHaveTextContent('{}');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"legacyPointIds":{}');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"synthesisPointIds":{"frame:0":"synth:frame:Frame A","reframe:0":"synth:reframe:Reframe A"}');
     });
+
     expect(deriveAnalysisKeyMock).not.toHaveBeenCalled();
     expect(derivePointIdMock).not.toHaveBeenCalled();
+    expect(deriveSynthesisPointIdMock).toHaveBeenCalled();
   });
 
-  it('handles derivation failures by warning and returning empty map', async () => {
+  it('legacy derivation failures do not block synthesis derivation', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    deriveAnalysisKeyMock.mockRejectedValue(new Error('boom'));
+    deriveAnalysisKeyMock.mockRejectedValue(new Error('legacy-boom'));
 
     render(
       <HookHarness
@@ -151,10 +161,11 @@ describe('useBiasPointIds', () => {
 
     await waitFor(() => {
       expect(warnSpy).toHaveBeenCalledWith(
-        '[vh:bias-table] failed to derive point IDs',
+        '[vh:bias-table] failed to derive legacy point IDs',
         expect.any(Error),
       );
-      expect(screen.getByTestId('point-ids')).toHaveTextContent('{}');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"legacyPointIds":{}');
+      expect(screen.getByTestId('point-ids')).toHaveTextContent('"synthesisPointIds":{"frame:0":"synth:frame:Frame A","reframe:0":"synth:reframe:Reframe A"}');
     });
   });
 });

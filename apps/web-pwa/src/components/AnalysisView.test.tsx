@@ -18,6 +18,11 @@ vi.mock('../hooks/useRegion', () => ({
   })
 }));
 
+vi.mock('../hooks/useSynthesisPointIds', () => ({
+  useSynthesisPointIds: () => ({}),
+  perspectivePointMapKey: (perspectiveId: string, column: 'frame' | 'reframe') => `${perspectiveId}:${column}`,
+}));
+
 const sample: FeedItem = {
   id: 'analysis-1',
   title: 'Story',
@@ -37,6 +42,7 @@ describe('AnalysisView', () => {
     useSentimentState.setState({
       ...useSentimentState.getState(),
       agreements: {},
+      pointIdAliases: {},
       lightbulb: {},
       eye: {},
       signals: []

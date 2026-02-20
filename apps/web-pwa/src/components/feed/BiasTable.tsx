@@ -43,6 +43,8 @@ interface ExpandableRowProps {
   readonly epoch?: number;
   readonly framePointId?: string;
   readonly reframePointId?: string;
+  readonly synthesisFramePointId?: string;
+  readonly synthesisReframePointId?: string;
   readonly votingEnabled?: boolean;
 }
 
@@ -57,6 +59,8 @@ function ExpandableRow({
   epoch,
   framePointId,
   reframePointId,
+  synthesisFramePointId,
+  synthesisReframePointId,
   votingEnabled,
 }: ExpandableRowProps): React.ReactElement {
   const [expanded, setExpanded] = useState(false);
@@ -67,6 +71,8 @@ function ExpandableRow({
     (analysis?.justifyBiasClaims?.length ?? 0) > 0;
 
   const showVoting = !!(votingEnabled && topicId && synthesisId && epoch !== undefined);
+  const resolvedFramePointId = framePointId ?? synthesisFramePointId;
+  const resolvedReframePointId = reframePointId ?? synthesisReframePointId;
 
   return (
     <>
@@ -78,10 +84,11 @@ function ExpandableRow({
       >
         <td className="border border-slate-200 px-2 py-1 text-slate-800">
           {frame}
-          {showVoting && framePointId && (
+          {showVoting && resolvedFramePointId && (
             <CellVoteControls
               topicId={topicId!}
-              pointId={framePointId}
+              pointId={resolvedFramePointId}
+              synthesisPointId={synthesisFramePointId}
               synthesisId={synthesisId!}
               epoch={epoch!}
               analysisId={analysisId}
@@ -90,10 +97,11 @@ function ExpandableRow({
         </td>
         <td className="border border-slate-200 px-2 py-1 text-slate-700">
           {reframe}
-          {showVoting && reframePointId && (
+          {showVoting && resolvedReframePointId && (
             <CellVoteControls
               topicId={topicId!}
-              pointId={reframePointId}
+              pointId={resolvedReframePointId}
+              synthesisPointId={synthesisReframePointId}
               synthesisId={synthesisId!}
               epoch={epoch!}
               analysisId={analysisId}
@@ -167,7 +175,7 @@ export const BiasTable: React.FC<BiasTableProps> = ({
   epoch,
   votingEnabled = false,
 }) => {
-  const pointIds = useBiasPointIds({
+  const { legacyPointIds, synthesisPointIds } = useBiasPointIds({
     frames,
     analysisId,
     topicId,
@@ -234,8 +242,10 @@ export const BiasTable: React.FC<BiasTableProps> = ({
                   analysisId={analysisId}
                   synthesisId={synthesisId}
                   epoch={epoch}
-                  framePointId={pointIds[pointMapKey(index, 'frame')]}
-                  reframePointId={pointIds[pointMapKey(index, 'reframe')]}
+                  framePointId={legacyPointIds[pointMapKey(index, 'frame')]}
+                  reframePointId={legacyPointIds[pointMapKey(index, 'reframe')]}
+                  synthesisFramePointId={synthesisPointIds[pointMapKey(index, 'frame')]}
+                  synthesisReframePointId={synthesisPointIds[pointMapKey(index, 'reframe')]}
                   votingEnabled={votingEnabled}
                 />
               ))

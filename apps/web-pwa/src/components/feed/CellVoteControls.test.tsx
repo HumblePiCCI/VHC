@@ -34,6 +34,7 @@ describe('CellVoteControls', () => {
   beforeEach(() => {
     useSentimentState.setState({
       agreements: {},
+      pointIdAliases: {},
       lightbulb: {},
       eye: {},
       signals: [],
@@ -85,6 +86,20 @@ describe('CellVoteControls', () => {
 
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({ desired: -1 }),
+    );
+  });
+
+  it('passes synthesisPointId for dual-write migration when provided', () => {
+    const spy = vi.spyOn(useSentimentState.getState(), 'setAgreement');
+    render(<CellVoteControls {...BASE_PROPS} synthesisPointId="synth-point-xyz" />);
+
+    fireEvent.click(screen.getByTestId('cell-vote-agree-point-abc'));
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pointId: 'point-abc',
+        synthesisPointId: 'synth-point-xyz',
+      }),
     );
   });
 

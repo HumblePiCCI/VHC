@@ -9,6 +9,7 @@ import { FlippableCard } from './venn/FlippableCard';
 import { ThreadView } from './hermes/forum/ThreadView';
 import { EngagementIcons } from './EngagementIcons';
 import { useViewTracking } from '../hooks/useViewTracking';
+import { perspectivePointMapKey, useSynthesisPointIds } from '../hooks/useSynthesisPointIds';
 
 interface AnalysisViewProps {
   item: FeedItem;
@@ -17,23 +18,55 @@ interface AnalysisViewProps {
 interface PerspectiveRowProps {
   itemId: string;
   perspective: Perspective;
+  synthesisFramePointId?: string;
+  synthesisReframePointId?: string;
   onBlockedVote: () => void;
 }
 
-function PerspectiveRow({ itemId, perspective, onBlockedVote }: PerspectiveRowProps) {
+function PerspectiveRow({
+  itemId,
+  perspective,
+  synthesisFramePointId,
+  synthesisReframePointId,
+  onBlockedVote,
+}: PerspectiveRowProps) {
   const framePointId = `${perspective.id}:frame`;
   const reframePointId = `${perspective.id}:reframe`;
-  const frameAgreement = useSentimentState((s) => s.getAgreement(itemId, framePointId));
-  const reframeAgreement = useSentimentState((s) => s.getAgreement(itemId, reframePointId));
+
+  const frameAgreement = useSentimentState((s) =>
+    s.getAgreement(
+      itemId,
+      synthesisFramePointId ?? framePointId,
+      itemId,
+      0,
+      synthesisFramePointId ? framePointId : undefined,
+    ),
+  );
+  const reframeAgreement = useSentimentState((s) =>
+    s.getAgreement(
+      itemId,
+      synthesisReframePointId ?? reframePointId,
+      itemId,
+      0,
+      synthesisReframePointId ? reframePointId : undefined,
+    ),
+  );
   const setAgreement = useSentimentState((s) => s.setAgreement);
   const { proof } = useRegion();
   const { identity } = useIdentity();
   const canVote = Boolean(identity);
 
-  const handleSet = (pointId: string, desired: -1 | 0 | 1) => {
+  const handleSet = (
+    legacyPointId: string,
+    synthesisPointId: string | undefined,
+    desired: -1 | 0 | 1,
+  ) => {
     setAgreement({
       topicId: itemId,
-      pointId,
+      pointId: legacyPointId,
+      synthesisPointId,
+      synthesisId: itemId,
+      epoch: 0,
       analysisId: itemId,
       desired,
       constituency_proof: proof || undefined
@@ -54,7 +87,7 @@ function PerspectiveRow({ itemId, perspective, onBlockedVote }: PerspectiveRowPr
                 onBlockedVote();
                 return;
               }
-              handleSet(framePointId, frameAgreement === -1 ? 0 : -1);
+              handleSet(framePointId, synthesisFramePointId, frameAgreement === -1 ? 0 : -1);
             }}
             ariaLabel="Disagree frame"
             variant="disagree"
@@ -70,7 +103,7 @@ function PerspectiveRow({ itemId, perspective, onBlockedVote }: PerspectiveRowPr
                 onBlockedVote();
                 return;
               }
-              handleSet(framePointId, frameAgreement === 1 ? 0 : 1);
+              handleSet(framePointId, synthesisFramePointId, frameAgreement === 1 ? 0 : 1);
             }}
             ariaLabel="Agree frame"
             variant="agree"
@@ -91,7 +124,7 @@ function PerspectiveRow({ itemId, perspective, onBlockedVote }: PerspectiveRowPr
                 onBlockedVote();
                 return;
               }
-              handleSet(reframePointId, reframeAgreement === -1 ? 0 : -1);
+              handleSet(reframePointId, synthesisReframePointId, reframeAgreement === -1 ? 0 : -1);
             }}
             ariaLabel="Disagree reframe"
             variant="disagree"
@@ -107,7 +140,7 @@ function PerspectiveRow({ itemId, perspective, onBlockedVote }: PerspectiveRowPr
                 onBlockedVote();
                 return;
               }
-              handleSet(reframePointId, reframeAgreement === 1 ? 0 : 1);
+              handleSet(reframePointId, synthesisReframePointId, reframeAgreement === 1 ? 0 : 1);
             }}
             ariaLabel="Agree reframe"
             variant="agree"
@@ -159,6 +192,12 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const eyeWeight = useSentimentState((s) => s.getEyeWeight(item.id));
   const lightbulbWeight = useSentimentState((s) => s.getLightbulbWeight(item.id));
+  const synthesisPointIds = useSynthesisPointIds({
+    topicId: item.id,
+    synthesisId: item.id,
+    epoch: 0,
+    perspectives: item.perspectives,
+  });
   useViewTracking(item.id, true);
 
   const linkedThread = useMemo(
@@ -205,7 +244,13 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ item }) => {
                 }
               }}
             >
-              <PerspectiveRow itemId={item.id} perspective={p} onBlockedVote={showWarn} />
+              <PerspectiveRow
+                itemId={item.id}
+                perspective={p}
+                synthesisFramePointId={synthesisPointIds[perspectivePointMapKey(p.id, 'frame')]}
+                synthesisReframePointId={synthesisPointIds[perspectivePointMapKey(p.id, 'reframe')]}
+                onBlockedVote={showWarn}
+              />
             </div>
           ))}
         </div>
