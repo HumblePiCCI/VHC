@@ -6,6 +6,7 @@ import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { resolveClientFromAppStore } from '../store/clientResolver';
 import { useXpLedger } from '../store/xpLedger';
 import { legacyWeightForActiveCount, resolveNextAgreement, type Agreement } from '../components/feed/voteSemantics';
+import { logMeshWriteResult, logVoteAdmission } from '../utils/sentimentTelemetry';
 
 interface SentimentStore {
   agreements: Record<string, Agreement>;
@@ -225,8 +226,25 @@ function asIsoTimestamp(emittedAt: number): string {
 }
 
 async function projectSignalToMesh(signal: SentimentSignal): Promise<void> {
+  const startedAt = Date.now();
+  let success = true;
+  let errorMessage: string | undefined;
+
+  const finalize = () => {
+    logMeshWriteResult({
+      topic_id: signal.topic_id,
+      point_id: signal.point_id,
+      success,
+      latency_ms: Math.max(0, Date.now() - startedAt),
+      error: errorMessage,
+    });
+  };
+
   const client = resolveClientFromAppStore();
   if (!client) {
+    success = false;
+    errorMessage = 'client-unavailable';
+    finalize();
     return;
   }
 
@@ -234,6 +252,9 @@ async function projectSignalToMesh(signal: SentimentSignal): Promise<void> {
     typeof (client as { gun?: { user?: unknown } }).gun?.user === 'function' &&
     typeof (client as { mesh?: { get?: unknown } }).mesh?.get === 'function';
   if (!hasSentimentTransports) {
+    success = false;
+    errorMessage = 'sentiment-transport-unavailable';
+    finalize();
     return;
   }
 
@@ -249,6 +270,8 @@ async function projectSignalToMesh(signal: SentimentSignal): Promise<void> {
       emitted_at: signal.emitted_at,
     });
   } catch (error) {
+    success = false;
+    errorMessage = error instanceof Error ? error.message : String(error);
     console.warn('[vh:sentiment] Failed to write encrypted sentiment event:', error);
   }
 
@@ -265,8 +288,13 @@ async function projectSignalToMesh(signal: SentimentSignal): Promise<void> {
       updated_at: asIsoTimestamp(signal.emitted_at),
     });
   } catch (error) {
+    success = false;
+    const nextErrorMessage = error instanceof Error ? error.message : String(error);
+    errorMessage = errorMessage ? `${errorMessage}; ${nextErrorMessage}` : nextErrorMessage;
     console.warn('[vh:sentiment] Failed to project aggregate voter node:', error);
   }
+
+  finalize();
 }
 
 export const useSentimentState = create<SentimentStore>((set, get) => ({
@@ -277,12 +305,24 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
   signals: [],
   setAgreement({ topicId, pointId, synthesisPointId, synthesisId, epoch, desired, constituency_proof, analysisId }) {
     if (!constituency_proof) {
+      logVoteAdmission({
+        topic_id: topicId,
+        point_id: pointId,
+        admitted: false,
+        reason: 'Missing constituency proof',
+      });
       console.warn('[vh:sentiment] Missing constituency proof; SentimentSignal not emitted');
       return { denied: true, reason: 'Missing constituency proof' };
     }
 
     const normalizedPointId = normalizePointId(pointId);
     if (!normalizedPointId) {
+      logVoteAdmission({
+        topic_id: topicId,
+        point_id: pointId,
+        admitted: false,
+        reason: 'Missing point_id',
+      });
       console.warn('[vh:sentiment] Missing point_id; SentimentSignal not emitted');
       return { denied: true, reason: 'Missing point_id' };
     }
@@ -294,6 +334,12 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
 
     const context = resolveSentimentContext({ synthesisId, epoch, analysisId });
     if (!context) {
+      logVoteAdmission({
+        topic_id: topicId,
+        point_id: normalizedSynthesisPointId,
+        admitted: false,
+        reason: 'Missing synthesis context',
+      });
       console.warn('[vh:sentiment] Missing synthesis context; SentimentSignal not emitted');
       return { denied: true, reason: 'Missing synthesis context' };
     }
@@ -307,9 +353,21 @@ export const useSentimentState = create<SentimentStore>((set, get) => ({
     const budgetCheck = useXpLedger.getState().canPerformAction('sentiment_votes/day', 1);
     if (!budgetCheck.allowed) {
       const reason = budgetCheck.reason || 'Daily limit reached for sentiment_votes/day';
+      logVoteAdmission({
+        topic_id: topicId,
+        point_id: normalizedSynthesisPointId,
+        admitted: false,
+        reason,
+      });
       console.warn('[vh:sentiment] Budget denied:', reason);
       return { denied: true, reason };
     }
+
+    logVoteAdmission({
+      topic_id: topicId,
+      point_id: normalizedSynthesisPointId,
+      admitted: true,
+    });
 
     const canonicalContextKey = buildAgreementKey(
       topicId,

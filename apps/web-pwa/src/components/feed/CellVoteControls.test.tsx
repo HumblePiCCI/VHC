@@ -248,6 +248,28 @@ describe('CellVoteControls', () => {
     );
   });
 
+  it('counts legacy signal IDs when synthesisPointId is provided', () => {
+    useSentimentState.setState({
+      signals: [
+        {
+          topic_id: 'topic-1',
+          synthesis_id: 'synth-1',
+          epoch: 3,
+          point_id: 'point-abc',
+          agreement: 1,
+          weight: 1,
+          constituency_proof: { district_hash: 'd', nullifier: 'n', merkle_root: 'm' },
+          emitted_at: Date.now(),
+        },
+      ] as any,
+    });
+
+    render(<CellVoteControls {...BASE_PROPS} synthesisPointId="synth-point-xyz" />);
+
+    expect(screen.getByTestId('cell-vote-agree-point-abc')).toHaveTextContent('+ 1');
+    expect(screen.getByTestId('cell-vote-disagree-point-abc')).toHaveTextContent('- 0');
+  });
+
   it('shows max(local, mesh) aggregate counts when mesh aggregate is available', () => {
     useSentimentState.setState({
       signals: [
