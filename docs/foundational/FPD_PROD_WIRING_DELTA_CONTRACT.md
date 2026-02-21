@@ -31,7 +31,7 @@ Close the gap between currently merged FPD L1-L4 behavior and production-safe en
 - Hard Gate 2 (WS6): **Satisfied** — `AnalysisView` now uses `useConstituencyProof` for vote admission parity with Feed; vote requires identity + validated proof, with reason-specific blocked UX.
 - Hard Gate 7 (WS6): **Satisfied** — critical vote-admission paths (`useSentimentState`, `CellVoteControls`, `AnalysisView`) are included in coverage gates with expanded unit tests and diff-coverage allowlisting.
 - Hard Gate 8a (WS6): **Satisfied** — telemetry (`[vh:vote:admission]`, `[vh:vote:mesh-write]`) and canary/rollback plan are documented.
-- Hard Gate 8b (WS7/WS8): **Partially satisfied** — transitional proof-path removal is complete (WS7), but runtime canary drill execution with recorded SLO evidence is still required before production enablement.
+- Hard Gate 8b (WS7/WS8): **Partially satisfied** — transitional proof-path removal is complete (WS7). Runtime canary drill was executed on 2026-02-20, but auto-aborted due mesh-write SLO/evidence failure and rolled back; quantitative thresholds are not yet met. See `docs/reports/FPD_CANARY_EVIDENCE_BUNDLE_2026-02-20.md` + `docs/reports/evidence/2026-02-20-canary/`.
 
 ---
 

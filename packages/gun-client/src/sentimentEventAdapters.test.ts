@@ -25,11 +25,15 @@ interface FakeNode {
   writes: Array<{ path: string; value: unknown }>;
   setRead: (path: string, value: unknown) => void;
   setPutError: (path: string, err: string) => void;
+  setPutHang: (path: string) => void;
+  setPutLateAck: (path: string, delayMs: number) => void;
 }
 
 function createFakeNode(): FakeNode {
   const reads = new Map<string, unknown>();
   const putErrors = new Map<string, string>();
+  const putHangs = new Set<string>();
+  const putLateAcks = new Map<string, number>();
   const writes: Array<{ path: string; value: unknown }> = [];
 
   const makeNode = (segments: string[]): any => {
@@ -38,8 +42,16 @@ function createFakeNode(): FakeNode {
       once: vi.fn((cb?: (data: unknown) => void) => cb?.(reads.get(path))),
       put: vi.fn((value: unknown, cb?: (ack?: { err?: string }) => void) => {
         writes.push({ path, value });
+        if (putHangs.has(path)) {
+          return;
+        }
         const err = putErrors.get(path);
         cb?.(err ? { err } : {});
+
+        const lateAckDelay = putLateAcks.get(path);
+        if (!err && lateAckDelay !== undefined) {
+          setTimeout(() => cb?.({}), lateAckDelay);
+        }
       }),
       get: vi.fn((key: string) => makeNode([...segments, key])),
     };
@@ -54,6 +66,12 @@ function createFakeNode(): FakeNode {
     },
     setPutError(path: string, err: string) {
       putErrors.set(path, err);
+    },
+    setPutHang(path: string) {
+      putHangs.add(path);
+    },
+    setPutLateAck(path: string, delayMs: number) {
+      putLateAcks.set(path, delayMs);
     },
   };
 }
@@ -224,6 +242,61 @@ describe('sentimentEventAdapters', () => {
 
     encryptMock.mockResolvedValueOnce('encrypted-payload');
     await expect(writeSentimentEvent(client, EVENT)).rejects.toThrow('write-failed');
+  });
+
+  it('writeSentimentEvent resolves after ack-timeout fallback when put callback never arrives', async () => {
+    const userNode = createFakeNode();
+    const guard = { validateWrite: vi.fn() } as unknown as TopologyGuard;
+    const client = createClient(userNode, guard);
+
+    const eventId = await deriveSentimentEventId({
+      nullifier: EVENT.constituency_proof.nullifier,
+      topic_id: EVENT.topic_id,
+      synthesis_id: EVENT.synthesis_id,
+      epoch: EVENT.epoch,
+      point_id: EVENT.point_id,
+    });
+    userNode.setPutHang(`outbox/sentiment/${eventId}`);
+    encryptMock.mockResolvedValueOnce('encrypted-payload');
+
+    await expect(writeSentimentEvent(client, EVENT)).resolves.toEqual({
+      eventId,
+      event: EVENT,
+    });
+  }, 10000);
+
+  it('writeSentimentEvent ignores timeout/late ack callbacks after successful settlement', async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      const userNode = createFakeNode();
+      const guard = { validateWrite: vi.fn() } as unknown as TopologyGuard;
+      const client = createClient(userNode, guard);
+
+      const eventId = await deriveSentimentEventId({
+        nullifier: EVENT.constituency_proof.nullifier,
+        topic_id: EVENT.topic_id,
+        synthesis_id: EVENT.synthesis_id,
+        epoch: EVENT.epoch,
+        point_id: EVENT.point_id,
+      });
+      userNode.setPutLateAck(`outbox/sentiment/${eventId}`, 1200);
+      encryptMock.mockResolvedValueOnce('encrypted-payload');
+
+      await expect(writeSentimentEvent(client, EVENT)).resolves.toEqual({
+        eventId,
+        event: EVENT,
+      });
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 
   it('throws when user pub is unavailable and validates read inputs', async () => {
