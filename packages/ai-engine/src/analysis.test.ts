@@ -4,7 +4,7 @@ import {
   hashUrl,
   type AnalysisStore,
   type CanonicalAnalysis,
-  type GenerateResult
+  type GenerateResult,
 } from './analysis';
 
 class MemoryStore implements AnalysisStore {
@@ -31,27 +31,34 @@ function buildGenerateResult(overrides: Partial<GenerateResult> = {}): GenerateR
       counterpoints: ['counter-1'],
       bias_claim_quote: [],
       justify_bias_claim: [],
-      confidence: 0.8
+      confidence: 0.8,
     },
-    ...overrides
+    ...overrides,
   };
 }
 
 describe('analysis first-to-file', () => {
-  it('hashes urls deterministically', () => {
-    const a = hashUrl('https://Example.com/Path');
-    const b = hashUrl('https://example.com/path');
+  it('hashes urls deterministically with canonicalization', async () => {
+    const a = await hashUrl('https://Example.com/Path/?b=2&a=1#fragment');
+    const b = await hashUrl('https://example.com/Path?a=1&b=2');
     expect(a).toBe(b);
+    expect(a).toMatch(/^[a-f0-9]{16}$/);
   });
 
-  it('hashes empty/whitespace consistently', () => {
-    expect(hashUrl('  ')).toBe(hashUrl(''));
+  it('hashes empty/whitespace consistently', async () => {
+    await expect(hashUrl('  ')).resolves.toBe(await hashUrl(''));
+  });
+
+  it('produces distinct hashes for near-identical URLs', async () => {
+    const one = await hashUrl('https://example.com/article?id=1');
+    const two = await hashUrl('https://example.com/article?id=2');
+    expect(one).not.toBe(two);
   });
 
   it('returns existing analysis without regenerating', async () => {
     const store = new MemoryStore();
     const url = 'https://example.com/post';
-    const urlHash = hashUrl(url);
+    const urlHash = await hashUrl(url);
     const existing: CanonicalAnalysis = {
       schemaVersion: 'canonical-analysis-v1',
       url,
@@ -62,7 +69,7 @@ describe('analysis first-to-file', () => {
       bias_claim_quote: [],
       justify_bias_claim: [],
       confidence: 0.5,
-      timestamp: Date.now() - 1000
+      timestamp: Date.now() - 1000,
     };
     await store.save(existing);
     const generate = vi.fn(async (_targetUrl: string): Promise<GenerateResult> => buildGenerateResult());
@@ -83,11 +90,11 @@ describe('analysis first-to-file', () => {
 
     expect(reused).toBe(false);
     expect(analysis.url).toBe(url);
-    expect(analysis.urlHash).toBe(hashUrl(url));
+    expect(analysis.urlHash).toBe(await hashUrl(url));
     expect(analysis.schemaVersion).toBe('canonical-analysis-v1');
     expect(analysis.engine).toBeUndefined();
     expect(analysis.warnings).toBeUndefined();
-    expect(await store.getByHash(hashUrl(url))).toEqual(analysis);
+    expect(await store.getByHash(await hashUrl(url))).toEqual(analysis);
   });
 
   it('flows engine metadata and warnings into canonical record', async () => {
@@ -96,8 +103,8 @@ describe('analysis first-to-file', () => {
     const generate = vi.fn().mockResolvedValue(
       buildGenerateResult({
         engine: { id: 'mock-local-engine', kind: 'local', modelName: 'mock-local-v1' },
-        warnings: ['Summary mentions year 2099 not in source']
-      })
+        warnings: ['Summary mentions year 2099 not in source'],
+      }),
     );
 
     const { analysis, reused } = await getOrGenerate(url, store, generate);
@@ -106,7 +113,7 @@ describe('analysis first-to-file', () => {
     expect(analysis.engine).toEqual({
       id: 'mock-local-engine',
       kind: 'local',
-      modelName: 'mock-local-v1'
+      modelName: 'mock-local-v1',
     });
     expect(analysis.warnings).toEqual(['Summary mentions year 2099 not in source']);
   });
