@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  analysisInternal,
   getOrGenerate,
   hashUrl,
   type AnalysisStore,
@@ -53,6 +54,38 @@ describe('analysis first-to-file', () => {
     const one = await hashUrl('https://example.com/article?id=1');
     const two = await hashUrl('https://example.com/article?id=2');
     expect(one).not.toBe(two);
+  });
+
+  it('normalizes default ports and duplicate query keys deterministically', async () => {
+    const httpWithPort = await hashUrl('HTTP://Example.com:80/path?x=2&x=1');
+    const httpWithoutPort = await hashUrl('http://example.com/path?x=1&x=2');
+    expect(httpWithPort).toBe(httpWithoutPort);
+
+    const httpsWithPort = await hashUrl('https://example.com:443/path?x=2&x=1');
+    const httpsWithoutPort = await hashUrl('https://example.com/path?x=1&x=2');
+    expect(httpsWithPort).toBe(httpsWithoutPort);
+  });
+
+  it('falls back to lower-cased trimmed input when URL parsing fails', () => {
+    expect(analysisInternal.normalizeUrlForHash('  %%%BAD%%%  ')).toBe('%%%bad%%%');
+  });
+
+  it('throws when SubtleCrypto is unavailable', async () => {
+    const originalCryptoDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto');
+    Object.defineProperty(globalThis, 'crypto', {
+      value: { subtle: undefined },
+      configurable: true,
+    });
+
+    try {
+      await expect(hashUrl('https://example.com')).rejects.toThrow('SubtleCrypto is unavailable for URL hashing');
+    } finally {
+      if (originalCryptoDescriptor) {
+        Object.defineProperty(globalThis, 'crypto', originalCryptoDescriptor);
+      } else {
+        delete (globalThis as { crypto?: unknown }).crypto;
+      }
+    }
   });
 
   it('returns existing analysis without regenerating', async () => {

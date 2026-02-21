@@ -1051,6 +1051,48 @@ describe('useSentimentState', () => {
     warnSpy.mockRestore();
   });
 
+  it('marks non-timeout non-acknowledged event writes as failed telemetry', async () => {
+    const fakeClient = {
+      gun: { user: () => ({}) },
+      mesh: { get: () => ({}) },
+    } as never;
+    vi.spyOn(ClientResolver, 'resolveClientFromAppStore').mockReturnValue(fakeClient);
+    vi.spyOn(GunClient, 'writeSentimentEvent').mockResolvedValue({
+      eventId: 'evt-unacked',
+      event: {} as never,
+      ack: {
+        acknowledged: false,
+        timedOut: false,
+      },
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-9',
+      epoch: 4,
+      analysisId: ANALYSIS,
+      desired: 1,
+      constituency_proof: proofFor('telemetry-unacked'),
+    });
+
+    await flushProjection();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[vh:vote:mesh-write]',
+      expect.objectContaining({
+        topic_id: TOPIC,
+        point_id: POINT,
+        success: false,
+        timed_out: false,
+        error: 'sentiment-outbox-not-acknowledged',
+      }),
+    );
+
+    warnSpy.mockRestore();
+  });
+
   it('emits successful mesh-write telemetry when projection succeeds', async () => {
     const fakeClient = {
       gun: { user: () => ({}) },
