@@ -1,0 +1,386 @@
+{
+  "runDate": "2026-02-21T10:13:26.448Z",
+  "runtimeUrl": "https://ccibootstrap.tail6cc9b5.ts.net",
+  "baselineSha": "f7b190c9266e29aae693e0d03d6516c768a70471",
+  "runId": "vr-1771668765301-51o3nn",
+  "canaryNamespace": "qa-vote-reliability-vr-1771668765301-51o3nn",
+  "meshWriteResults": [
+    {
+      "seq": 1,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 2,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 307,
+      "error": null
+    },
+    {
+      "seq": 3,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 4,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 5,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 312,
+      "error": null
+    },
+    {
+      "seq": 6,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 307,
+      "error": null
+    },
+    {
+      "seq": 7,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 8,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 9,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 10,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 11,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 12,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 13,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 14,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 15,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 16,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 311,
+      "error": null
+    },
+    {
+      "seq": 17,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 313,
+      "error": null
+    },
+    {
+      "seq": 18,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 19,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 20,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 21,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 307,
+      "error": null
+    },
+    {
+      "seq": 22,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 23,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 24,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 25,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 26,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 27,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 28,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 29,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 30,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 31,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 32,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 33,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 366,
+      "error": null
+    },
+    {
+      "seq": 34,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 35,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 36,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 37,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 38,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 39,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 40,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 41,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 42,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 43,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 44,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 370,
+      "error": null
+    },
+    {
+      "seq": 45,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    },
+    {
+      "seq": 46,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 47,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 48,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 308,
+      "error": null
+    },
+    {
+      "seq": 49,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 310,
+      "error": null
+    },
+    {
+      "seq": 50,
+      "admitted": true,
+      "meshWriteSuccess": true,
+      "meshWriteLatencyMs": 309,
+      "error": null
+    }
+  ],
+  "readBackVerification": {
+    "total": 50,
+    "found": 50,
+    "missing": 0
+  },
+  "p95LatencyMs": 313,
+  "summary": {
+    "totalWrites": 50,
+    "admitted": 50,
+    "meshSuccess": 50,
+    "meshTimeout": 0,
+    "silentDrops": 0,
+    "successRate": 1,
+    "terminalOutcomeRate": 1
+  },
+  "analysisBackendStability": {
+    "totalRequests": 20,
+    "success": 20,
+    "failures": 0,
+    "stable": true
+  },
+  "codeAnalysis": {
+    "writePattern": "settled-flag with 1000ms timeout (putWithAck in sentimentEventAdapters.ts, aggregateAdapters.ts)",
+    "terminalOutcomeProof": "Every write resolves via: (1) ack success, (2) ack error reject, or (3) timeout resolve. settled boolean prevents double-resolution.",
+    "silentDropImpossible": true
+  },
+  "verdict": "PASS: all 50 admitted votes reached terminal mesh outcomes (50 success, 0 timeout, 0 silent drops)"
+}
