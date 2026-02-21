@@ -16,12 +16,14 @@ interface FakeMesh {
   setRead: (path: string, value: unknown) => void;
   setPutError: (path: string, err: string) => void;
   setPutHang: (path: string) => void;
+  setPutLateAck: (path: string, delayMs: number) => void;
 }
 
 function createFakeMesh(): FakeMesh {
   const reads = new Map<string, unknown>();
   const putErrors = new Map<string, string>();
   const putHangs = new Set<string>();
+  const putLateAcks = new Map<string, number>();
   const writes: Array<{ path: string; value: unknown }> = [];
 
   const makeNode = (segments: string[]): any => {
@@ -35,6 +37,11 @@ function createFakeMesh(): FakeMesh {
         }
         const err = putErrors.get(path);
         cb?.(err ? { err } : {});
+
+        const lateAckDelay = putLateAcks.get(path);
+        if (!err && lateAckDelay !== undefined) {
+          setTimeout(() => cb?.({}), lateAckDelay);
+        }
       }),
       get: vi.fn((key: string) => makeNode([...segments, key])),
     };
@@ -52,6 +59,9 @@ function createFakeMesh(): FakeMesh {
     },
     setPutHang(path: string) {
       putHangs.add(path);
+    },
+    setPutLateAck(path: string, delayMs: number) {
+      putLateAcks.set(path, delayMs);
     },
   };
 }
@@ -164,6 +174,36 @@ describe('aggregateAdapters', () => {
 
     await expect(writeVoterNode(client, 'topic-1', 'synth-1', 4, 'voter-1', node)).resolves.toEqual(node);
   }, 10000);
+
+  it('writeVoterNode ignores timeout/late ack callbacks after successful settlement', async () => {
+    vi.useFakeTimers();
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    try {
+      const path = 'aggregates/topics/topic-1/syntheses/synth-1/epochs/4/voters/voter-1/point-1';
+      const mesh = createFakeMesh();
+      mesh.setPutLateAck(path, 1200);
+      const guard = { validateWrite: vi.fn() } as unknown as TopologyGuard;
+      const client = createClient(mesh, guard);
+
+      const node = {
+        point_id: 'point-1',
+        agreement: 1 as const,
+        weight: 1,
+        updated_at: '2026-02-18T22:20:00.000Z',
+      };
+
+      await expect(writeVoterNode(client, 'topic-1', 'synth-1', 4, 'voter-1', node)).resolves.toEqual(node);
+      await vi.advanceTimersByTimeAsync(1500);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+      vi.useRealTimers();
+    }
+  });
 
   it('readAggregates fans-in voter sub-nodes and ignores neutral/invalid rows', async () => {
     const mesh = createFakeMesh();
