@@ -1233,6 +1233,30 @@ describe('useSentimentState', () => {
     expect(intent!.proof_ref).not.toContain('intent-proof');
   });
 
+  it('logs warning when VoteIntent enqueue derivation fails', async () => {
+    vi.spyOn(DataModel, 'deriveAggregateVoterId').mockRejectedValueOnce(new Error('intent-derive-failed'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    useSentimentState.getState().setAgreement({
+      topicId: TOPIC,
+      pointId: POINT,
+      synthesisId: 'synth-intent-fail',
+      epoch: 2,
+      desired: 1,
+      constituency_proof: proofFor('intent-proof-fail'),
+    });
+
+    await flushProjection();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[vh:sentiment] Failed to enqueue vote intent:',
+      expect.any(Error),
+    );
+    expect(localStorage.getItem('vh_vote_intent_queue_v1')).toBeNull();
+
+    warnSpy.mockRestore();
+  });
+
   it('receipt_id is always a non-empty string', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
